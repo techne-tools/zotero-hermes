@@ -1,0 +1,164 @@
+<?xml version="1.0"?>
+<!DOCTYPE prefwindow SYSTEM "chrome://zotero/locale/preferences.dtd">
+<prefwindow
+  id="hermes-preferences"
+  title="Hermes Preferences"
+  xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+  xmlns:html="http://www.w3.org/1999/xhtml"
+>
+  <prefpane id="hermes-prefpane-general" label="General">
+    <preferences>
+      <preference
+        id="pref-hermes-binary-path"
+        name="extensions.hermes.binaryPath"
+        type="string"
+      ></preference>
+      <preference
+        id="pref-hermes-connection-mode"
+        name="extensions.hermes.connectionMode"
+        type="string"
+      ></preference>
+      <preference
+        id="pref-hermes-auto-save"
+        name="extensions.hermes.autoSave"
+        type="bool"
+      ></preference>
+      <preference
+        id="pref-hermes-show-reasoning"
+        name="extensions.hermes.showReasoning"
+        type="bool"
+      ></preference>
+      <preference
+        id="pref-hermes-typing-effects"
+        name="extensions.hermes.typingEffects"
+        type="bool"
+      ></preference>
+      <preference
+        id="pref-hermes-enable-citations"
+        name="extensions.hermes.enableCitations"
+        type="bool"
+      ></preference>
+      <preference
+        id="pref-hermes-enable-annotations"
+        name="extensions.hermes.enableAnnotations"
+        type="bool"
+      ></preference>
+      <preference
+        id="pref-hermes-enable-tags"
+        name="extensions.hermes.enableTags"
+        type="bool"
+      ></preference>
+    </preferences>
+
+    <vbox>
+      <groupbox>
+        <caption label="Connection Settings"></caption>
+        <vbox>
+          <label value="Hermes Binary Path:"></label>
+          <hbox align="center">
+            <textbox
+              id="hermes-binary-path"
+              preference="pref-hermes-binary-path"
+              flex="1"
+              placeholder="/path/to/hermes-binary"
+            ></textbox>
+            <button
+              id="hermes-browse-binary"
+              label="Browse..."
+              oncommand="HermesPreferences.browseBinary()"
+            ></button>
+          </hbox>
+
+          <separator class="thin"></separator>
+
+          <label value="Connection Mode:"></label>
+          <radiogroup
+            id="hermes-connection-mode"
+            preference="pref-hermes-connection-mode"
+          >
+            <radio label="stdio (Local Process)" value="stdio"></radio>
+            <radio label="HTTP (Remote Server)" value="http"></radio>
+          </radiogroup>
+
+          <separator class="thin"></separator>
+
+          <hbox align="center">
+            <checkbox
+              id="hermes-auto-save"
+              preference="pref-hermes-auto-save"
+              label="Auto-save conversations to notes"
+            ></checkbox>
+          </hbox>
+        </vbox>
+      </groupbox>
+
+      <groupbox>
+        <caption label="Chat Settings"></caption>
+        <vbox>
+          <hbox align="center">
+            <checkbox
+              id="hermes-show-reasoning"
+              preference="pref-hermes-show-reasoning"
+              label="Show reasoning/thinking steps"
+            ></checkbox>
+          </hbox>
+
+          <hbox align="center">
+            <checkbox
+              id="hermes-typing-effects"
+              preference="pref-hermes-typing-effects"
+              label="Enable typing animation effects"
+            ></checkbox>
+          </hbox>
+        </vbox>
+      </groupbox>
+
+      <groupbox>
+        <caption label="Feature Toggles"></caption>
+        <vbox>
+          <hbox align="center">
+            <checkbox
+              id="hermes-enable-citations"
+              preference="pref-hermes-enable-citations"
+              label="Enable citation generation"
+            ></checkbox>
+          </hbox>
+
+          <hbox align="center">
+            <checkbox
+              id="hermes-enable-annotations"
+              preference="pref-hermes-enable-annotations"
+              label="Enable annotation extraction"
+            ></checkbox>
+          </hbox>
+
+          <hbox align="center">
+            <checkbox
+              id="hermes-enable-tags"
+              preference="pref-hermes-enable-tags"
+              label="Enable tag suggestions"
+            ></checkbox>
+          </hbox>
+        </vbox>
+      </groupbox>
+
+      <groupbox>
+        <caption label="Actions"></caption>
+        <vbox>
+          <hbox>
+            <button
+              id="hermes-test-connection"
+              label="Test Connection"
+              oncommand="HermesPreferences.testConnection()"
+            ></button>
+            <button
+              id="hermes-clear-history"
+              label="Clear Conversation History"
+              oncommand="HermesPreferences.clearHistory()"
+            ></button>
+          </hbox>
+        </vbox>
+      </groupbox>
+    </vbox>
+  </prefpane>
+</prefwindow>

@@ -9,3 +9,24 @@ item-section-example2-sidenav-tooltip =
 item-section-example2-button-tooltip =
     .tooltiptext = Unregister this section
 item-info-row-example-label = Example Row
+hermes-title = Hermes Agent
+hermes-sidebar-title = Hermes Chat
+hermes-input-placeholder = Ask Hermes about your research...
+hermes-send = Send
+hermes-connected = Connected
+hermes-disconnected = Disconnected
+hermes-connecting = Connecting...
+hermes-typing = Hermes is thinking...
+
+# Preferences
+prefs-title = Hermes Agent
+prefs-connection-title = Connection Settings
+prefs-connection-mode = Connection Mode
+prefs-connection-mode-local = Local (ACP)
+prefs-connection-mode-remote = Remote (API)
+prefs-hermes-path = Hermes Binary Path
+prefs-hermes-path-placeholder = /usr/local/bin/hermes
+prefs-hermes-url = API URL
+prefs-hermes-url-placeholder = http://localhost:8642
+prefs-api-key = API Key
+prefs-test-connection = Test Connection

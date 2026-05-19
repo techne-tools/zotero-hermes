@@ -139,6 +139,170 @@
 
 ---
 
+## Cross-Platform Feature Porting Plan (19 May 2026)
+
+### 📚 Features from Obsidian Plugin to Consider for Zotero
+
+Based on analysis of both codebases, the following Obsidian features could usefully be ported to or inspire Zotero Hermes:
+
+### **Tier 1: High Impact, High Feasibility** ⭐⭐⭐
+
+#### 1. Ghost Text / Inline Auto-Completion
+**Obsidian Implementation**: `GhostTextExtension.ts`
+- Inline auto-completion suggestions directly in markdown editor
+- Triggered via command or automatically
+- Multiple alternatives cycled with `Alt+ArrowRight`
+- Accept with `Tab`, clear on cursor movement
+
+**Zotero Enhancement Plan**:
+- Add inline suggestion support in Zotero's note editor
+- Use Zotero's editor API for inline completions
+- Support multiple alternatives with keyboard navigation
+- Accept with Tab key, clear on cursor movement
+- **Estimated:** 3-4 days
+- **Dependencies:** Zotero editor API knowledge
+
+#### 2. Semantic Vault RAG via `/search` Command
+**Obsidian Implementation**: `/search` slash command
+- Search the vault and append results to context (Local RAG)
+- Semantic search using Obsidian's metadataCache
+- Support for file and folder search
+
+**Zotero Enhancement Plan**:
+- Enhance existing item search functionality
+- Add `/search` slash command with semantic search
+- Search items by title, authors, tags, abstract
+- Append search results to conversation context
+- **Estimated:** 2-3 days
+- **Dependencies:** Item context system
+
+#### 3. Conversation Branching with Message Editing
+**Obsidian Implementation**: Message editing in `HermesChatView.tsx`
+- Edit a message truncates the chat history and branches the conversation
+- Preserves conversation context while allowing corrections
+
+**Zotero Enhancement Plan**:
+- Add message editing capability in Zotero sidebar
+- Truncate history and create conversation branch
+- Support multiple conversation branches from same session
+- **Estimated:** 2-3 days
+- **Dependencies:** ChatManager.ts
+
+### **Tier 2: Medium Impact, Medium Feasibility** ⭐⭐
+
+#### 4. Token Usage Dashboard
+**Obsidian Implementation**: Real-time token counter in chat footer
+- Track input/output tokens and estimated cost per conversation
+- Parsed from agent's `usage_update` events
+
+**Zotero Enhancement Plan**:
+- Add token counter to Zotero sidebar status bar
+- Display real-time token usage during conversation
+- Show estimated cost based on API pricing
+- **Estimated:** 1-2 days
+- **Dependencies:** HermesClient.ts
+
+#### 5. Conversation Search with Cmd+F
+**Obsidian Implementation**: Search through all messages in chat
+- Real-time filtering, match counter, up/down navigation
+- Perfect for finding that one piece of advice from 50 messages ago
+
+**Zotero Enhancement Plan**:
+- Add search functionality to Zotero sidebar
+- Search through conversation history
+- Real-time filtering with match counter
+- Keyboard navigation (Cmd+F, Enter, Shift+Enter)
+- **Estimated:** 2-3 days
+- **Dependencies:** ChatManager.ts
+
+#### 6. Persona Templates
+**Obsidian Implementation**: `/persona` slash command
+- Switch between pre-configured personas (Coding Assistant, Writing Coach, Research Assistant)
+- Each persona has its own system prompt and default tool set
+- Customize or create your own in Settings
+
+**Zotero Enhancement Plan**:
+- Add `/persona` slash command to Zotero
+- Pre-configured personas: Research Assistant, Citation Expert, Annotation Analyst
+- Each with different system prompts and tool sets
+- Save custom personas to preferences
+- **Estimated:** 1-2 days
+- **Dependencies:** ChatManager.ts
+
+### **Tier 3: Low Impact, High Feasibility** ⭐
+
+#### 7. Export Conversations (HTML/JSON/PDF)
+**Obsidian Implementation**: Export functionality in `VaultManager.ts`
+- Export conversations in multiple formats: HTML (self-contained), JSON (structured), PDF (print-friendly)
+- Perfect for sharing or archiving
+
+**Zotero Enhancement Plan**:
+- Add export functionality to Zotero sidebar
+- Export as HTML (self-contained with escaped output), JSON (with metadata), PDF (via browser print)
+- Support for sharing conversations with collaborators
+- **Estimated:** 2-3 days
+- **Dependencies:** ConversationManager.ts
+
+#### 8. Session Tools (Tool Restrictions)
+**Obsidian Implementation**: Session-specific tool execution
+- Restrict which tools Hermes is allowed to use on a per-conversation basis
+- Session Tools button (wrench icon) in chat header
+
+**Zotero Enhancement Plan**:
+- Add session tools UI to Zotero sidebar
+- Allow users to restrict available tools per conversation
+- Save tool restrictions with conversation
+- **Estimated:** 1-2 days
+- **Dependencies:** ChatManager.ts
+
+---
+
+## Implementation Priority Matrix
+
+| Feature | Obsidian Value | Zotero Port Difficulty | Zotero Impact | Priority |
+|---------|---------------|----------------------|---------------|----------|
+| Ghost Text / Inline Auto-Completion | ⭐⭐⭐⭐⭐ | Medium | ⭐⭐⭐⭐ | **1** |
+| Semantic Vault RAG (`/search`) | ⭐⭐⭐⭐⭐ | Low | ⭐⭐⭐⭐⭐ | **2** |
+| Conversation Branching | ⭐⭐⭐⭐ | Medium | ⭐⭐⭐⭐ | **3** |
+| Token Usage Dashboard | ⭐⭐⭐⭐ | Low | ⭐⭐⭐⭐ | **4** |
+| Conversation Search (Cmd+F) | ⭐⭐⭐⭐ | Medium | ⭐⭐⭐⭐ | **5** |
+| Persona Templates | ⭐⭐⭐⭐ | Low | ⭐⭐⭐⭐ | **6** |
+| Export Conversations | ⭐⭐⭐ | Low | ⭐⭐⭐ | **7** |
+| Session Tools (Tool Restrictions) | ⭐⭐⭐ | Low | ⭐⭐⭐ | **8** |
+
+---
+
+## Implementation Timeline
+
+### Week 1 (May 20-26): Foundation
+- [ ] Ghost Text / Inline Auto-Completion (Tier 1)
+- [ ] Semantic Vault RAG (`/search`) (Tier 1)
+- [ ] Conversation Branching (Tier 1)
+
+### Week 2 (May 27-June 2): Advanced Features
+- [ ] Token Usage Dashboard (Tier 2)
+- [ ] Conversation Search (Cmd+F) (Tier 2)
+- [ ] Persona Templates (Tier 2)
+
+### Week 3 (June 3-9): Polish & Refinement
+- [ ] Export Conversations (Tier 3)
+- [ ] Session Tools (Tier 3)
+- [ ] Testing and documentation
+
+---
+
+## Notes
+
+- All features should follow Zotero Hermes coding conventions
+- TypeScript strict mode must be maintained
+- Security considerations: approval system for note modifications
+- Test across different Zotero versions (9.0.0+)
+- Update `manifest.json` version after each major feature
+- Consider using Zotero's existing search infrastructure for RAG
+- Zotero's editor API may require different approach than Obsidian's CodeMirror 6
+
+---
+
 ## Phase 4: Preferences & Settings (Week 4: Jun 9-15)
 
 ### ⚪ Future - Preferences Panel

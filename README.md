@@ -1,24 +1,174 @@
-# Zotero Plugin Template
+# Zotero Hermes Plugin
 
-[![zotero target version](https://img.shields.io/badge/Zotero-7-green?style=flat-square&logo=zotero&logoColor=CC2936)](https://www.zotero.org)
-[![Using Zotero Plugin Template](https://img.shields.io/badge/Using-Zotero%20Plugin%20Template-blue?style=flat-square&logo=github)](https://github.com/windingwind/zotero-plugin-template)
+[![Zotero 9+](https://img.shields.io/badge/Zotero-9-green?style=flat-square&logo=zotero&logoColor=CC2936)](https://www.zotero.org/)
+[![Hermes Agent](https://img.shields.io/badge/Hermes-Agent-blue?style=flat-square)](https://github.com/NousResearch/hermes-agent)
 
-This is a plugin template for [Zotero](https://www.zotero.org/).
+**Bring the power of the Hermes autonomous AI agent directly into your Zotero research library.**
 
-[English](README.md) | [简体中文](doc/README-zhCN.md) | [Français](doc/README-frFR.md)
+## ✨ Features
 
-- Documentation for plugins development
-  - [📖 Plugin Development Documentation](https://zotero-chinese.com/plugin-dev-guide/) (Chinese, not yet complete)
-  - [📖 Plugin Development Documentation for Zotero 7](https://www.zotero.org/support/dev/zotero_7_for_developers)
-- Tools for plugins development
-  - [🛠️ Zotero Plugin Toolkit](https://github.com/windingwind/zotero-plugin-toolkit) | [API Documentation](https://github.com/windingwind/zotero-plugin-toolkit/blob/master/docs/zotero-plugin-toolkit.md)
-  - [🛠️ Zotero Plugin Scaffold](https://github.com/northword/zotero-plugin-scaffold)
-  - [ℹ️ Zotero Type Definitions](https://github.com/windingwind/zotero-types)
-  - [📜 Zotero Source Code](https://github.com/zotero/zotero)
-  - [📌 Zotero Plugin Template](https://github.com/windingwind/zotero-plugin-template) (This repo)
+### 🧠 AI-Powered Research Assistant
 
-> [!tip]
-> 👁 Watch this repo so that you can be notified whenever there are fixes & updates.
+- Chat with Hermes about your papers, notes, and research topics
+- Get instant summaries and insights from your Zotero library
+- Ask questions about specific items or collections
+
+### 📝 Smart Note Integration
+
+- Create and edit Zotero notes with AI assistance
+- Auto-generate summaries of papers
+- Extract key findings and methodologies
+
+### 📚 PDF Annotation Support (Planned)
+
+- Read and analyze PDF annotations
+- Generate annotation summaries
+- Connect annotations across papers
+
+### 🔍 Context-Aware Responses
+
+- Attach selected items to conversations
+- Search your library for relevant papers
+- RAG (Retrieval-Augmented Generation) from your notes
+
+### 🛡️ Security First
+
+- Approval system for all note modifications
+- Secure API key storage
+- Local execution option (no cloud required)
+
+### 🔌 Flexible Connection
+
+- **Local Mode**: Run Hermes on your computer via ACP protocol
+- **Remote Mode**: Connect to a remote Hermes server
+- **MCP Support**: Extend capabilities with custom tools
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+1. **Zotero 9** or later
+2. **Hermes Agent** installed locally (for local mode) OR access to a Hermes server (for remote mode)
+
+### Installation
+
+1. Download the latest `.xpi` file from the [releases page](https://github.com/NousResearch/zotero-hermes/releases)
+2. In Zotero, go to `Tools → Add-ons`
+3. Click the gear icon → `Install Add-on From File`
+4. Select the downloaded `.xpi` file
+5. Restart Zotero
+
+### Configuration
+
+1. Go to `Edit → Preferences → Hermes Agent`
+2. Choose your connection mode:
+   - **Local**: Enter the path to your Hermes binary (e.g., `/usr/local/bin/hermes`)
+   - **Remote**: Enter your server URL and API key
+3. Click `Test Connection` to verify
+
+### Usage
+
+1. Click the Hermes icon in the Zotero toolbar
+2. The sidebar will open with the chat interface
+3. Select items in your library to add them as context
+4. Ask questions or request assistance
+5. Approve any suggested changes before they're applied
+
+## 💡 Example Use Cases
+
+- **"Summarize this paper"** - Get a concise summary of selected items
+- **"Find related papers"** - Discover connections in your library
+- **"Extract methodologies"** - Compare methods across multiple papers
+- **"Generate citations"** - Format citations in various styles
+- **"Write literature review"** - Draft sections based on your readings
+
+## 🏗️ Architecture
+
+```
+┌─────────────────┐
+│  Zotero UI      │
+│  (Sidebar)      │
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│  ChatManager    │
+│  (State Mgmt)   │
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│  HermesClient   │
+│  (ACP/API)      │
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│  Hermes Agent   │
+│  (Local/Remote) │
+└─────────────────┘
+```
+
+## 🛠️ Development
+
+### Prerequisites
+
+- Node.js 18+
+- npm or pnpm
+- Zotero 9 beta
+
+### Setup
+
+```bash
+git clone https://github.com/NousResearch/zotero-hermes.git
+cd zotero-hermes
+npm install
+npm start
+```
+
+This will:
+
+1. Install dependencies
+2. Start the development server
+3. Auto-reload Zotero with the plugin
+
+### Building
+
+```bash
+npm run build
+```
+
+The built `.xpi` file will be in the `dist/` folder.
+
+### Testing
+
+```bash
+npm test
+```
+
+## 📖 Documentation
+
+- [Plugin Development Guide](https://windingwind.github.io/doc-for-zotero-plugin-dev/)
+- [Hermes Agent Docs](https://hermes-agent.nousresearch.com/docs/)
+- [Zotero Plugin Toolkit API](https://github.com/windingwind/zotero-plugin-toolkit)
+
+## 🔒 Security
+
+- All note modifications require explicit approval
+- API keys are stored securely in Zotero preferences
+- Local mode keeps all data on your computer
+- MCP servers should only be added from trusted sources
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read our [contributing guidelines](CONTRIBUTING.md) first.
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+## 🙏 Acknowledgments
+
+- Built with [Zotero Plugin Template](https://github.com/windingwind/zotero-plugin-template)
+- Uses [Zotero Plugin Toolkit](https://github.com/windingwind/zotero-plugin-toolkit)
+- Powered by [Hermes Agent](https://github.com/NousResearch/hermes-agent)
 
 ## Plugins built with this template
 

@@ -1,10 +1,10 @@
-startup-begin = Addon is loading
-startup-finish = Addon is ready
-menuitem-label = Addon Template: Helper Examples
-menupopup-label = Addon Template: Menupopup
-menuitem-submenulabel = Addon Template
-menuitem-filemenulabel = Addon Template: File Menuitem
-prefs-title = Template
+startup-begin = Hermes Agent is loading
+startup-finish = Hermes Agent is ready
+menuitem-label = Hermes Agent: Helper Examples
+menupopup-label = Hermes Agent: Menupopup
+menuitem-submenulabel = Hermes Agent
+menuitem-filemenulabel = Hermes Agent: File Menuitem
+prefs-title = Hermes Agent
 prefs-table-title = Title
 prefs-table-detail = Detail
 tabpanel-lib-tab-label = Lib Tab

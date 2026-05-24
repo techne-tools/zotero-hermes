@@ -1,0 +1,312 @@
+/* Hermes Sidebar Styles */
+
+.hermes-chat-container {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--zotero-background-primary);
+  overflow: hidden;
+}
+
+#hermes-messages-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hermes-message {
+  padding: 12px;
+  border-radius: 8px;
+  max-width: 85%;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hermes-message-user {
+  align-self: flex-end;
+  background-color: var(--zotero-accent-color, #4a90d9);
+  color: white;
+}
+
+.hermes-message-assistant {
+  align-self: flex-start;
+  background-color: var(--zotero-background-secondary);
+  border: 1px solid var(--zotero-border-color);
+}
+
+.hermes-message-system {
+  align-self: center;
+  background-color: var(--zotero-background-tertiary);
+  font-style: italic;
+  font-size: 0.9em;
+}
+
+.hermes-message-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.85em;
+  opacity: 0.8;
+}
+
+.hermes-message-content {
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.hermes-input-container {
+  padding: 12px;
+  border-top: 1px solid var(--zotero-border-color);
+  background-color: var(--zotero-background-secondary);
+  gap: 8px;
+}
+
+#hermes-input {
+  resize: none;
+  font-family: inherit;
+  font-size: 0.95em;
+  padding: 8px;
+  border: 1px solid var(--zotero-border-color);
+  border-radius: 6px;
+  background-color: var(--zotero-background-primary);
+  color: var(--zotero-text-primary);
+}
+
+#hermes-input:focus {
+  outline: 2px solid var(--zotero-accent-color);
+  border-color: transparent;
+}
+
+.hermes-btn-primary {
+  padding: 8px 16px;
+  background-color: var(--zotero-accent-color, #4a90d9);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.hermes-btn-primary:hover {
+  background-color: var(--zotero-accent-color-hover, #3a7bc8);
+}
+
+.hermes-btn-primary:disabled {
+  background-color: var(--zotero-background-tertiary);
+  cursor: not-allowed;
+}
+
+.hermes-status-bar {
+  padding: 6px 12px;
+  border-top: 1px solid var(--zotero-border-color);
+  background-color: var(--zotero-background-secondary);
+  font-size: 0.8em;
+  color: var(--zotero-text-secondary);
+  justify-content: space-between;
+}
+
+#hermes-connection-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#hermes-connection-status::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--zotero-text-tertiary);
+}
+
+#hermes-connection-status.connected::before {
+  background-color: #4caf50;
+}
+
+#hermes-connection-status.connecting::before {
+  background-color: #ff9800;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Markdown rendering */
+.hermes-message-content code {
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: "Consolas", "Monaco", monospace;
+  font-size: 0.9em;
+}
+
+.hermes-message-content pre {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 8px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+
+.hermes-message-content pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.hermes-message-content blockquote {
+  border-left: 3px solid var(--zotero-border-color);
+  margin: 8px 0;
+  padding-left: 12px;
+  color: var(--zotero-text-secondary);
+}
+
+/* Typing indicator */
+.hermes-typing-indicator {
+  display: flex;
+  gap: 4px;
+  padding: 8px 0 0 0;
+  align-items: center;
+}
+
+.hermes-typing-indicator span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--zotero-text-tertiary);
+  animation: typingDot 1.4s infinite ease-in-out;
+}
+
+.hermes-typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.hermes-typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typingDot {
+  0%,
+  60%,
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  30% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+}
+
+/* Error message styling */
+.hermes-message-error {
+  color: #d32f2f;
+  background-color: rgba(211, 47, 47, 0.1);
+  border: 1px solid rgba(211, 47, 47, 0.3);
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+/* Context bar */
+.hermes-context-bar {
+  padding: 8px 12px;
+  border-top: 1px solid var(--zotero-border-color);
+  background-color: var(--zotero-background-tertiary);
+  align-items: center;
+  gap: 8px;
+}
+
+.hermes-context-bar[hidden="true"] {
+  display: none;
+}
+
+.hermes-context-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+}
+
+.hermes-context-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background-color: var(--zotero-accent-color, #4a90d9);
+  color: white;
+  border-radius: 4px;
+  font-size: 0.8em;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hermes-context-item-remove {
+  cursor: pointer;
+  opacity: 0.7;
+  font-weight: bold;
+}
+
+.hermes-context-item-remove:hover {
+  opacity: 1;
+}
+
+/* Input actions */
+.hermes-input-actions {
+  padding-top: 6px;
+  align-items: center;
+}
+
+.hermes-btn-secondary {
+  padding: 4px 10px;
+  background-color: transparent;
+  color: var(--zotero-text-secondary);
+  border: 1px solid var(--zotero-border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85em;
+  transition: all 0.2s;
+}
+
+.hermes-btn-secondary:hover {
+  background-color: var(--zotero-background-tertiary);
+  color: var(--zotero-text-primary);
+}
+
+.hermes-btn-small {
+  padding: 2px 8px;
+  background-color: transparent;
+  color: var(--zotero-text-secondary);
+  border: 1px solid var(--zotero-border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75em;
+}
+
+.hermes-btn-small:hover {
+  background-color: rgba(211, 47, 47, 0.1);
+  color: #d32f2f;
+  border-color: #d32f2f;
+}

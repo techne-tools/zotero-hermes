@@ -1,3 +1,30 @@
-.makeItRed {
-  background-color: tomato;
+/* Hermes Plugin Styles */
+
+#hermes-pane {
+  background-color: var(--zotero-background-primary, #ffffff);
+  color: var(--zotero-text-color, #333333);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  /* Ensure it fills XUL parent containers */
+  -moz-box-flex: 1;
+}
+
+#hermes-pane > div {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  -moz-box-flex: 1;
+}
+
+#hermes-react-root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  -moz-box-flex: 1;
 }

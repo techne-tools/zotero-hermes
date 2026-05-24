@@ -1,28 +1,98 @@
 import { config } from "../../../package.json";
 import pkg from "../../../package.json";
-import * as acp from "@agentclientprotocol/sdk";
-import type {
-  ContentBlock,
-  SessionNotification,
-  InitializeResponse,
-  NewSessionResponse,
-} from "@agentclientprotocol/sdk/dist/schema/types.gen.js";
+
+export interface ChatSessionUpdate {
+  type:
+    | "message"
+    | "reasoning"
+    | "stop"
+    | "tool_start"
+    | "tool_progress"
+    | "tool_complete"
+    | "error"
+    | "available_commands"
+    | "terminal_output"
+    | "usage";
+  content?: string;
+  reasoning?: string;
+  toolCall?: {
+    callId: string;
+    name: string;
+    status: "complete" | "error" | "running";
+    result?: string;
+  };
+  terminal?: {
+    id: string;
+    output: string;
+    isExited?: boolean;
+  };
+  usage?: {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  };
+  availableCommands?: Array<{ description: string; name: string }>;
+}
+
+interface JsonRpcRequest {
+  jsonrpc: "2.0";
+  id: string;
+  method: string;
+  params?: Record<string, unknown>;
+}
+
+interface JsonRpcResponse {
+  jsonrpc: "2.0";
+  id?: string;
+  result?: unknown;
+  error?: { code: number; message: string; data?: unknown };
+}
+
+interface JsonRpcNotification {
+  jsonrpc: "2.0";
+  method: string;
+  params?: Record<string, unknown>;
+}
+
+const PROTOCOL_VERSION = "2025-03-18";
+
+const HERMES_BINARY_CANDIDATES = [
+  "hermes",
+  "hermes-cli",
+];
+
+const HERMES_PATH_CANDIDATES = [
+  "/usr/local/bin",
+  "/usr/bin",
+  "/opt/homebrew/bin",
+  "/opt/local/bin",
+  "~/.local/bin",
+  "~/bin",
+];
+
+export interface PromptContextItem {
+  id: string;
+  type: "note" | "selection" | "folder" | "image" | "pdf" | "item";
+  text: string;
+  data?: string;
+  mimeType?: string;
+}
 
 /**
  * Hermes Agent Client for ACP (Agent Client Protocol) connection.
- * Spawns hermes acp as a subprocess and communicates via JSON-RPC over stdio.
+ * Spawns `hermes acp` as a subprocess and communicates via JSON-RPC over stdio.
+ * Auto-discovers the binary across $PATH and common install locations.
  */
 export class HermesClient {
   private childProcess: any | null = null;
   private _isConnected = false;
-  private readonly plugin: any;
+  private readonly addon: any;
   private sessionId: string | null = null;
   private messageIdCounter = 0;
-  private pendingResponses = new Map<string, (value: unknown) => void>();
+  private pendingResponses = new Map<string, (value: JsonRpcResponse) => void>();
   private pendingErrors = new Map<string, (error: Error) => void>();
   private stdoutBuffer = "";
-  private onMessageCallback: ((text: string) => void) | null = null;
-  private onCompleteCallback: (() => void) | null = null;
+  private onUpdateCallback: ((update: ChatSessionUpdate) => void) | null = null;
   private onErrorCallback: ((error: Error) => void) | null = null;
   private onToolUpdateCallback:
     | ((
@@ -32,15 +102,18 @@ export class HermesClient {
         payload?: string,
       ) => void)
     | null = null;
-  private currentMessageText = "";
+  private onAvailableCommandsCallback:
+    | ((commands: Array<{ description: string; name: string }>) => void)
+    | null = null;
+  private reconnectAttempts = 0;
+  private readonly MAX_RECONNECT_ATTEMPTS = 5;
+  private reconnectTimeout: number | null = null;
+  private currentAllowedTools: string[] | null = null;
 
-  constructor(plugin: any) {
-    this.plugin = plugin;
+  constructor(addon: any) {
+    this.addon = addon;
   }
 
-  /**
-   * Check if the client has valid configuration.
-   */
   public isReady(): boolean {
     const hermesPath = Zotero.Prefs.get(
       `${config.prefsPrefix}.hermesBinaryPath`,
@@ -49,22 +122,17 @@ export class HermesClient {
     return Boolean(hermesPath || this.findHermesPath());
   }
 
-  /**
-   * Check if connected to the agent.
-   */
   public getIsConnected(): boolean {
     return this._isConnected;
   }
 
-  /**
-   * Get current session ID.
-   */
   public getSessionId(): string | null {
     return this.sessionId;
   }
 
   /**
    * Connect to Hermes agent via ACP protocol.
+   * Auto-discovers the binary if no explicit path is configured.
    */
   public async connect(): Promise<void> {
     if (this._isConnected) {
@@ -72,202 +140,470 @@ export class HermesClient {
     }
 
     try {
-      const hermesPath =
-        (Zotero.Prefs.get(
-          `${config.prefsPrefix}.hermesBinaryPath`,
-          true,
-        ) as string) || this.findHermesPath();
+      const hermesPath = this.resolveHermesPath();
 
       if (!hermesPath) {
         throw new Error(
-          "Hermes binary not found. Please install Hermes or set the path in preferences.",
+          "Hermes binary not found. Install Hermes or set the path in preferences.",
         );
       }
 
-      // Spawn hermes acp subprocess
-      const { spawn } = ChromeUtils.import(
+      this.addon.log(`Starting Hermes ACP from: ${hermesPath}`);
+
+      // Spawn hermes acp subprocess using Firefox childprocess.jsm
+      const { spawn } = ChromeUtils.importESModule(
         "resource://gre/modules/childprocess.jsm",
       );
       this.childProcess = spawn(hermesPath, ["acp"], {
         stdio: ["pipe", "pipe", "pipe"],
       });
 
-      // Setup communication handlers
       this.setupStdioHandlers();
 
-      // Wait for process to be ready
-      await Zotero.Promise.delay(500);
+      // Wait for process startup
+      await Zotero.Promise.delay(300);
 
-      // Initialize ACP connection
+      // Initialize ACP handshake
       await this.initializeConnection();
 
       // Create a new session
       await this.createSession();
 
       this._isConnected = true;
-      const pw = new Zotero.ProgressWindow();
-      pw.changeHeadline("Connected to Hermes Agent");
-      pw.show();
-      pw.startCloseTimer(5000);
+      this.reconnectAttempts = 0;
+
+      this.addon.log("Hermes ACP connected", { sessionId: this.sessionId });
     } catch (error) {
-      this.plugin.log("Connection failed", error);
+      this.addon.log("ACP connection failed", error);
       this.disconnect();
       throw error;
     }
   }
 
   /**
-   * Disconnect from Hermes agent.
+   * Disconnect and clean up the ACP connection.
    */
   public disconnect(): void {
+    if (this.reconnectTimeout !== null) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+
     if (this.childProcess) {
       try {
         this.childProcess.kill();
-      } catch (e) {
+      } catch {
         // Process may already be dead
       }
       this.childProcess = null;
     }
+
     this._isConnected = false;
     this.sessionId = null;
     this.stdoutBuffer = "";
+
+    // Reject all pending promises
+    for (const [, reject] of this.pendingErrors) {
+      reject(new Error("Connection closed"));
+    }
     this.pendingResponses.clear();
     this.pendingErrors.clear();
   }
 
   /**
-   * Send a prompt to Hermes and stream the response.
-   * @param text - User message text
-   * @param contextItems - Optional context items to include
-   * @param onMessage - Callback for each message chunk
-   * @param onComplete - Callback when response is complete
-   * @param onError - Callback on error
+   * Send a user message to Hermes and stream the response.
    */
   public async sendPrompt(
     text: string,
-    contextItems: Array<{ type: string; content: string }> = [],
-    onMessage: (text: string) => void,
-    onComplete: () => void,
-    onError: (error: Error) => void,
-    onToolUpdate?: (
+    contextItems: PromptContextItem[] = [],
+    options?: { allowedTools?: string[] | null },
+  ): Promise<void> {
+    if (!this._isConnected || !this.sessionId) {
+      await this.connect();
+    }
+
+    this.currentAllowedTools = options?.allowedTools ?? null;
+
+    const messageId = this.generateMessageId();
+    const promptBlocks: Array<{ type: string; text: string }> = [];
+
+    // Add context items
+    for (const item of contextItems) {
+      promptBlocks.push({ type: "text", text: `[${item.type}]: ${item.text}` });
+    }
+
+    promptBlocks.push({ type: "text", text });
+
+    const request: JsonRpcRequest = {
+      jsonrpc: "2.0",
+      id: messageId,
+      method: "session/prompt",
+      params: {
+        sessionId: this.sessionId,
+        prompt: promptBlocks,
+      },
+    };
+
+    this.writeToStdin(JSON.stringify(request) + "\n");
+  }
+
+  /**
+   * Cancel the current prompt turn.
+   */
+  public async cancel(): Promise<void> {
+    if (!this.sessionId) return;
+
+    const messageId = this.generateMessageId();
+    const request: JsonRpcRequest = {
+      jsonrpc: "2.0",
+      id: messageId,
+      method: "session/cancel",
+      params: { sessionId: this.sessionId },
+    };
+
+    this.writeToStdin(JSON.stringify(request) + "\n");
+  }
+
+  public onUpdate(callback: (update: ChatSessionUpdate) => void): () => void {
+    this.onUpdateCallback = callback;
+    return () => {
+      this.onUpdateCallback = null;
+    };
+  }
+
+  public onError(callback: (error: Error) => void): () => void {
+    this.onErrorCallback = callback;
+    return () => {
+      this.onErrorCallback = null;
+    };
+  }
+
+  public onAvailableCommands(
+    callback: (commands: Array<{ description: string; name: string }>) => void,
+  ): () => void {
+    this.onAvailableCommandsCallback = callback;
+    return () => {
+      this.onAvailableCommandsCallback = null;
+    };
+  }
+
+  public onToolUpdate(
+    callback: (
       toolCallId: string,
       title: string,
       status: string,
       payload?: string,
     ) => void,
-  ): Promise<void> {
-    if (!this._isConnected || !this.sessionId) {
-      try {
-        await this.connect();
-      } catch (error) {
-        onError(error as Error);
-        return;
-      }
-    }
-
-    this.onMessageCallback = onMessage;
-    this.onCompleteCallback = onComplete;
-    this.onErrorCallback = onError;
-    this.onToolUpdateCallback = onToolUpdate || null;
-    this.currentMessageText = "";
-
-    try {
-      // Build prompt content blocks
-      const prompt: ContentBlock[] = [];
-
-      // Add context items as resource links
-      for (const item of contextItems) {
-        prompt.push({
-          type: "text",
-          text: `[${item.type}]: ${item.content}`,
-        } as ContentBlock);
-      }
-
-      // Add user message
-      prompt.push({
-        type: "text",
-        text,
-      } as ContentBlock);
-
-      // Send prompt via ACP
-      const messageId = this.generateMessageId();
-      const request = {
-        jsonrpc: "2.0" as const,
-        id: messageId,
-        method: "session/prompt",
-        params: {
-          sessionId: this.sessionId,
-          prompt,
-        },
-      };
-
-      // Write request to stdin
-      const requestJson = JSON.stringify(request) + "\n";
-      this.writeToStdin(requestJson);
-
-      // Wait for prompt response (completion signal)
-      await this.waitForResponse(messageId);
-    } catch (error) {
-      onError(error as Error);
-    }
-  }
-
-  /**
-   * Cancel the current prompt.
-   */
-  public async cancelPrompt(): Promise<void> {
-    if (!this.sessionId) return;
-
-    const messageId = this.generateMessageId();
-    const request = {
-      jsonrpc: "2.0" as const,
-      id: messageId,
-      method: "session/cancel",
-      params: {
-        sessionId: this.sessionId,
-      },
+  ): () => void {
+    this.onToolUpdateCallback = callback;
+    return () => {
+      this.onToolUpdateCallback = null;
     };
+  }
 
-    this.writeToStdin(JSON.stringify(request) + "\n");
+  // --- Private helpers ---
+
+  /**
+   * Resolve the Hermes binary path from preferences or auto-discovery.
+   */
+  private resolveHermesPath(): string | null {
+    const configuredPath = Zotero.Prefs.get(
+      `${config.prefsPrefix}.hermesBinaryPath`,
+      true,
+    ) as string;
+
+    if (configuredPath) {
+      return configuredPath;
+    }
+
+    return this.findHermesPath();
   }
 
   /**
-   * Initialize the ACP connection.
+   * Auto-discover the Hermes binary across $PATH and common install locations.
+   */
+  private findHermesPath(): string | null {
+    // 1. Try $PATH via `which`-like search using nsIEnvironment
+    const env = (Components.classes as any)["@mozilla.org/process/environment;1"]
+      .getService((Components.interfaces as any).nsIEnvironment);
+    const pathEnv = env.get("PATH") || "";
+    const pathDirs = pathEnv.split(":");
+
+    for (const dir of pathDirs) {
+      for (const bin of HERMES_BINARY_CANDIDATES) {
+        const candidate = `${dir}/${bin}`;
+        if (this.fileExists(candidate)) {
+          return candidate;
+        }
+      }
+    }
+
+    // 2. Try common install locations
+    const homeDir = env.get("HOME") || "";
+    for (const dir of HERMES_PATH_CANDIDATES) {
+      const resolvedDir = dir.startsWith("~")
+        ? `${homeDir}${dir.slice(1)}`
+        : dir;
+      for (const bin of HERMES_BINARY_CANDIDATES) {
+        const candidate = `${resolvedDir}/${bin}`;
+        if (this.fileExists(candidate)) {
+          return candidate;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Check if a file exists and is executable.
+   */
+  private fileExists(path: string): boolean {
+    try {
+      const file = (Components.classes as any)["@mozilla.org/file/local;1"]
+        .createInstance((Components.interfaces as any).nsIFile);
+      file.initWithPath(path);
+      return file.exists() && file.isExecutable();
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Set up stdout/stderr handlers for NDJSON communication.
+   */
+  private setupStdioHandlers(): void {
+    if (!this.childProcess) return;
+
+    this.childProcess.stdout.on("data", (data: string) => {
+      this.stdoutBuffer += data;
+      this.processStdoutBuffer();
+    });
+
+    this.childProcess.stdout.on("close", () => {
+      this.addon.log("Hermes stdout closed");
+      this.handleDisconnect();
+    });
+
+    this.childProcess.stderr.on("data", (data: string) => {
+      const line = data.trim();
+      if (line) {
+        this.addon.log(`Hermes stderr: ${line}`);
+      }
+    });
+
+    this.childProcess.on("exit", (code: number | null) => {
+      this.addon.log(`Hermes process exited with code ${code}`);
+      this.handleDisconnect();
+    });
+  }
+
+  /**
+   * Process buffered stdout data, extracting complete NDJSON lines.
+   */
+  private processStdoutBuffer(): void {
+    let lineEnd = this.stdoutBuffer.indexOf("\n");
+    while (lineEnd >= 0) {
+      const line = this.stdoutBuffer.slice(0, lineEnd).trim();
+      this.stdoutBuffer = this.stdoutBuffer.slice(lineEnd + 1);
+
+      if (line) {
+        try {
+          const message = JSON.parse(line) as
+            | JsonRpcResponse
+            | JsonRpcNotification;
+          this.handleMessage(message);
+        } catch (e) {
+          this.addon.log("Failed to parse NDJSON line", line);
+        }
+      }
+
+      lineEnd = this.stdoutBuffer.indexOf("\n");
+    }
+  }
+
+  /**
+   * Handle an incoming JSON-RPC message (response or notification).
+   */
+  private handleMessage(
+    message: JsonRpcResponse | JsonRpcNotification,
+  ): void {
+    // Response with id -> resolve pending promise
+    if ("id" in message && message.id !== undefined) {
+      const resolve = this.pendingResponses.get(message.id);
+      const reject = this.pendingErrors.get(message.id);
+      if (resolve) {
+        resolve(message as JsonRpcResponse);
+        this.pendingResponses.delete(message.id);
+        this.pendingErrors.delete(message.id);
+      }
+      return;
+    }
+
+    // Notification (no id)
+    if ("method" in message) {
+      this.handleNotification(message as JsonRpcNotification);
+    }
+  }
+
+  /**
+   * Handle ACP notifications (streaming updates, tool calls, etc.).
+   */
+  private handleNotification(notification: JsonRpcNotification): void {
+    const method = notification.method;
+    const params = notification.params || {};
+
+    switch (method) {
+      case "session/update": {
+        const content = params.content as string | undefined;
+        if (content && this.onUpdateCallback) {
+          this.onUpdateCallback({ type: "message", content });
+        }
+        break;
+      }
+
+      case "session/reasoning": {
+        const reasoning = params.reasoning as string | undefined;
+        if (reasoning && this.onUpdateCallback) {
+          this.onUpdateCallback({ type: "reasoning", reasoning });
+        }
+        break;
+      }
+
+      case "session/stop": {
+        if (this.onUpdateCallback) {
+          this.onUpdateCallback({ type: "stop" });
+        }
+        break;
+      }
+
+      case "session/tool_start":
+      case "session/tool_progress":
+      case "session/tool_complete": {
+        const toolCall = params.toolCall as
+          | {
+              callId: string;
+              name: string;
+              status: "complete" | "error" | "running";
+              result?: string;
+            }
+          | undefined;
+
+        if (toolCall) {
+          const updateType = method.replace("session/", "") as
+            | "tool_start"
+            | "tool_progress"
+            | "tool_complete";
+
+          if (this.onUpdateCallback) {
+            this.onUpdateCallback({
+              type: updateType,
+              toolCall,
+            });
+          }
+
+          if (this.onToolUpdateCallback) {
+            this.onToolUpdateCallback(
+              toolCall.callId,
+              toolCall.name,
+              toolCall.status,
+              toolCall.result,
+            );
+          }
+        }
+        break;
+      }
+
+      case "session/usage": {
+        const usage = params.usage as
+          | { inputTokens: number; outputTokens: number; totalTokens: number }
+          | undefined;
+        if (usage && this.onUpdateCallback) {
+          this.onUpdateCallback({ type: "usage", usage });
+        }
+        break;
+      }
+
+      case "session/error": {
+        const errorMsg = params.message as string | undefined;
+        if (errorMsg && this.onUpdateCallback) {
+          this.onUpdateCallback({ type: "error", content: errorMsg });
+        }
+        if (errorMsg && this.onErrorCallback) {
+          this.onErrorCallback(new Error(errorMsg));
+        }
+        break;
+      }
+
+      case "session/available_commands": {
+        const commands = params.commands as
+          | Array<{ description: string; name: string }>
+          | undefined;
+        if (commands) {
+          if (this.onAvailableCommandsCallback) {
+            this.onAvailableCommandsCallback(commands);
+          }
+          if (this.onUpdateCallback) {
+            this.onUpdateCallback({
+              type: "available_commands",
+              availableCommands: commands,
+            });
+          }
+        }
+        break;
+      }
+
+      case "session/terminal_output": {
+        const terminal = params.terminal as
+          | { id: string; output: string; isExited?: boolean }
+          | undefined;
+        if (terminal && this.onUpdateCallback) {
+          this.onUpdateCallback({
+            type: "terminal_output",
+            terminal,
+          });
+        }
+        break;
+      }
+
+      default:
+        this.addon.log("Unhandled ACP notification", method, params);
+    }
+  }
+
+  /**
+   * Initialize the ACP connection with the Hermes server.
    */
   private async initializeConnection(): Promise<void> {
     const messageId = this.generateMessageId();
-    const request = {
-      jsonrpc: "2.0" as const,
+    const request: JsonRpcRequest = {
+      jsonrpc: "2.0",
       id: messageId,
       method: "initialize",
       params: {
-        protocolVersion: acp.PROTOCOL_VERSION,
+        protocolVersion: PROTOCOL_VERSION,
         clientCapabilities: {
-          fs: {
-            readTextFile: true,
-            writeTextFile: true,
-          },
+          fs: { readTextFile: true, writeTextFile: true },
         },
         clientInfo: {
           name: "zotero-hermes",
           version: pkg.version || "0.1.0",
-          title: "Hermes Agent for Zotero",
+          title: config.addonName,
         },
       },
     };
 
     this.writeToStdin(JSON.stringify(request) + "\n");
 
-    const response = (await this.waitForResponse(messageId)) as {
-      result?: InitializeResponse;
-      error?: { message: string };
-    };
+    const response = await this.waitForResponse(messageId);
 
     if (response.error) {
-      throw new Error(`ACP initialization failed: ${response.error.message}`);
+      throw new Error(
+        `ACP initialization failed: ${response.error.message}`,
+      );
     }
 
-    this.plugin.log("ACP initialized", response.result);
+    this.addon.log("ACP initialized");
   }
 
   /**
@@ -275,461 +611,92 @@ export class HermesClient {
    */
   private async createSession(): Promise<void> {
     const messageId = this.generateMessageId();
-    const request = {
-      jsonrpc: "2.0" as const,
+    const request: JsonRpcRequest = {
+      jsonrpc: "2.0",
       id: messageId,
       method: "session/new",
       params: {
-        cwd: "/tmp",
+        cwd: Zotero.getProfileDirectory?.() || "/tmp",
         mcpServers: [],
       },
     };
 
     this.writeToStdin(JSON.stringify(request) + "\n");
 
-    const response = (await this.waitForResponse(messageId)) as {
-      result?: NewSessionResponse;
-      error?: { message: string };
-    };
+    const response = await this.waitForResponse(messageId);
 
     if (response.error) {
       throw new Error(`Session creation failed: ${response.error.message}`);
     }
 
-    this.sessionId = response.result?.sessionId || null;
-    this.plugin.log("Session created", this.sessionId);
+    const result = response.result as { sessionId?: string } | undefined;
+    this.sessionId = result?.sessionId || null;
+    this.addon.log("Session created", { sessionId: this.sessionId });
   }
 
   /**
-   * Setup stdio handlers for subprocess communication.
-   */
-  private setupStdioHandlers(): void {
-    if (!this.childProcess) return;
-
-    this.childProcess.stdout.on("data", (data: Buffer) => {
-      this.handleStdout(data.toString());
-    });
-
-    this.childProcess.stderr.on("data", (data: Buffer) => {
-      const stderr = data.toString();
-      this.plugin.log("Hermes stderr", stderr);
-    });
-
-    this.childProcess.on("exit", (code: number) => {
-      this.plugin.log("Hermes process exited", code);
-      this._isConnected = false;
-      this.sessionId = null;
-    });
-  }
-
-  /**
-   * Handle stdout messages from Hermes (NDJSON parsing).
-   */
-  private handleStdout(data: string): void {
-    this.stdoutBuffer += data;
-
-    // Process complete lines (NDJSON)
-    const lines = this.stdoutBuffer.split("\n");
-    this.stdoutBuffer = lines.pop() || ""; // Keep incomplete line in buffer
-
-    for (const line of lines) {
-      if (!line.trim()) continue;
-
-      try {
-        const message = JSON.parse(line);
-        this.handleAcpMessage(message);
-      } catch (e) {
-        this.plugin.log("Failed to parse NDJSON line", line);
-      }
-    }
-  }
-
-  /**
-   * Handle parsed ACP messages.
-   */
-  private handleAcpMessage(message: any): void {
-    // Handle responses to our requests
-    if (
-      message.id !== undefined &&
-      (message.result !== undefined || message.error !== undefined)
-    ) {
-      const id = String(message.id);
-      const resolve = this.pendingResponses.get(id);
-      const reject = this.pendingErrors.get(id);
-
-      if (resolve) {
-        resolve(message);
-        this.pendingResponses.delete(id);
-        this.pendingErrors.delete(id);
-      }
-      return;
-    }
-
-    // Handle notifications (session updates)
-    if (message.method === "session/update" && message.params) {
-      this.handleSessionUpdate(message.params as SessionNotification);
-      return;
-    }
-
-    // Handle agent requests (like fs/read_text_file, request_permission)
-    if (message.id !== undefined && message.method) {
-      this.handleAgentRequest(message);
-      return;
-    }
-  }
-
-  /**
-   * Handle session update notifications (streaming content).
-   */
-  private handleSessionUpdate(params: SessionNotification): void {
-    const update = params.update;
-
-    switch (update.sessionUpdate) {
-      case "agent_message_chunk": {
-        const content = update.content;
-        if (content.type === "text" && content.text) {
-          this.currentMessageText += content.text;
-          this.onMessageCallback?.(this.currentMessageText);
-        }
-        break;
-      }
-
-      case "agent_thought_chunk": {
-        // Optionally show reasoning - for now, append to message
-        const content = update.content;
-        if (content.type === "text" && content.text) {
-          // Could be shown separately based on settings
-        }
-        break;
-      }
-
-      case "tool_call": {
-        this.plugin.log("Tool call", update.title);
-        this.onToolUpdateCallback?.(
-          update.toolCallId || "unknown",
-          update.title || "Tool",
-          "running",
-          JSON.stringify(update, null, 2),
-        );
-        break;
-      }
-
-      case "tool_call_update": {
-        this.plugin.log("Tool call update", update.toolCallId, update.status);
-        const statusMap: Record<string, string> = {
-          pending: "running",
-          in_progress: "running",
-          completed: "complete",
-          failed: "error",
-        };
-        const status = statusMap[update.status ?? ""] ?? "running";
-        this.onToolUpdateCallback?.(
-          update.toolCallId || "unknown",
-          update.title || "Tool",
-          status,
-          JSON.stringify(update, null, 2),
-        );
-        break;
-      }
-
-      case "plan": {
-        this.plugin.log("Plan update", update.entries);
-        break;
-      }
-
-      case "session_info_update": {
-        // Session metadata update
-        break;
-      }
-
-      case "usage_update": {
-        // Token usage update
-        break;
-      }
-
-      default:
-        this.plugin.log("Unknown session update", update.sessionUpdate);
-    }
-  }
-
-  /**
-   * Handle agent requests (fs operations, permissions, etc.).
-   */
-  private async handleAgentRequest(message: any): Promise<void> {
-    const { id, method, params } = message;
-
-    switch (method) {
-      case "fs/read_text_file": {
-        // For now, return empty - Zotero doesn't expose direct file system access
-        this.writeToStdin(
-          JSON.stringify({
-            jsonrpc: "2.0",
-            id,
-            result: { content: "" },
-          }) + "\n",
-        );
-        break;
-      }
-
-      case "fs/write_text_file": {
-        const { path, content } = params;
-
-        // 1. Route to NoteManager if the path represents a Zotero virtual note
-        if (
-          path.startsWith("note-") ||
-          path.endsWith(".note") ||
-          !path.includes("/")
-        ) {
-          try {
-            const notesManager = this.plugin.data?.hermes?.notes;
-            if (notesManager) {
-              const noteIDMatch = path.match(/^note-(\d+)/);
-              const noteID = noteIDMatch ? parseInt(noteIDMatch[1], 10) : null;
-              const title = path.replace(/^note-/, "").replace(/\.note$/, "");
-
-              await notesManager.writeNote(noteID, content, title);
-
-              this.writeToStdin(
-                JSON.stringify({ jsonrpc: "2.0", id, result: {} }) + "\n",
-              );
-              break;
-            }
-          } catch (err) {
-            this.plugin.log("Error writing note", err);
-            this.writeToStdin(
-              JSON.stringify({
-                jsonrpc: "2.0",
-                id,
-                error: {
-                  code: -32603,
-                  message: `Failed to write note: ${err}`,
-                },
-              }) + "\n",
-            );
-            break;
-          }
-        }
-
-        // 2. Handle physical file writes with user approval
-        const approvalDialog = this.plugin.data?.hermes?.approvalDialog;
-        if (approvalDialog) {
-          let currentContent = "";
-          try {
-            const file = Zotero.File.pathToFile(path);
-            if (file.exists()) {
-              currentContent = (Zotero.File as any).getContents(file) || "";
-            }
-          } catch (e) {
-            // Ignore read errors for new files
-          }
-
-          const result = await approvalDialog.showNoteApproval(
-            "Approve File Write",
-            currentContent,
-            content,
-            path,
-          );
-
-          if (result === "approve") {
-            try {
-              const file = Zotero.File.pathToFile(path);
-              Zotero.File.putContents(file, content);
-              this.plugin.log("File written successfully", path);
-              this.writeToStdin(
-                JSON.stringify({ jsonrpc: "2.0", id, result: {} }) + "\n",
-              );
-            } catch (err) {
-              this.plugin.log("Error writing file", err);
-              this.writeToStdin(
-                JSON.stringify({
-                  jsonrpc: "2.0",
-                  id,
-                  error: {
-                    code: -32603,
-                    message: `Failed to write file: ${err}`,
-                  },
-                }) + "\n",
-              );
-            }
-          } else if (result === "modify") {
-            // If they click "Modify", tell the agent to ask the user what needs changing!
-            this.writeToStdin(
-              JSON.stringify({
-                jsonrpc: "2.0",
-                id,
-                error: {
-                  code: -32000,
-                  message:
-                    "User requested modifications. Please ask the user what to change and try again.",
-                },
-              }) + "\n",
-            );
-          } else {
-            this.writeToStdin(
-              JSON.stringify({
-                jsonrpc: "2.0",
-                id,
-                error: { code: -32000, message: "User rejected file write" },
-              }) + "\n",
-            );
-          }
-          break;
-        }
-
-        // Fallback if no UI available
-        this.writeToStdin(
-          JSON.stringify({
-            jsonrpc: "2.0",
-            id,
-            error: { code: -32000, message: "Approval dialog not available" },
-          }) + "\n",
-        );
-        break;
-      }
-
-      case "session/request_permission": {
-        const toolCall = params.toolCall || {};
-        const title = toolCall.title || "Tool Execution";
-        const rawInput = toolCall.rawInput;
-        const options = params.options || [];
-
-        // Format description text
-        let description = `Hermes is requesting permission to execute a tool.`;
-        if (toolCall.kind) {
-          description = `Hermes is requesting permission to execute '<strong>${toolCall.kind}</strong>'.`;
-        }
-        if (toolCall.locations && toolCall.locations.length > 0) {
-          const escapedLocs = toolCall.locations
-            .map((l: any) => l.path)
-            .join(", ")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;");
-          description += `<br><br><strong>Locations:</strong> ${escapedLocs}`;
-        }
-
-        const approvalDialog = this.plugin.data?.hermes?.approvalDialog;
-        if (approvalDialog && options.length > 0) {
-          const mappedOptions = options.map((o: any) => ({
-            id: o.optionId,
-            name: o.name || o.optionId,
-          }));
-
-          const selectedOptionId = await approvalDialog.showPermissionApproval(
-            title,
-            description,
-            rawInput,
-            mappedOptions,
-          );
-
-          if (selectedOptionId) {
-            this.writeToStdin(
-              JSON.stringify({
-                jsonrpc: "2.0",
-                id,
-                result: {
-                  outcome: { outcome: "selected", optionId: selectedOptionId },
-                },
-              }) + "\n",
-            );
-            break;
-          }
-        }
-
-        // Fallback or user manually cancelled the request
-        this.plugin.log("Permission requested and rejected/cancelled", params);
-        this.writeToStdin(
-          JSON.stringify({
-            jsonrpc: "2.0",
-            id,
-            result: {
-              outcome: {
-                outcome: "cancelled",
-              },
-            },
-          }) + "\n",
-        );
-        break;
-      }
-
-      default:
-        this.plugin.log("Unknown agent request", method);
-        this.writeToStdin(
-          JSON.stringify({
-            jsonrpc: "2.0",
-            id,
-            error: {
-              code: -32601,
-              message: `Method not found: ${method}`,
-            },
-          }) + "\n",
-        );
-    }
-  }
-
-  /**
-   * Write data to the subprocess stdin.
+   * Write a JSON-RPC message to the subprocess stdin.
    */
   private writeToStdin(data: string): void {
-    if (!this.childProcess || !this.childProcess.stdin) {
+    if (!this.childProcess?.stdin) {
       throw new Error("Not connected to Hermes process");
     }
-
-    try {
-      this.childProcess.stdin.write(data);
-    } catch (error) {
-      this.plugin.log("Failed to write to stdin", error);
-      throw error;
-    }
+    this.childProcess.stdin.write(data);
   }
 
   /**
-   * Wait for a response to a request.
+   * Wait for a JSON-RPC response with the given message ID.
    */
-  private async waitForResponse(
-    messageId: string,
-    timeout = 30000,
-  ): Promise<unknown> {
+  private waitForResponse(messageId: string): Promise<JsonRpcResponse> {
     return new Promise((resolve, reject) => {
       this.pendingResponses.set(messageId, resolve);
       this.pendingErrors.set(messageId, reject);
 
-      // Timeout
+      // Timeout after 30 seconds
       setTimeout(() => {
         if (this.pendingResponses.has(messageId)) {
           this.pendingResponses.delete(messageId);
           this.pendingErrors.delete(messageId);
-          reject(
-            new Error(`Request ${messageId} timed out after ${timeout}ms`),
-          );
+          reject(new Error(`Request ${messageId} timed out`));
         }
-      }, timeout);
+      }, 30000);
     });
   }
 
   /**
-   * Generate unique message ID.
+   * Handle unexpected disconnection (process exit, stream close).
    */
-  private generateMessageId(): string {
-    return `msg-${++this.messageIdCounter}-${Date.now()}`;
-  }
+  private handleDisconnect(): void {
+    if (!this._isConnected) return;
 
-  /**
-   * Find Hermes binary in common locations.
-   */
-  private findHermesPath(): string | null {
-    const paths = [
-      "/usr/local/bin/hermes",
-      "/opt/homebrew/bin/hermes",
-      "~/.local/bin/hermes",
-    ];
+    this._isConnected = false;
+    this.sessionId = null;
 
-    for (const path of paths) {
-      const file = Zotero.File.pathToFile(path);
-      if (file.exists()) {
-        return path;
-      }
+    if (this.onErrorCallback) {
+      this.onErrorCallback(new Error("Hermes connection closed unexpectedly"));
     }
 
-    return null;
+    // Auto-reconnect with exponential backoff
+    if (this.reconnectAttempts < this.MAX_RECONNECT_ATTEMPTS) {
+      this.reconnectAttempts++;
+      const delay = Math.min(
+        1000 * Math.pow(2, this.reconnectAttempts - 1),
+        30000,
+      );
+
+      this.addon.log(
+        `Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.MAX_RECONNECT_ATTEMPTS})`,
+      );
+
+      this.reconnectTimeout = setTimeout(() => {
+        this.connect().catch((err: Error) => {
+          this.addon.log("Auto-reconnect failed", err.message);
+        });
+      }, delay) as unknown as number;
+    }
+  }
+
+  private generateMessageId(): string {
+    return `msg_${++this.messageIdCounter}_${Date.now()}`;
   }
 }

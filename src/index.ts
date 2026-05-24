@@ -2,6 +2,20 @@ import { BasicTool } from "zotero-plugin-toolkit";
 import Addon from "./addon";
 import { config } from "../package.json";
 
+// Ensure browser globals are available in Zotero sandbox for React
+const mainWindow = Zotero.getMainWindow();
+if (mainWindow) {
+  if (typeof (globalThis as any).window === "undefined") {
+    (globalThis as any).window = mainWindow;
+  }
+  if (typeof (globalThis as any).document === "undefined") {
+    (globalThis as any).document = mainWindow.document;
+  }
+  if (typeof (globalThis as any).navigator === "undefined") {
+    (globalThis as any).navigator = mainWindow.navigator;
+  }
+}
+
 const basicTool = new BasicTool();
 
 // @ts-expect-error - Plugin instance is not typed

@@ -45,9 +45,9 @@ async function updatePrefsUI() {
   // You can initialize some UI elements on prefs window
   // with addon.data.prefs.window.document
   // Or bind some events to the elements
-  const renderLock = ztoolkit.getGlobal("Zotero").Promise.defer();
+  const renderLock = addon.data.ztoolkit.getGlobal("Zotero").Promise.defer();
   if (addon.data.prefs?.window == undefined) return;
-  const tableHelper = new ztoolkit.VirtualizedTable(addon.data.prefs?.window)
+  const tableHelper = new addon.data.ztoolkit.VirtualizedTable(addon.data.prefs?.window)
     .setContainerId(`${config.addonRef}-table-container`)
     .setProp({
       id: `${config.addonRef}-prefs-table`,
@@ -70,7 +70,7 @@ async function updatePrefsUI() {
     )
     // Show a progress window when selection changes
     .setProp("onSelectionChange", (selection) => {
-      new ztoolkit.ProgressWindow(config.addonName)
+      new addon.data.ztoolkit.ProgressWindow(config.addonName)
         .createLine({
           text: `Selected line: ${addon.data.prefs?.rows
             .filter((v, i) => selection.isSelected(i))
@@ -103,7 +103,7 @@ async function updatePrefsUI() {
       renderLock.resolve();
     });
   await renderLock.promise;
-  ztoolkit.log("Preference table rendered!");
+  addon.data.ztoolkit.log("Preference table rendered!");
 }
 
 function bindPrefEvents() {
@@ -112,7 +112,7 @@ function bindPrefEvents() {
       `#zotero-prefpane-${config.addonRef}-enable`,
     )
     ?.addEventListener("command", (e: Event) => {
-      ztoolkit.log(e);
+      addon.data.ztoolkit.log(e);
       addon.data.prefs!.window.alert(
         `Successfully changed to ${(e.target as XUL.Checkbox).checked}!`,
       );
@@ -123,7 +123,7 @@ function bindPrefEvents() {
       `#zotero-prefpane-${config.addonRef}-input`,
     )
     ?.addEventListener("change", (e: Event) => {
-      ztoolkit.log(e);
+      addon.data.ztoolkit.log(e);
       addon.data.prefs!.window.alert(
         `Successfully changed to ${(e.target as HTMLInputElement).value}!`,
       );

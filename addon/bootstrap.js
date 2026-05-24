@@ -27,11 +27,25 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
   const ctx = { rootURI };
   ctx._globalThis = ctx;
 
+  // Ensure browser globals are available in sandbox for React
+  const mainWindow = Zotero.getMainWindow();
+  if (mainWindow) {
+    ctx.window = mainWindow;
+    ctx.document = mainWindow.document;
+    ctx.navigator = mainWindow.navigator;
+  }
+
   Services.scriptloader.loadSubScript(
     `${rootURI}/content/scripts/__addonRef__.js`,
     ctx,
   );
-  await Zotero.__addonInstance__.hooks.onStartup();
+  try {
+    await Zotero.__addonInstance__.hooks.onStartup();
+  } catch (e) {
+    Zotero.debug(`[Hermes] Bootstrap startup error: ${e}`);
+    Zotero.debug(`[Hermes] Stack: ${e.stack}`);
+    throw e;
+  }
 }
 
 async function onMainWindowLoad({ window }, reason) {

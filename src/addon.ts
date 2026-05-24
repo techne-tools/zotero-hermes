@@ -1,15 +1,5 @@
 import { config } from "../package.json";
 import { ColumnOptions, DialogHelper } from "zotero-plugin-toolkit";
-import { HermesClient } from "./modules/hermes/HermesClient";
-import { ChatManager } from "./modules/hermes/ChatManager";
-import { NoteManager } from "./modules/hermes/NoteManager";
-import { ItemManager } from "./modules/hermes/ItemManager";
-import { CitationManager } from "./modules/hermes/CitationManager";
-import { AnnotationManager } from "./modules/hermes/AnnotationManager";
-import { ApprovalDialog } from "./modules/hermes/ApprovalDialog";
-import { TagManager } from "./modules/hermes/TagManager";
-import { ConversationManager } from "./modules/hermes/ConversationManager";
-import { PreferencesManager } from "./modules/hermes/PreferencesManager";
 import hooks from "./hooks";
 import { createZToolkit } from "./utils/ztoolkit";
 
@@ -17,21 +7,20 @@ class Addon {
   public data: {
     alive: boolean;
     config: typeof config;
-    // Env type, see build.js
     env: "development" | "production";
     initialized?: boolean;
     ztoolkit: ZToolkit;
     hermes?: {
-      client: HermesClient;
-      chat: ChatManager;
-      notes: NoteManager;
-      items: ItemManager;
-      citations: CitationManager;
-      annotations: AnnotationManager;
-      tags: TagManager;
-      conversations: ConversationManager;
-      preferences: PreferencesManager;
-      approvalDialog: ApprovalDialog;
+      client: import("./modules/hermes/HermesClient").HermesClient;
+      chat: import("./modules/hermes/ChatManager").ChatManager;
+      notes: import("./modules/hermes/NoteManager").NoteManager;
+      items: import("./modules/hermes/ItemManager").ItemManager;
+      citations: import("./modules/hermes/CitationManager").CitationManager;
+      annotations: import("./modules/hermes/AnnotationManager").AnnotationManager;
+      tags: import("./modules/hermes/TagManager").TagManager;
+      conversations: import("./modules/hermes/ConversationManager").ConversationManager;
+      preferences: import("./modules/hermes/PreferencesManager").PreferencesManager;
+      approvalDialog: import("./modules/hermes/ApprovalDialog").ApprovalDialog;
     };
     locale?: {
       current: any;
@@ -43,9 +32,7 @@ class Addon {
     };
     dialog?: DialogHelper;
   };
-  // Lifecycle hooks
   public hooks: typeof hooks;
-  // APIs
   public api: object;
 
   constructor() {
@@ -60,12 +47,13 @@ class Addon {
     this.api = {};
   }
 
-  /**
-   * Log a message with plugin prefix.
-   */
   public log(message: string, ...data: any[]): void {
-    Zotero.debug(`[Hermes] ${message}`);
-    Zotero.log(`[Hermes] ${message}`);
+    const line = `[Hermes] ${message}`;
+    Zotero.debug(line);
+    console.log(line);
+    if (data.length) {
+      console.log(`[Hermes] data:`, data);
+    }
   }
 }
 

@@ -21,6 +21,10 @@ This skill covers:
 - File format specifications
 - External resources
 
+## Bundled Resources
+
+- `references/references.md`: External docs, types, and MCP server info
+
 ## Zotero API Quick Reference
 
 ### Items

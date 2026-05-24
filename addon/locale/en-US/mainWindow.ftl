@@ -17,16 +17,3 @@ hermes-connected = Connected
 hermes-disconnected = Disconnected
 hermes-connecting = Connecting...
 hermes-typing = Hermes is thinking...
-
-# Preferences
-prefs-title = Hermes Agent
-prefs-connection-title = Connection Settings
-prefs-connection-mode = Connection Mode
-prefs-connection-mode-local = Local (ACP)
-prefs-connection-mode-remote = Remote (API)
-prefs-hermes-path = Hermes Binary Path
-prefs-hermes-path-placeholder = /usr/local/bin/hermes
-prefs-hermes-url = API URL
-prefs-hermes-url-placeholder = http://localhost:8642
-prefs-api-key = API Key
-prefs-test-connection = Test Connection

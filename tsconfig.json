@@ -1,5 +1,11 @@
 {
   "extends": "zotero-types/entries/sandbox/",
-  "include": ["src", "typings"],
-  "exclude": ["build", "addon"]
+  "compilerOptions": {
+    "types": ["zotero-types/entries/sandbox"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "lib": ["ESNext", "DOM"]
+  },
+  "include": ["src", "typings", ".refs/zotero-pdfjs-types/types"],
+  "exclude": ["build", "addon", ".scaffold"]
 }

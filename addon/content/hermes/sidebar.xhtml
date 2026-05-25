@@ -1,13 +1,18 @@
 <linkset>
   <html:link rel="localization" href="hermes-mainWindow.ftl" />
 </linkset>
-<vbox
+<div
   id="hermes-sidebar-container"
-  flex="1"
-  xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+  style="display:flex;flex-direction:column;height:100%;flex:1;min-height:0"
 >
+  <!-- Header -->
+  <div class="hermes-header">
+    <div class="hermes-header-title">Hermes AI Chat</div>
+    <div class="hermes-header-subtitle">Ask questions about your research</div>
+  </div>
+
   <!-- Toolbar -->
-  <hbox id="hermes-toolbar" class="hermes-toolbar">
+  <div id="hermes-toolbar" class="hermes-toolbar" style="display:flex;flex-direction:row">
     <button
       id="hermes-new-conversation-btn"
       label="New Chat"
@@ -23,46 +28,51 @@
       label="Settings"
       class="hermes-btn-small"
     />
-  </hbox>
+  </div>
 
   <!-- Chat Messages Area -->
-  <vbox id="hermes-chat-messages" flex="1" class="hermes-chat-container">
-    <html:div id="hermes-messages-list"></html:div>
-  </vbox>
+  <div id="hermes-chat-messages" class="hermes-chat-container" style="display:flex;flex-direction:column;flex:1;min-height:0">
+    <div id="hermes-messages-list"></div>
+  </div>
 
   <!-- Context Bar -->
-  <hbox id="hermes-context-bar" class="hermes-context-bar" hidden="true">
-    <html:div id="hermes-context-items" class="hermes-context-items"></html:div>
+  <div id="hermes-context-bar" class="hermes-context-bar" style="display:none">
+    <div id="hermes-context-items" class="hermes-context-items"></div>
     <button
       id="hermes-clear-context-btn"
       label="Clear"
       class="hermes-btn-small"
     />
-  </hbox>
+  </div>
 
   <!-- Feature Toggles Bar -->
-  <hbox id="hermes-feature-bar" class="hermes-feature-bar">
-    <hbox align="center">
-      <checkbox id="hermes-toggle-citations" label="Citations" checked="true" />
-      <checkbox
-        id="hermes-toggle-annotations"
-        label="Annotations"
-        checked="true"
-      />
-      <checkbox id="hermes-toggle-tags" label="Tags" checked="true" />
-    </hbox>
-  </hbox>
+  <div id="hermes-feature-bar" class="hermes-feature-bar" style="display:flex;flex-direction:row">
+    <div style="display:flex;flex-direction:row;align-items:center">
+      <label class="hermes-checkbox-label">
+        <input type="checkbox" id="hermes-toggle-citations" checked="true" />
+        Citations
+      </label>
+      <label class="hermes-checkbox-label">
+        <input type="checkbox" id="hermes-toggle-annotations" checked="true" />
+        Annotations
+      </label>
+      <label class="hermes-checkbox-label">
+        <input type="checkbox" id="hermes-toggle-tags" checked="true" />
+        Tags
+      </label>
+    </div>
+  </div>
 
   <!-- Input Area -->
-  <hbox class="hermes-input-container">
-    <vbox flex="1">
-      <html:textarea
+  <div class="hermes-input-container" style="display:flex;flex-direction:row">
+    <div style="display:flex;flex-direction:column;flex:1">
+      <textarea
         id="hermes-input"
         placeholder="Ask Hermes about your research... (Type /help for commands)"
         rows="3"
-        flex="1"
-      ></html:textarea>
-      <hbox class="hermes-input-actions">
+        style="flex:1"
+      ></textarea>
+      <div class="hermes-input-actions" style="display:flex;flex-direction:row">
         <button
           id="hermes-attach-btn"
           label="Attach Selected Item"
@@ -78,14 +88,14 @@
           label="Annotate"
           class="hermes-btn-secondary"
         />
-      </hbox>
-    </vbox>
+      </div>
+    </div>
     <button id="hermes-send-btn" label="Send" class="hermes-btn-primary" />
-  </hbox>
+  </div>
 
   <!-- Status Bar -->
-  <hbox id="hermes-status-bar" class="hermes-status-bar">
-    <html:span id="hermes-connection-status">Disconnected</html:span>
-    <html:span id="hermes-token-count"></html:span>
-  </hbox>
-</vbox>
+  <div id="hermes-status-bar" class="hermes-status-bar" style="display:flex;flex-direction:row">
+    <span id="hermes-connection-status">Disconnected</span>
+    <span id="hermes-token-count"></span>
+  </div>
+</div>

@@ -102,24 +102,61 @@ export class HermesClient {
         payload?: string,
       ) => void)
     | null = null;
-  private onAvailableCommandsCallback:
-    | ((commands: Array<{ description: string; name: string }>) => void)
-    | null = null;
-  private reconnectAttempts = 0;
-  private readonly MAX_RECONNECT_ATTEMPTS = 5;
-  private reconnectTimeout: number | null = null;
-  private currentAllowedTools: string[] | null = null;
+  private currentMessageText = "";
+  private activeAbortController: AbortController | null = null;
 
   constructor(addon: any) {
     this.addon = addon;
   }
 
-  public isReady(): boolean {
+  /**
+   * Get the connection mode from preferences.
+   */
+  private getConnectionMode(): "stdio" | "http" {
+    const mode = Zotero.Prefs.get(
+      `${config.prefsPrefix}.connectionMode`,
+      true,
+    ) as string;
+    return (mode === "http" ? "http" : "stdio");
+  }
+
+  /**
+   * Get the API URL for HTTP mode.
+   */
+  private getApiUrl(): string {
+    const url =
+      (Zotero.Prefs.get(
+        `${config.prefsPrefix}.apiUrl`,
+        true,
+      ) as string) || "http://localhost:8642";
+    return url.replace(/\/$/, "");
+  }
+
+  /**
+   * Get the API key for HTTP mode.
+   */
+  private getApiKey(): string {
+    return (
+      (Zotero.Prefs.get(
+        `${config.prefsPrefix}.apiKey`,
+        true,
+      ) as string) || ""
+    );
+  }
+
+  /**
+   * Check if the client has valid configuration.
+   */
+  public async isReady(): Promise<boolean> {
+    const mode = this.getConnectionMode();
+    if (mode === "http") {
+      return Boolean(this.getApiUrl());
+    }
     const hermesPath = Zotero.Prefs.get(
       `${config.prefsPrefix}.hermesBinaryPath`,
       true,
     ) as string;
-    return Boolean(hermesPath || this.findHermesPath());
+    return Boolean(hermesPath || (await this.findHermesPath()));
   }
 
   public getIsConnected(): boolean {
@@ -131,62 +168,97 @@ export class HermesClient {
   }
 
   /**
-   * Connect to Hermes agent via ACP protocol.
-   * Auto-discovers the binary if no explicit path is configured.
+   * Connect to Hermes agent.
    */
   public async connect(): Promise<void> {
     if (this._isConnected) {
       return;
     }
 
-    try {
-      const hermesPath = this.resolveHermesPath();
+    const mode = this.getConnectionMode();
 
-      if (!hermesPath) {
-        throw new Error(
-          "Hermes binary not found. Install Hermes or set the path in preferences.",
-        );
-      }
-
-      this.addon.log(`Starting Hermes ACP from: ${hermesPath}`);
-
-      // Spawn hermes acp subprocess using Firefox childprocess.jsm
-      const { spawn } = ChromeUtils.importESModule(
-        "resource://gre/modules/childprocess.jsm",
-      );
-      this.childProcess = spawn(hermesPath, ["acp"], {
-        stdio: ["pipe", "pipe", "pipe"],
-      });
-
-      this.setupStdioHandlers();
-
-      // Wait for process startup
-      await Zotero.Promise.delay(300);
-
-      // Initialize ACP handshake
-      await this.initializeConnection();
-
-      // Create a new session
-      await this.createSession();
-
-      this._isConnected = true;
-      this.reconnectAttempts = 0;
-
-      this.addon.log("Hermes ACP connected", { sessionId: this.sessionId });
-    } catch (error) {
-      this.addon.log("ACP connection failed", error);
-      this.disconnect();
-      throw error;
+    if (mode === "http") {
+      await this.connectHttp();
+    } else {
+      await this.connectStdio();
     }
   }
 
   /**
-   * Disconnect and clean up the ACP connection.
+   * Connect via HTTP API.
+   */
+  private async connectHttp(): Promise<void> {
+    const url = this.getApiUrl();
+    if (!url) {
+      throw new Error(
+        "Hermes API URL not configured. Please set it in preferences.",
+      );
+    }
+
+    try {
+      const response = await fetch(`${url}/v1/commands`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      this._isConnected = true;
+      const pw = new Zotero.ProgressWindow();
+      pw.changeHeadline("Connected to Hermes API");
+      pw.show();
+      pw.startCloseTimer(3000);
+    } catch (error) {
+      this.plugin.log("HTTP connection failed", error);
+      throw new Error(
+        `Failed to connect to Hermes API at ${url}. Is the server running?`,
+      );
+    }
+  }
+
+  /**
+   * Connect via ACP stdio subprocess.
+   */
+  private async connectStdio(): Promise<void> {
+    const hermesPath =
+      (Zotero.Prefs.get(
+        `${config.prefsPrefix}.hermesBinaryPath`,
+        true,
+      ) as string) || (await this.findHermesPath());
+
+    if (!hermesPath) {
+      throw new Error(
+        "Hermes binary not found. Please install Hermes or set the path in preferences.",
+      );
+    }
+
+    const { Subprocess } = ChromeUtils.importESModule(
+      "resource://gre/modules/Subprocess.sys.mjs",
+    );
+    this.childProcess = await Subprocess.call({
+      command: hermesPath,
+      arguments: ["acp"],
+      stdin: "pipe",
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+
+    this._isConnected = true;
+    this.setupStdioHandlers();
+    await Zotero.Promise.delay(500);
+    await this.initializeConnection();
+    await this.createSession();
+    const pw = new Zotero.ProgressWindow();
+    pw.changeHeadline("Connected to Hermes Agent");
+    pw.show();
+    pw.startCloseTimer(5000);
+  }
+
+  /**
+   * Disconnect from Hermes agent.
    */
   public disconnect(): void {
-    if (this.reconnectTimeout !== null) {
-      clearTimeout(this.reconnectTimeout);
-      this.reconnectTimeout = null;
+    if (this.activeAbortController) {
+      this.activeAbortController.abort();
+      this.activeAbortController = null;
     }
 
     if (this.childProcess) {
@@ -211,7 +283,7 @@ export class HermesClient {
   }
 
   /**
-   * Send a user message to Hermes and stream the response.
+   * Send a prompt to Hermes and stream the response.
    */
   public async sendPrompt(
     text: string,
@@ -294,10 +366,249 @@ export class HermesClient {
       status: string,
       payload?: string,
     ) => void,
-  ): () => void {
-    this.onToolUpdateCallback = callback;
-    return () => {
-      this.onToolUpdateCallback = null;
+  ): Promise<void> {
+    if (!this._isConnected) {
+      try {
+        await this.connect();
+      } catch (error) {
+        onError(error as Error);
+        return;
+      }
+    }
+
+    this.onMessageCallback = onMessage;
+    this.onCompleteCallback = onComplete;
+    this.onErrorCallback = onError;
+    this.onToolUpdateCallback = onToolUpdate || null;
+    this.currentMessageText = "";
+
+    const mode = this.getConnectionMode();
+
+    if (mode === "http") {
+      await this.sendPromptHttp(text, contextItems, onMessage, onComplete, onError);
+    } else {
+      await this.sendPromptStdio(text, contextItems, onMessage, onComplete, onError);
+    }
+  }
+
+  /**
+   * Send prompt via HTTP API with SSE streaming.
+   */
+  private async sendPromptHttp(
+    text: string,
+    contextItems: Array<{ type: string; content: string }>,
+    onMessage: (text: string) => void,
+    onComplete: () => void,
+    onError: (error: Error) => void,
+  ): Promise<void> {
+    const url = `${this.getApiUrl()}/v1/chat/completions`;
+    const apiKey = this.getApiKey();
+
+    const messages: Array<{ role: string; content: string }> = [];
+
+    for (const item of contextItems) {
+      messages.push({
+        role: "user",
+        content: `[${item.type}]: ${item.content}`,
+      });
+    }
+
+    messages.push({ role: "user", content: text });
+
+    this.activeAbortController = new AbortController();
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+        },
+        body: JSON.stringify({
+          messages,
+          model: "hermes",
+          stream: true,
+        }),
+        signal: this.activeAbortController.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      if (!response.body) {
+        throw new Error("No response body");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read(new Uint8Array(1024));
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const data = line.slice(6);
+              if (data === "[DONE]") {
+                onComplete();
+                return;
+              }
+
+              try {
+                const parsed = JSON.parse(data);
+                const delta = parsed.choices?.[0]?.delta?.content;
+                if (delta) {
+                  this.currentMessageText += delta;
+                  onMessage(this.currentMessageText);
+                }
+              } catch (e) {
+                // Ignore parse errors for incomplete chunks
+              }
+            }
+          }
+        }
+
+        onComplete();
+      } catch (error) {
+        if ((error as Error).name === "AbortError") {
+          onComplete();
+        } else {
+          throw error;
+        }
+      }
+    } catch (error) {
+      onError(error as Error);
+    } finally {
+      this.activeAbortController = null;
+    }
+  }
+
+  /**
+   * Send prompt via ACP stdio.
+   */
+  private async sendPromptStdio(
+    text: string,
+    contextItems: Array<{ type: string; content: string }>,
+    onMessage: (text: string) => void,
+    onComplete: () => void,
+    onError: (error: Error) => void,
+  ): Promise<void> {
+    try {
+      const prompt: ContentBlock[] = [];
+
+      for (const item of contextItems) {
+        prompt.push({
+          type: "text",
+          text: `[${item.type}]: ${item.content}`,
+        } as ContentBlock);
+      }
+
+      prompt.push({
+        type: "text",
+        text,
+      } as ContentBlock);
+
+      const messageId = this.generateMessageId();
+      const request = {
+        jsonrpc: "2.0" as const,
+        id: messageId,
+        method: "session/prompt",
+        params: {
+          sessionId: this.sessionId,
+          prompt,
+        },
+      };
+
+      this.writeToStdin(JSON.stringify(request) + "\n");
+
+      // ACP session/prompt streams updates via session/update notifications.
+      // The response with matching id may or may not arrive.
+      // We detect completion by waiting for a quiet period after the last chunk.
+      await this.waitForPromptComplete(onComplete, 60000);
+    } catch (error) {
+      onError(error as Error);
+    }
+  }
+
+  /**
+   * Wait for prompt completion by monitoring streaming chunks.
+   * Calls onComplete when no chunks arrive for 5 seconds (max 60s).
+   */
+  private async waitForPromptComplete(
+    onComplete: () => void,
+    maxWaitMs = 60000,
+  ): Promise<void> {
+    return new Promise((resolve) => {
+      let completed = false;
+      let chunkTimer: ReturnType<typeof setTimeout> | null = null;
+      let hasReceivedChunk = false;
+
+      const finish = () => {
+        if (!completed) {
+          completed = true;
+          if (chunkTimer) clearTimeout(chunkTimer);
+          onComplete();
+          resolve();
+        }
+      };
+
+      // Max wait timer
+      const maxTimer = setTimeout(finish, maxWaitMs);
+
+      // Override onMessage to detect chunks
+      const originalOnMessage = this.onMessageCallback;
+      this.onMessageCallback = (text: string) => {
+        // Call original handler
+        originalOnMessage?.(text);
+
+        hasReceivedChunk = true;
+
+        // Reset completion timer on each chunk
+        if (chunkTimer) clearTimeout(chunkTimer);
+        chunkTimer = setTimeout(() => {
+          // 5 seconds of quiet = done
+          clearTimeout(maxTimer);
+          this.onMessageCallback = originalOnMessage;
+          finish();
+        }, 5000);
+      };
+
+      // Start initial 30s timer (model may take time to start responding)
+      chunkTimer = setTimeout(() => {
+        clearTimeout(maxTimer);
+        this.onMessageCallback = originalOnMessage;
+        finish();
+      }, 30000);
+    });
+  }
+
+  /**
+   * Cancel the current prompt.
+   */
+  public async cancelPrompt(): Promise<void> {
+    if (this.activeAbortController) {
+      this.activeAbortController.abort();
+      this.activeAbortController = null;
+      return;
+    }
+
+    if (!this.sessionId) return;
+
+    const messageId = this.generateMessageId();
+    const request = {
+      jsonrpc: "2.0" as const,
+      id: messageId,
+      method: "session/cancel",
+      params: {
+        sessionId: this.sessionId,
+      },
     };
   }
 
@@ -635,7 +946,398 @@ export class HermesClient {
   }
 
   /**
-   * Write a JSON-RPC message to the subprocess stdin.
+   * Setup stdio handlers for subprocess communication.
+   */
+  private setupStdioHandlers(): void {
+    if (!this.childProcess) return;
+
+    // Start stdout read loop
+    this.startStdoutReadLoop();
+
+    // Monitor process exit
+    this.childProcess.exitPromise.then(
+      (result: { exitCode: number }) => {
+        this.plugin.log("Hermes process exited", result.exitCode);
+        this._isConnected = false;
+        this.sessionId = null;
+      },
+      (error: Error) => {
+        this.plugin.log("Hermes process error", error);
+        this._isConnected = false;
+        this.sessionId = null;
+      },
+    );
+  }
+
+  /**
+   * Continuously read from stdout in a loop.
+   */
+  private async startStdoutReadLoop(): Promise<void> {
+    if (!this.childProcess || !this.childProcess.stdout) return;
+
+    try {
+      while (this._isConnected && this.childProcess) {
+        const data = await this.childProcess.stdout.readString();
+        if (data === null || data === undefined) break;
+        if (data) {
+          this.handleStdout(data);
+        }
+        // Small delay to prevent tight loop on empty reads
+        if (!data) {
+          await Zotero.Promise.delay(50);
+        }
+      }
+    } catch (error) {
+      this.plugin.log("Stdout read error", error);
+    }
+  }
+
+  /**
+   * Handle stdout messages from Hermes (NDJSON parsing).
+   */
+  private handleStdout(data: string): void {
+    this.stdoutBuffer += data;
+
+    // Process complete lines (NDJSON)
+    const lines = this.stdoutBuffer.split("\n");
+    this.stdoutBuffer = lines.pop() || ""; // Keep incomplete line in buffer
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+
+      try {
+        const message = JSON.parse(line);
+        this.handleAcpMessage(message);
+      } catch (e) {
+        this.plugin.log("Failed to parse NDJSON line", line);
+      }
+    }
+  }
+
+  /**
+   * Handle parsed ACP messages.
+   */
+  private handleAcpMessage(message: any): void {
+    // Handle responses to our requests
+    if (
+      message.id !== undefined &&
+      (message.result !== undefined || message.error !== undefined)
+    ) {
+      const id = String(message.id);
+      const resolve = this.pendingResponses.get(id);
+      const reject = this.pendingErrors.get(id);
+
+      if (resolve) {
+        resolve(message);
+        this.pendingResponses.delete(id);
+        this.pendingErrors.delete(id);
+      }
+      return;
+    }
+
+    // Handle notifications (session updates)
+    if (message.method === "session/update" && message.params) {
+      this.handleSessionUpdate(message.params as SessionNotification);
+      return;
+    }
+
+    // Handle agent requests (like fs/read_text_file, request_permission)
+    if (message.id !== undefined && message.method) {
+      this.handleAgentRequest(message);
+      return;
+    }
+  }
+
+  /**
+   * Handle session update notifications (streaming content).
+   */
+  private handleSessionUpdate(params: SessionNotification): void {
+    const update = params.update;
+
+    switch (update.sessionUpdate) {
+      case "agent_message_chunk": {
+        const content = update.content;
+        if (content.type === "text" && content.text) {
+          this.currentMessageText += content.text;
+          this.onMessageCallback?.(this.currentMessageText);
+        }
+        break;
+      }
+
+      case "agent_thought_chunk": {
+        // Optionally show reasoning - for now, append to message
+        const content = update.content;
+        if (content.type === "text" && content.text) {
+          // Could be shown separately based on settings
+        }
+        break;
+      }
+
+      case "tool_call": {
+        this.plugin.log("Tool call", update.title);
+        this.onToolUpdateCallback?.(
+          update.toolCallId || "unknown",
+          update.title || "Tool",
+          "running",
+          JSON.stringify(update, null, 2),
+        );
+        break;
+      }
+
+      case "tool_call_update": {
+        this.plugin.log("Tool call update", update.toolCallId, update.status);
+        const statusMap: Record<string, string> = {
+          pending: "running",
+          in_progress: "running",
+          completed: "complete",
+          failed: "error",
+        };
+        const status = statusMap[update.status ?? ""] ?? "running";
+        this.onToolUpdateCallback?.(
+          update.toolCallId || "unknown",
+          update.title || "Tool",
+          status,
+          JSON.stringify(update, null, 2),
+        );
+        break;
+      }
+
+      case "plan": {
+        this.plugin.log("Plan update", update.entries);
+        break;
+      }
+
+      case "session_info_update": {
+        // Session metadata update
+        break;
+      }
+
+      case "usage_update": {
+        // Token usage update
+        break;
+      }
+
+      default:
+        this.plugin.log("Unknown session update", update.sessionUpdate);
+    }
+  }
+
+  /**
+   * Handle agent requests (fs operations, permissions, etc.).
+   */
+  private async handleAgentRequest(message: any): Promise<void> {
+    const { id, method, params } = message;
+
+    switch (method) {
+      case "fs/read_text_file": {
+        // For now, return empty - Zotero doesn't expose direct file system access
+        this.writeToStdin(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            id,
+            result: { content: "" },
+          }) + "\n",
+        );
+        break;
+      }
+
+      case "fs/write_text_file": {
+        const { path, content } = params;
+
+        // 1. Route to NoteManager if the path represents a Zotero virtual note
+        if (
+          path.startsWith("note-") ||
+          path.endsWith(".note") ||
+          !path.includes("/")
+        ) {
+          try {
+            const notesManager = this.plugin.data?.hermes?.notes;
+            if (notesManager) {
+              const noteIDMatch = path.match(/^note-(\d+)/);
+              const noteID = noteIDMatch ? parseInt(noteIDMatch[1], 10) : null;
+              const title = path.replace(/^note-/, "").replace(/\.note$/, "");
+
+              await notesManager.writeNote(noteID, content, title);
+
+              this.writeToStdin(
+                JSON.stringify({ jsonrpc: "2.0", id, result: {} }) + "\n",
+              );
+              break;
+            }
+          } catch (err) {
+            this.plugin.log("Error writing note", err);
+            this.writeToStdin(
+              JSON.stringify({
+                jsonrpc: "2.0",
+                id,
+                error: {
+                  code: -32603,
+                  message: `Failed to write note: ${err}`,
+                },
+              }) + "\n",
+            );
+            break;
+          }
+        }
+
+        // 2. Handle physical file writes with user approval
+        const approvalDialog = this.plugin.data?.hermes?.approvalDialog;
+        if (approvalDialog) {
+          let currentContent = "";
+          try {
+            const file = Zotero.File.pathToFile(path);
+            if (file.exists()) {
+              currentContent = (Zotero.File as any).getContents(file) || "";
+            }
+          } catch (e) {
+            // Ignore read errors for new files
+          }
+
+          const result = await approvalDialog.showNoteApproval(
+            "Approve File Write",
+            currentContent,
+            content,
+            path,
+          );
+
+          if (result === "approve") {
+            try {
+              const file = Zotero.File.pathToFile(path);
+              Zotero.File.putContents(file, content);
+              this.plugin.log("File written successfully", path);
+              this.writeToStdin(
+                JSON.stringify({ jsonrpc: "2.0", id, result: {} }) + "\n",
+              );
+            } catch (err) {
+              this.plugin.log("Error writing file", err);
+              this.writeToStdin(
+                JSON.stringify({
+                  jsonrpc: "2.0",
+                  id,
+                  error: {
+                    code: -32603,
+                    message: `Failed to write file: ${err}`,
+                  },
+                }) + "\n",
+              );
+            }
+          } else if (result === "modify") {
+            // If they click "Modify", tell the agent to ask the user what needs changing!
+            this.writeToStdin(
+              JSON.stringify({
+                jsonrpc: "2.0",
+                id,
+                error: {
+                  code: -32000,
+                  message:
+                    "User requested modifications. Please ask the user what to change and try again.",
+                },
+              }) + "\n",
+            );
+          } else {
+            this.writeToStdin(
+              JSON.stringify({
+                jsonrpc: "2.0",
+                id,
+                error: { code: -32000, message: "User rejected file write" },
+              }) + "\n",
+            );
+          }
+          break;
+        }
+
+        // Fallback if no UI available
+        this.writeToStdin(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            id,
+            error: { code: -32000, message: "Approval dialog not available" },
+          }) + "\n",
+        );
+        break;
+      }
+
+      case "session/request_permission": {
+        const toolCall = params.toolCall || {};
+        const title = toolCall.title || "Tool Execution";
+        const rawInput = toolCall.rawInput;
+        const options = params.options || [];
+
+        // Format description text
+        let description = `Hermes is requesting permission to execute a tool.`;
+        if (toolCall.kind) {
+          description = `Hermes is requesting permission to execute '<strong>${toolCall.kind}</strong>'.`;
+        }
+        if (toolCall.locations && toolCall.locations.length > 0) {
+          const escapedLocs = toolCall.locations
+            .map((l: any) => l.path)
+            .join(", ")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+          description += `<br><br><strong>Locations:</strong> ${escapedLocs}`;
+        }
+
+        const approvalDialog = this.plugin.data?.hermes?.approvalDialog;
+        if (approvalDialog && options.length > 0) {
+          const mappedOptions = options.map((o: any) => ({
+            id: o.optionId,
+            name: o.name || o.optionId,
+          }));
+
+          const selectedOptionId = await approvalDialog.showPermissionApproval(
+            title,
+            description,
+            rawInput,
+            mappedOptions,
+          );
+
+          if (selectedOptionId) {
+            this.writeToStdin(
+              JSON.stringify({
+                jsonrpc: "2.0",
+                id,
+                result: {
+                  outcome: { outcome: "selected", optionId: selectedOptionId },
+                },
+              }) + "\n",
+            );
+            break;
+          }
+        }
+
+        // Fallback or user manually cancelled the request
+        this.plugin.log("Permission requested and rejected/cancelled", params);
+        this.writeToStdin(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            id,
+            result: {
+              outcome: {
+                outcome: "cancelled",
+              },
+            },
+          }) + "\n",
+        );
+        break;
+      }
+
+      default:
+        this.plugin.log("Unknown agent request", method);
+        this.writeToStdin(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            id,
+            error: {
+              code: -32601,
+              message: `Method not found: ${method}`,
+            },
+          }) + "\n",
+        );
+    }
+  }
+
+  /**
+   * Write data to the subprocess stdin.
    */
   private writeToStdin(data: string): void {
     if (!this.childProcess?.stdin) {
@@ -669,11 +1371,44 @@ export class HermesClient {
   private handleDisconnect(): void {
     if (!this._isConnected) return;
 
-    this._isConnected = false;
-    this.sessionId = null;
+  /**
+   * Find Hermes binary in common locations.
+   */
+  private async findHermesPath(): Promise<string | null> {
+    const { Subprocess } = ChromeUtils.importESModule(
+      "resource://gre/modules/Subprocess.sys.mjs",
+    );
 
-    if (this.onErrorCallback) {
-      this.onErrorCallback(new Error("Hermes connection closed unexpectedly"));
+    try {
+      // Try to find hermes in PATH
+      const path = await Subprocess.pathSearch("hermes");
+      if (path) {
+        return path;
+      }
+    } catch (e) {
+      // Not found in PATH, try common locations
+    }
+
+    // Get home directory from environment
+    const env = Subprocess.getEnvironment();
+    const home = env.HOME || env.USERPROFILE || "";
+
+    const paths = [
+      "/usr/local/bin/hermes",
+      "/opt/homebrew/bin/hermes",
+      ...(home ? [`${home}/.local/bin/hermes`] : []),
+      ...(home ? [`${home}/bin/hermes`] : []),
+    ];
+
+    for (const path of paths) {
+      try {
+        const file = Zotero.File.pathToFile(path);
+        if (file.exists()) {
+          return path;
+        }
+      } catch (e) {
+        // Path doesn't exist
+      }
     }
 
     // Auto-reconnect with exponential backoff

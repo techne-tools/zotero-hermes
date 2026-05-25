@@ -1,5 +1,59 @@
 /* Hermes Sidebar Styles */
 
+/* Full-pane tab layout */
+#hermes-sidebar-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  flex: 1;
+  min-height: 0;
+  background-color: var(--zotero-background-primary);
+}
+
+/* Header area */
+.hermes-header {
+  padding: 16px 12px 8px;
+  border-bottom: 1px solid var(--zotero-border-color);
+  background-color: var(--zotero-background-primary);
+}
+
+.hermes-header-title {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: var(--zotero-text-primary);
+  margin-bottom: 2px;
+}
+
+.hermes-header-subtitle {
+  font-size: 0.85em;
+  color: var(--zotero-text-secondary);
+}
+
+/* Toolbar */
+.hermes-toolbar {
+  display: flex;
+  flex-direction: row;
+  padding: 8px 12px;
+  gap: 8px;
+  border-bottom: 1px solid var(--zotero-border-color);
+  background-color: var(--zotero-background-secondary);
+}
+
+/* Checkbox labels */
+.hermes-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85em;
+  color: var(--zotero-text-secondary);
+  cursor: pointer;
+  margin-right: 12px;
+}
+
+.hermes-checkbox-label input[type="checkbox"] {
+  margin: 0;
+}
+
 .hermes-chat-container {
   display: flex;
   flex-direction: column;
@@ -68,6 +122,8 @@
 }
 
 .hermes-input-container {
+  display: flex;
+  flex-direction: row;
   padding: 12px;
   border-top: 1px solid var(--zotero-border-color);
   background-color: var(--zotero-background-secondary);
@@ -230,6 +286,8 @@
 
 /* Context bar */
 .hermes-context-bar {
+  display: flex;
+  flex-direction: row;
   padding: 8px 12px;
   border-top: 1px solid var(--zotero-border-color);
   background-color: var(--zotero-background-tertiary);
@@ -237,8 +295,9 @@
   gap: 8px;
 }
 
-.hermes-context-bar[hidden="true"] {
-  display: none;
+.hermes-context-bar[style*="display:none"],
+.hermes-context-bar[hidden] {
+  display: none !important;
 }
 
 .hermes-context-items {
@@ -275,6 +334,8 @@
 
 /* Input actions */
 .hermes-input-actions {
+  display: flex;
+  flex-direction: row;
   padding-top: 6px;
   align-items: center;
 }

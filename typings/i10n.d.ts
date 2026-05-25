@@ -3,14 +3,10 @@
 /* eslint-disable */
 // @ts-nocheck
 export type FluentMessageId =
-  | 'hermes-connected'
-  | 'hermes-connecting'
-  | 'hermes-disconnected'
-  | 'hermes-input-placeholder'
-  | 'hermes-send'
-  | 'hermes-sidebar-title'
-  | 'hermes-title'
-  | 'hermes-typing'
+  | 'connected'
+  | 'connecting'
+  | 'disconnected'
+  | 'input-placeholder'
   | 'item-info-row-example-label'
   | 'item-section-example1-head-text'
   | 'item-section-example1-sidenav-tooltip'
@@ -28,7 +24,11 @@ export type FluentMessageId =
   | 'prefs-table-detail'
   | 'prefs-table-title'
   | 'prefs-title'
+  | 'send'
+  | 'sidebar-title'
   | 'startup-begin'
   | 'startup-finish'
   | 'tabpanel-lib-tab-label'
-  | 'tabpanel-reader-tab-label';
+  | 'tabpanel-reader-tab-label'
+  | 'title'
+  | 'typing';

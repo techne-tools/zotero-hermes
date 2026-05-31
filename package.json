@@ -22,6 +22,7 @@
   "license": "MIT",
   "scripts": {
     "start": "zotero-plugin serve",
+    "serve": "zotero-plugin serve",
     "build": "zotero-plugin build && tsc --noEmit",
     "lint:check": "prettier --check . && eslint .",
     "lint:fix": "prettier --write . && eslint . --fix",

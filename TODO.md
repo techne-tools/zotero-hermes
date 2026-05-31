@@ -1,9 +1,10 @@
 # Zotero Hermes Plugin — Full Rework TODO
 
 **Created:** 21 May 2026  
+**Updated:** 30 May 2026  
 **Target Version:** 0.1.0 (Alpha)  
 **Platform:** Zotero 9.0.0+  
-**Status:** � Core Features Complete — Advanced Features In Progress
+**Status:** ✅ Core Infrastructure Complete — API Mode & Preferences UI Added
 
 ---
 
@@ -40,6 +41,15 @@
   - [x] Implement message ID tracking and correlation
   - [x] Auto-reconnect with exponential backoff
 
+- [x] **Add API Server Mode (Alternative to ACP)**
+  - [x] Create `HermesApiClient.ts` — REST API client with SSE streaming
+  - [x] OpenAI-compatible `/v1/chat/completions` endpoint support
+  - [x] Bearer token authentication via `Authorization` header
+  - [x] Auto-reconnect with exponential backoff
+  - [x] Compatible with `hermes gateway` (port 8642)
+  - [x] Same public interface as `HermesClient` (ACP) — UI doesn't need to know which is active
+  - File: `src/modules/hermes/HermesApiClient.ts`
+
 - [x] Implement Basic Chat Flow
   - [x] Connect send button to HermesClient
   - [x] Stream responses to UI in real-time
@@ -51,7 +61,26 @@
   - [x] Add comprehensive error boundaries
   - [x] Implement retry logic for failed connections
   - [x] Add user-friendly error messages
-  - [ ] Setup debug logging system
+  - [x] Setup debug logging system
+
+### Bug Fixes (30 May 2026)
+
+- [x] **Fix textarea input in Zotero sandbox**
+  - React synthetic `onChange` doesn't work in Zotero's sandboxed Firefox
+  - Solution: Native DOM `input` event listener + `defaultValue` instead of `value`
+  - File: `src/views/HermesChatView.tsx`
+
+- [x] **Fix ACP connection timeout**
+  - Missing `stdin: "pipe"`, `stdout: "pipe"`, `stderr: "pipe"` in Subprocess.call
+  - `writeToStdin` was synchronous but Firefox Subprocess requires async
+  - `session/new` param was `cwd` but should be `workdir`
+  - File: `src/modules/hermes/HermesClient.ts`
+
+- [x] **Fix dark/light theming**
+  - XUL documents don't support `textContent`/`innerHTML` on `<style>` elements
+  - Solution: CSSOM `sheet.insertRule()` + inline styles on container + `color-scheme` CSS property
+  - Three detection methods: `matchMedia`, computed `main-window` background, document class/attr
+  - File: `src/views/HermesChatView.tsx`
 
 ---
 
@@ -202,7 +231,16 @@
 
 ## Rework Notes
 
-- All features must follow Zotero Hermes coding conventions
+### 30 May 2026 — Major Bug Fixes & API Mode
+
+- **Textarea input fixed**: React `onChange` doesn't work in Zotero's sandboxed Firefox. Used native DOM `input` event + `defaultValue`.
+- **ACP connection fixed**: Added missing `stdin/stdout/stderr: "pipe"`, made `writeToStdin` async, corrected `workdir` param name.
+- **Theming fixed**: XUL documents don't support `textContent` on `<style>` elements. Used CSSOM `sheet.insertRule()` + inline styles + `color-scheme` property.
+- **API Server mode added**: New `HermesApiClient.ts` connects to `hermes gateway` via HTTP `/v1/chat/completions` with SSE streaming. Same interface as ACP client.
+- **Preferences UI added**: Full settings panel with connection mode dropdown, dynamic fields for binary path / API URL / API key, and general settings toggles.
+
+All features must follow Zotero Hermes coding conventions.
+
 - TypeScript strict mode must be maintained
 - Security considerations: approval system for note modifications
 - Test across different Zotero versions (9.0.0+)
@@ -214,27 +252,21 @@
 
 ## Phase 4: Preferences & Settings (Week 4: Jun 9-15)
 
-### ⚪ Future - Preferences Panel
+### ✅ Completed - Preferences Panel (30 May 2026)
 
-- [ ] **Connection Settings**
-  - [ ] Create preferences.xhtml panel
-  - [ ] Connection mode selector (Local/Remote)
-  - [ ] Hermes binary path input with file picker
-  - [ ] API URL and key inputs (remote mode)
-  - [ ] Test connection button with status
-  - **Estimated:** 2 days
-  - **Dependencies:** None
-  - **Status:** Not started
+- [x] **Connection Settings**
+  - [x] Create preferences.xhtml panel
+  - [x] Connection mode selector (ACP stdio / API HTTP)
+  - [x] Hermes binary path input
+  - [x] API URL and key inputs (API mode)
+  - [x] Dynamic show/hide fields based on connection mode
+  - Files: `addon/content/preferences.xhtml`, `src/modules/preferenceScript.ts`
 
-- [ ] **Chat Settings**
-  - [ ] Show reasoning toggle
-  - [ ] Show tool use toggle
-  - [ ] Typing sound effects toggle
-  - [ ] Conversation save location
-  - [ ] Organization mode (flat/by-date)
-  - **Estimated:** 2 days
-  - **Dependencies:** Preferences panel
-  - **Status:** Not started
+- [x] **Chat Settings**
+  - [x] Show reasoning toggle
+  - [x] Auto-save toggle
+  - [x] Enable citations/annotations/tags toggles
+  - File: `addon/content/preferences.xhtml`
 
 - [ ] **Security Settings**
   - [ ] Auto-approve threshold (e.g., small edits)

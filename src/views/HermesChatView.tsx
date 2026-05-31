@@ -61,7 +61,31 @@ function stripAnsi(text: string): string {
     .replace(/\x1b\x1b/g, "");
 }
 
+/**
+ * Determine if a CSS color value represents a dark color.
+ */
+function isDarkColor(color: string): boolean {
+  // Parse rgb/rgba
+  const rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if (rgbMatch) {
+    const r = parseInt(rgbMatch[1], 10);
+    const g = parseInt(rgbMatch[2], 10);
+    const b = parseInt(rgbMatch[3], 10);
+    // Perceived brightness formula
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    return brightness < 128;
+  }
+  // Named colors: treat transparent as light
+  if (color === "transparent" || color === "rgba(0, 0, 0, 0)") {
+    return false;
+  }
+  // Default to light for unknown
+  return false;
+}
+
 export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
+  addon.log("HermesChatViewComponent: React component rendering");
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -83,6 +107,22 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Native DOM input listener: React synthetic onChange is unreliable in Zotero's sandboxed Firefox
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (!textarea) return;
+
+    const handleNativeInput = (e: Event) => {
+      const target = e.target as HTMLTextAreaElement;
+      setInput(target.value);
+    };
+
+    textarea.addEventListener("input", handleNativeInput);
+    return () => {
+      textarea.removeEventListener("input", handleNativeInput);
+    };
+  }, []);
 
   // Guard: Hermes modules not initialized yet
   const hermes = addon.data.hermes;
@@ -555,7 +595,7 @@ ${messages
         <div
           style={{
             padding: "8px",
-            borderBottom: "1px solid var(--zotero-border, #ccc)",
+            borderBottom: "1px solid var(--hermes-border, #ccc)",
             maxHeight: "200px",
             overflowY: "auto",
           }}
@@ -594,7 +634,7 @@ ${messages
                       background: "none",
                       border: "none",
                       cursor: "pointer",
-                      color: "var(--zotero-text, #333)",
+                      color: "inherit",
                       textDecoration: "underline",
                       padding: 0,
                       textAlign: "left",
@@ -628,7 +668,7 @@ ${messages
             alignItems: "center",
             gap: "8px",
             padding: "8px",
-            borderBottom: "1px solid var(--zotero-border, #ccc)",
+            borderBottom: "1px solid var(--hermes-border, #ccc)",
           }}
         >
           <input
@@ -652,8 +692,10 @@ ${messages
             style={{
               flex: 1,
               padding: "4px 8px",
-              border: "1px solid var(--zotero-border, #ccc)",
+              border: "1px solid var(--hermes-border, #ccc)",
               borderRadius: "4px",
+              backgroundColor: "var(--hermes-input-bg, #fff)",
+              color: "inherit",
             }}
           />
           {searchMatches.length > 0 && (
@@ -734,8 +776,7 @@ ${messages
       <div className="hermes-input-area" style={inputAreaStyle}>
         <textarea
           ref={inputRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
+          defaultValue={input}
           onKeyDown={handleKeyDown}
           placeholder="Ask Hermes about your research..."
           rows={3}
@@ -770,9 +811,9 @@ const ChatMessageItem = memo(function ChatMessageItem({
         ...messageBubbleStyle,
         alignSelf: isUser ? "flex-end" : "flex-start",
         backgroundColor: isUser
-          ? "var(--zotero-accent-color, #4a90d9)"
-          : "var(--zotero-background-secondary, #f5f5f5)",
-        color: isUser ? "white" : "inherit",
+          ? "var(--hermes-accent, #4a90d9)"
+          : "var(--hermes-bg-secondary, #f5f5f5)",
+        color: isUser ? "var(--hermes-accent-text, white)" : "inherit",
       }}
     >
       <div style={{ fontSize: "0.75em", opacity: 0.7, marginBottom: "4px" }}>
@@ -793,7 +834,8 @@ const chatViewStyle: React.CSSProperties = {
   display: "flex",
   flexDirection: "column",
   height: "100%",
-  backgroundColor: "var(--zotero-background-primary, #fff)",
+  backgroundColor: "var(--hermes-bg, #fff)",
+  color: "var(--hermes-text, #333)",
   fontFamily: "system-ui, -apple-system, sans-serif",
   fontSize: "14px",
 };
@@ -803,8 +845,8 @@ const headerStyle: React.CSSProperties = {
   justifyContent: "space-between",
   alignItems: "center",
   padding: "12px 16px",
-  borderBottom: "1px solid var(--zotero-border-color, #e0e0e0)",
-  backgroundColor: "var(--zotero-background-secondary, #fafafa)",
+  borderBottom: "1px solid var(--hermes-border, #e0e0e0)",
+  backgroundColor: "var(--hermes-bg-secondary, #fafafa)",
 };
 
 const messagesStyle: React.CSSProperties = {
@@ -832,8 +874,8 @@ const typingIndicatorStyle: React.CSSProperties = {
 const errorStyle: React.CSSProperties = {
   alignSelf: "center",
   padding: "8px 12px",
-  backgroundColor: "#ffebee",
-  color: "#c62828",
+  backgroundColor: "var(--hermes-bg-tertiary, #ffebee)",
+  color: "var(--hermes-text, #c62828)",
   borderRadius: "8px",
   fontSize: "0.9em",
 };
@@ -843,8 +885,8 @@ const contextBarStyle: React.CSSProperties = {
   justifyContent: "space-between",
   alignItems: "center",
   padding: "8px 16px",
-  backgroundColor: "var(--zotero-background-tertiary, #f0f0f0)",
-  borderTop: "1px solid var(--zotero-border-color, #e0e0e0)",
+  backgroundColor: "var(--hermes-bg-tertiary, #f0f0f0)",
+  borderTop: "1px solid var(--hermes-border, #e0e0e0)",
   fontSize: "0.85em",
 };
 
@@ -852,8 +894,8 @@ const inputAreaStyle: React.CSSProperties = {
   display: "flex",
   gap: "8px",
   padding: "12px 16px",
-  borderTop: "1px solid var(--zotero-border-color, #e0e0e0)",
-  backgroundColor: "var(--zotero-background-secondary, #fafafa)",
+  borderTop: "1px solid var(--hermes-border, #e0e0e0)",
+  backgroundColor: "var(--hermes-bg-secondary, #fafafa)",
 };
 
 const textareaStyle: React.CSSProperties = {
@@ -861,16 +903,17 @@ const textareaStyle: React.CSSProperties = {
   resize: "none",
   padding: "10px",
   borderRadius: "8px",
-  border: "1px solid var(--zotero-border-color, #ccc)",
+  border: "1px solid var(--hermes-border, #ccc)",
   fontFamily: "inherit",
   fontSize: "14px",
-  backgroundColor: "var(--zotero-background-primary, #fff)",
+  backgroundColor: "var(--hermes-input-bg, #fff)",
+  color: "inherit",
 };
 
 const sendBtnStyle: React.CSSProperties = {
   padding: "10px 20px",
-  backgroundColor: "var(--zotero-accent-color, #4a90d9)",
-  color: "white",
+  backgroundColor: "var(--hermes-accent, #4a90d9)",
+  color: "var(--hermes-accent-text, white)",
   border: "none",
   borderRadius: "8px",
   cursor: "pointer",
@@ -883,15 +926,17 @@ const iconBtnStyle: React.CSSProperties = {
   cursor: "pointer",
   fontSize: "16px",
   padding: "4px",
+  color: "inherit",
 };
 
 const smallBtnStyle: React.CSSProperties = {
   padding: "4px 8px",
   fontSize: "0.8em",
-  backgroundColor: "var(--zotero-background-primary, #fff)",
-  border: "1px solid var(--zotero-border-color, #ccc)",
+  backgroundColor: "var(--hermes-bg, #fff)",
+  border: "1px solid var(--hermes-border, #ccc)",
   borderRadius: "4px",
   cursor: "pointer",
+  color: "inherit",
 };
 
 /**
@@ -916,14 +961,168 @@ export function mountHermesChat(
     }
   }
 
-  const root = createRoot(container);
+  // Detect dark mode from OS + Zotero
+  let isDark = false;
+  const doc = container.ownerDocument;
+  try {
+    // Method 1: OS dark mode via matchMedia
+    const mq = win?.matchMedia?.("(prefers-color-scheme: dark)");
+    if (mq && mq.matches) {
+      isDark = true;
+      addonInstance.log("Hermes theme: detected dark via matchMedia");
+    }
+
+    // Method 2: Check Zotero main window background color
+    if (!isDark) {
+      const mainWindow = doc?.getElementById("main-window");
+      if (mainWindow && win) {
+        const style = win.getComputedStyle(mainWindow);
+        const bg = style?.backgroundColor || "";
+        if (isDarkColor(bg)) {
+          isDark = true;
+          addonInstance.log("Hermes theme: detected dark via main-window bg");
+        }
+      }
+    }
+
+    // Method 3: Check document element classes/attributes
+    if (!isDark && doc?.documentElement) {
+      const htmlClass = doc.documentElement.className || "";
+      const htmlAttr = doc.documentElement.getAttribute("data-theme") || "";
+      if (htmlClass.includes("dark") || htmlClass.includes("theme-dark") || htmlAttr.includes("dark")) {
+        isDark = true;
+        addonInstance.log("Hermes theme: detected dark via document class/attr");
+      }
+    }
+  } catch (e) {
+    addonInstance.log(`Hermes theme detection error: ${(e as Error).message}`);
+  }
+
+  addonInstance.log(`Hermes theme: isDark=${isDark}`);
+
+  // Apply theme directly to container element — most reliable in XUL sandbox.
+  // CSS custom properties set via inline style are inherited by all children.
+  const theme = {
+    bg: isDark ? "#1e1e1e" : "#ffffff",
+    text: isDark ? "#f0f0f0" : "#333333",
+    border: isDark ? "rgba(255,255,255,0.18)" : "#e0e0e0",
+    bgSecondary: isDark ? "#272727" : "#fafafa",
+    bgTertiary: isDark ? "#303030" : "#f0f0f0",
+    inputBg: isDark ? "#303030" : "#ffffff",
+    accent: "#4a90d9",
+    accentText: "#ffffff",
+  };
+
+  container.style.setProperty("--hermes-bg", theme.bg);
+  container.style.setProperty("--hermes-text", theme.text);
+  container.style.setProperty("--hermes-border", theme.border);
+  container.style.setProperty("--hermes-bg-secondary", theme.bgSecondary);
+  container.style.setProperty("--hermes-bg-tertiary", theme.bgTertiary);
+  container.style.setProperty("--hermes-input-bg", theme.inputBg);
+  container.style.setProperty("--hermes-accent", theme.accent);
+  container.style.setProperty("--hermes-accent-text", theme.accentText);
+
+  // Explicitly set container background/color so something shows even if
+  // CSS variable inheritance fails inside the React tree.
+  container.style.backgroundColor = theme.bg;
+  container.style.color = theme.text;
+  container.style.colorScheme = isDark ? "dark" : "light";
+
+  // Inject CSS via CSSOM insertRule — the only reliable method in XUL documents
+  // where textContent/innerHTML on <style> elements don't persist.
+  if (doc) {
+    const existing = doc.getElementById("hermes-theme-style");
+    if (existing) existing.remove();
+    const styleEl = doc.createElement("style");
+    styleEl.setAttribute("id", "hermes-theme-style");
+    styleEl.setAttribute("type", "text/css");
+    const parent = doc.documentElement || doc.head || doc.body;
+    if (parent) {
+      parent.appendChild(styleEl);
+      addonInstance.log("Hermes theme: style tag appended to " + parent.nodeName);
+      // Use CSSOM to insert the rule — works in XUL where innerHTML doesn't
+      const sheet = (styleEl as any).sheet;
+      if (sheet && sheet.insertRule) {
+        const rule = `
+          #hermes-react-root {
+            --hermes-bg: ${theme.bg};
+            --hermes-text: ${theme.text};
+            --hermes-border: ${theme.border};
+            --hermes-bg-secondary: ${theme.bgSecondary};
+            --hermes-bg-tertiary: ${theme.bgTertiary};
+            --hermes-input-bg: ${theme.inputBg};
+            --hermes-accent: ${theme.accent};
+            --hermes-accent-text: ${theme.accentText};
+            background-color: ${theme.bg} !important;
+            color: ${theme.text} !important;
+            color-scheme: ${isDark ? "dark" : "light"};
+          }
+        `;
+        sheet.insertRule(rule, 0);
+        addonInstance.log("Hermes theme: CSSOM insertRule succeeded, rules=" + sheet.cssRules.length);
+      } else {
+        addonInstance.log("Hermes theme: WARNING — sheet or insertRule not available");
+      }
+    } else {
+      addonInstance.log("Hermes theme: WARNING — no parent element found for style tag");
+    }
+  }
+
+  // Listen for OS theme changes and update dynamically
+  try {
+    const mq = win?.matchMedia?.("(prefers-color-scheme: dark)");
+    if (mq) {
+      const onThemeChange = (e: MediaQueryListEvent) => {
+        addonInstance.log(`Hermes theme: OS theme changed to ${e.matches ? "dark" : "light"}`);
+        const newIsDark = e.matches;
+        const newTheme = {
+          bg: newIsDark ? "#1e1e1e" : "#ffffff",
+          text: newIsDark ? "#f0f0f0" : "#333333",
+          border: newIsDark ? "rgba(255,255,255,0.18)" : "#e0e0e0",
+          bgSecondary: newIsDark ? "#272727" : "#fafafa",
+          bgTertiary: newIsDark ? "#303030" : "#f0f0f0",
+          inputBg: newIsDark ? "#303030" : "#ffffff",
+          accent: "#4a90d9",
+          accentText: "#ffffff",
+        };
+        container.style.setProperty("--hermes-bg", newTheme.bg);
+        container.style.setProperty("--hermes-text", newTheme.text);
+        container.style.setProperty("--hermes-border", newTheme.border);
+        container.style.setProperty("--hermes-bg-secondary", newTheme.bgSecondary);
+        container.style.setProperty("--hermes-bg-tertiary", newTheme.bgTertiary);
+        container.style.setProperty("--hermes-input-bg", newTheme.inputBg);
+        container.style.backgroundColor = newTheme.bg;
+        container.style.color = newTheme.text;
+        container.style.colorScheme = newIsDark ? "dark" : "light";
+      };
+      mq.addEventListener("change", onThemeChange);
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  addonInstance.log(`Hermes theme: container innerHTML before render = "${(container.innerHTML as string).slice(0, 80)}..."`);
+
+  let root: ReturnType<typeof createRoot> | null = null;
+  try {
+    root = createRoot(container);
+    addonInstance.log("Hermes theme: createRoot succeeded");
+  } catch (err) {
+    addonInstance.log(`Hermes theme: createRoot FAILED: ${(err as Error).message}`);
+    container.innerHTML = `<div style="padding:16px;color:red">createRoot error: ${(err as Error).message}</div>`;
+    return () => {};
+  }
+
   try {
     root.render(<HermesChatViewComponent addon={addonInstance} />);
+    addonInstance.log("Hermes theme: root.render() called successfully");
   } catch (err) {
-    addonInstance.log(`React render error: ${(err as Error).message}`);
-    container.innerHTML = `<div style="padding:16px;color:red">Error loading chat: ${(err as Error).message}</div>`;
+    addonInstance.log(`Hermes theme: root.render() FAILED: ${(err as Error).message}`);
+    container.innerHTML = `<div style="padding:16px;color:red">Render error: ${(err as Error).message}</div>`;
   }
+
   return () => {
-    root.unmount();
+    addonInstance.log("Hermes theme: unmounting React root");
+    root?.unmount();
   };
 }

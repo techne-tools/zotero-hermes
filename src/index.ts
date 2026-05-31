@@ -14,6 +14,9 @@ if (mainWindow) {
   if (typeof (globalThis as any).navigator === "undefined") {
     (globalThis as any).navigator = mainWindow.navigator;
   }
+  if (typeof (globalThis as any).console === "undefined") {
+    (globalThis as any).console = mainWindow.console;
+  }
 }
 
 const basicTool = new BasicTool();

@@ -17,3 +17,8 @@ hermes-connected = Connected
 hermes-disconnected = Disconnected
 hermes-connecting = Connecting...
 hermes-typing = Hermes is thinking...
+
+hermes-section-head =
+    .label = Hermes Chat
+hermes-section-sidenav =
+    .tooltiptext = Open Hermes Chat

@@ -11,7 +11,7 @@ class Addon {
     initialized?: boolean;
     ztoolkit: ZToolkit;
     hermes?: {
-      client: import("./modules/hermes/HermesClient").HermesClient;
+      client: import("./modules/hermes/HermesClient").HermesClient | import("./modules/hermes/HermesApiClient").HermesApiClient;
       chat: import("./modules/hermes/ChatManager").ChatManager;
       notes: import("./modules/hermes/NoteManager").NoteManager;
       items: import("./modules/hermes/ItemManager").ItemManager;
@@ -50,9 +50,11 @@ class Addon {
   public log(message: string, ...data: any[]): void {
     const line = `[Hermes] ${message}`;
     Zotero.debug(line);
-    console.log(line);
-    if (data.length) {
-      console.log(`[Hermes] data:`, data);
+    if (typeof console !== "undefined") {
+      console.log(line);
+      if (data.length) {
+        console.log(`[Hermes] data:`, data);
+      }
     }
   }
 }

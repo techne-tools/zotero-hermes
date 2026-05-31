@@ -54,7 +54,7 @@ interface JsonRpcNotification {
   params?: Record<string, unknown>;
 }
 
-const PROTOCOL_VERSION = "2025-03-18";
+const PROTOCOL_VERSION = 1;
 
 const HERMES_BINARY_CANDIDATES = [
   "hermes",
@@ -116,7 +116,7 @@ export class HermesClient {
 
   public isReady(): boolean {
     const hermesPath = Zotero.Prefs.get(
-      `${config.prefsPrefix}.hermesBinaryPath`,
+      `${config.prefsPrefix}.binaryPath`,
       true,
     ) as string;
     return Boolean(hermesPath || this.findHermesPath());
@@ -150,12 +150,27 @@ export class HermesClient {
 
       this.addon.log(`Starting Hermes ACP from: ${hermesPath}`);
 
-      // Spawn hermes acp subprocess using Firefox childprocess.jsm
-      const { spawn } = ChromeUtils.importESModule(
-        "resource://gre/modules/childprocess.jsm",
+      this.addon.log(`Spawning Hermes ACP via zsh with manual .zshrc sourcing from: ${hermesPath}`);
+
+      // Spawn hermes acp subprocess using Firefox Subprocess.sys.mjs via zsh.
+      // We manually construct and export the PATH variable to include Homebrew bin paths, ensuring npx and Node are found instantly for MCP servers
+      // without sourcing ~/.zshrc which pollutes stdout with interactive terminal greetings/banners.
+      const envService = (Components.classes as any)["@mozilla.org/process/environment;1"]
+        .getService((Components.interfaces as any).nsIEnvironment);
+      const homeDir = envService.get("HOME") || "~/";
+      const customPath = `/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${homeDir}/.local/bin`;
+
+      const { Subprocess } = ChromeUtils.importESModule(
+        "resource://gre/modules/Subprocess.sys.mjs",
       );
-      this.childProcess = spawn(hermesPath, ["acp"], {
-        stdio: ["pipe", "pipe", "pipe"],
+      this.childProcess = await Subprocess.call({
+        command: "/bin/zsh",
+        arguments: ["-c", `export PATH="${customPath}:$PATH" && "${hermesPath}" acp`],
+        stdin: "pipe",
+        stdout: "pipe",
+        stderr: "pipe",
+        environment: { PYTHONUNBUFFERED: "1" },
+        environmentAppend: true,
       });
 
       this.setupStdioHandlers();
@@ -308,7 +323,7 @@ export class HermesClient {
    */
   private resolveHermesPath(): string | null {
     const configuredPath = Zotero.Prefs.get(
-      `${config.prefsPrefix}.hermesBinaryPath`,
+      `${config.prefsPrefix}.binaryPath`,
       true,
     ) as string;
 
@@ -375,26 +390,38 @@ export class HermesClient {
   private setupStdioHandlers(): void {
     if (!this.childProcess) return;
 
-    this.childProcess.stdout.on("data", (data: string) => {
-      this.stdoutBuffer += data;
-      this.processStdoutBuffer();
-    });
-
-    this.childProcess.stdout.on("close", () => {
-      this.addon.log("Hermes stdout closed");
-      this.handleDisconnect();
-    });
-
-    this.childProcess.stderr.on("data", (data: string) => {
-      const line = data.trim();
-      if (line) {
-        this.addon.log(`Hermes stderr: ${line}`);
+    const stdoutDecoder = new TextDecoder();
+    this.childProcess.stdout.onInput = (data: ArrayBuffer) => {
+      try {
+        const chunk = stdoutDecoder.decode(data);
+        if (chunk) {
+          this.stdoutBuffer += chunk;
+          this.processStdoutBuffer();
+        }
+      } catch (e) {
+        this.addon.log("Error decoding stdout chunk:", e);
       }
-    });
+    };
 
-    this.childProcess.on("exit", (code: number | null) => {
-      this.addon.log(`Hermes process exited with code ${code}`);
+    const stderrDecoder = new TextDecoder();
+    this.childProcess.stderr.onInput = (data: ArrayBuffer) => {
+      try {
+        const chunk = stderrDecoder.decode(data);
+        const line = chunk.trim();
+        if (line) {
+          this.addon.log(`Hermes stderr: ${line}`);
+        }
+      } catch (e) {
+        this.addon.log("Error decoding stderr chunk:", e);
+      }
+    };
+
+    // 3. Wait for process exit
+    this.childProcess.wait().then(({ exitCode }: { exitCode: number }) => {
+      this.addon.log(`Hermes process exited with code ${exitCode}`);
       this.handleDisconnect();
+    }).catch((e: any) => {
+      this.addon.log("Error waiting for Hermes exit:", e);
     });
   }
 
@@ -588,12 +615,11 @@ export class HermesClient {
         clientInfo: {
           name: "zotero-hermes",
           version: pkg.version || "0.1.0",
-          title: config.addonName,
         },
       },
     };
 
-    this.writeToStdin(JSON.stringify(request) + "\n");
+    await this.writeToStdin(JSON.stringify(request) + "\n");
 
     const response = await this.waitForResponse(messageId);
 
@@ -611,17 +637,19 @@ export class HermesClient {
    */
   private async createSession(): Promise<void> {
     const messageId = this.generateMessageId();
+    const path = Zotero.getProfileDirectory?.()?.path || "/tmp";
     const request: JsonRpcRequest = {
       jsonrpc: "2.0",
       id: messageId,
       method: "session/new",
       params: {
-        cwd: Zotero.getProfileDirectory?.() || "/tmp",
+        cwd: path,
+        workdir: path,
         mcpServers: [],
       },
     };
 
-    this.writeToStdin(JSON.stringify(request) + "\n");
+    await this.writeToStdin(JSON.stringify(request) + "\n");
 
     const response = await this.waitForResponse(messageId);
 
@@ -637,11 +665,16 @@ export class HermesClient {
   /**
    * Write a JSON-RPC message to the subprocess stdin.
    */
-  private writeToStdin(data: string): void {
+  private async writeToStdin(data: string): Promise<void> {
     if (!this.childProcess?.stdin) {
       throw new Error("Not connected to Hermes process");
     }
-    this.childProcess.stdin.write(data);
+    try {
+      await this.childProcess.stdin.write(data);
+    } catch (e: any) {
+      this.addon.log("Error writing to Hermes stdin:", e);
+      throw e;
+    }
   }
 
   /**
@@ -652,14 +685,14 @@ export class HermesClient {
       this.pendingResponses.set(messageId, resolve);
       this.pendingErrors.set(messageId, reject);
 
-      // Timeout after 30 seconds
+      // Timeout after 90 seconds (accommodates slow python agent MCP initialization)
       setTimeout(() => {
         if (this.pendingResponses.has(messageId)) {
           this.pendingResponses.delete(messageId);
           this.pendingErrors.delete(messageId);
           reject(new Error(`Request ${messageId} timed out`));
         }
-      }, 30000);
+      }, 90000);
     });
   }
 

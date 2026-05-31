@@ -4,14 +4,16 @@
 export class PreferencesManager {
   private readonly addon: any;
   private readonly defaults: Record<string, any> = {
-    "extensions.hermes.binaryPath": "",
-    "extensions.hermes.connectionMode": "stdio",
-    "extensions.hermes.autoSave": true,
-    "extensions.hermes.showReasoning": true,
-    "extensions.hermes.typingEffects": true,
-    "extensions.hermes.enableCitations": true,
-    "extensions.hermes.enableAnnotations": true,
-    "extensions.hermes.enableTags": true,
+    "extensions.zotero.hermes.binaryPath": "",
+    "extensions.zotero.hermes.connectionMode": "stdio",
+    "extensions.zotero.hermes.apiUrl": "",
+    "extensions.zotero.hermes.apiKey": "",
+    "extensions.zotero.hermes.autoSave": true,
+    "extensions.zotero.hermes.showReasoning": true,
+    "extensions.zotero.hermes.typingEffects": true,
+    "extensions.zotero.hermes.enableCitations": true,
+    "extensions.zotero.hermes.enableAnnotations": true,
+    "extensions.zotero.hermes.enableTags": true,
   };
 
   constructor(addon: any) {
@@ -28,17 +30,17 @@ export class PreferencesManager {
   }
 
   public get<T>(key: string, defaultValue?: T): T {
-    const fullKey = key.startsWith("extensions.hermes.")
+    const fullKey = key.startsWith("extensions.zotero.hermes.")
       ? key
-      : `extensions.hermes.${key}`;
+      : `extensions.zotero.hermes.${key}`;
     const value = Zotero.Prefs.get(fullKey);
     return value !== undefined ? (value as T) : (defaultValue as T);
   }
 
   public set<T extends string | number | boolean>(key: string, value: T): void {
-    const fullKey = key.startsWith("extensions.hermes.")
+    const fullKey = key.startsWith("extensions.zotero.hermes.")
       ? key
-      : `extensions.hermes.${key}`;
+      : `extensions.zotero.hermes.${key}`;
     Zotero.Prefs.set(fullKey, value);
   }
 

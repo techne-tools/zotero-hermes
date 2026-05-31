@@ -1,5 +1,26 @@
+if (typeof console === "undefined") {
+  const debugLog = (level: string, msg: any, args: any[]) => {
+    const formatted = `${msg} ${args.map(a => typeof a === "object" ? JSON.stringify(a) : String(a)).join(" ")}`;
+    if (typeof Zotero !== "undefined") {
+      Zotero.debug(`[Hermes-${level}] ${formatted}`);
+    }
+  };
+
+  (globalThis as any).console = {
+    log: (msg: any, ...args: any[]) => debugLog("log", msg, args),
+    warn: (msg: any, ...args: any[]) => debugLog("warn", msg, args),
+    error: (msg: any, ...args: any[]) => debugLog("error", msg, args),
+    info: (msg: any, ...args: any[]) => debugLog("info", msg, args),
+    group: () => {},
+    groupCollapsed: () => {},
+    groupEnd: () => {},
+    trace: () => {},
+  };
+}
+
 import { UIExampleFactory } from "./modules/examples";
 import { HermesClient } from "./modules/hermes/HermesClient";
+import { HermesApiClient } from "./modules/hermes/HermesApiClient";
 import { ChatManager } from "./modules/hermes/ChatManager";
 import { NoteManager } from "./modules/hermes/NoteManager";
 import { ItemManager } from "./modules/hermes/ItemManager";
@@ -33,9 +54,17 @@ async function onStartup() {
     const approvalDialog = new ApprovalDialog(addon);
     addon.log("Step 5: ApprovalDialog created");
 
-    addon.log("Step 6: Creating HermesClient...");
-    const client = new HermesClient(addon);
-    addon.log("Step 7: HermesClient created");
+    addon.log("Step 6: Creating Hermes client...");
+    const preferences = new PreferencesManager(addon);
+    const connectionMode = preferences.getConnectionMode();
+    let client;
+    if (connectionMode === "api") {
+      client = new HermesApiClient(addon);
+      addon.log("Step 7: HermesApiClient created (API mode)");
+    } else {
+      client = new HermesClient(addon);
+      addon.log("Step 7: HermesClient created (ACP/stdio mode)");
+    }
 
     addon.log("Step 8: Creating ChatManager...");
     const chat = new ChatManager(addon);
@@ -65,10 +94,6 @@ async function onStartup() {
     const conversations = new ConversationManager(addon);
     addon.log("Step 21: ConversationManager created");
 
-    addon.log("Step 22: Creating PreferencesManager...");
-    const preferences = new PreferencesManager(addon);
-    addon.log("Step 23: PreferencesManager created");
-
     addon.data.hermes = {
       client,
       chat,
@@ -82,8 +107,7 @@ async function onStartup() {
       approvalDialog,
     };
     addon.log("Step 24: Hermes modules initialized");
-
-    // Register Hermes sidebar tab for all existing windows
+        // Load FTL/Stylesheets for all existing windows
     const mainWindows = Zotero.getMainWindows();
     addon.log(`Step 25: Found ${mainWindows.length} main windows`);
     if (mainWindows.length > 0) {
@@ -103,200 +127,179 @@ async function onStartup() {
 }
 
 /**
- * Register Hermes as a proper sidebar tab with toolbar icon.
- * Creates a panel inside zotero-item-pane-content and adds a toggle button to the toolbar.
+ * Register Hermes Toolbar Toggle Button and prepare full sidebar.
  */
-function registerHermesSidebarTab(win: _ZoteroTypes.MainWindow): void {
+function registerHermesSidebar(win: _ZoteroTypes.MainWindow): void {
   try {
     const doc = win.document;
-    const contentPane = doc.getElementById("zotero-item-pane-content");
-    if (!contentPane) {
-      addon.log("Hermes: zotero-item-pane-content not found");
-      return;
+    const syncBtn = doc.getElementById("zotero-tb-sync") as any;
+    
+    if (syncBtn && !doc.getElementById("zotero-hermes-tb-chat-toggle")) {
+      const btn = doc.createXULElement("toolbarbutton") as any;
+      btn.setAttribute("id", "zotero-hermes-tb-chat-toggle");
+      btn.setAttribute("tooltiptext", "Toggle Hermes Chat");
+      btn.setAttribute("aria-label", "Toggle Hermes Chat");
+      btn.setAttribute("aria-pressed", "false");
+      btn.setAttribute("tabindex", "0");
+      btn.style.listStyleImage = "url('chrome://hermes/content/icons/hermes-sidenav.svg')";
+      btn.style.mozUserFocus = "normal";
+      
+      const separator = doc.createElement("div") as any;
+      separator.setAttribute("id", "hermes-tb-separator");
+      separator.className = "zotero-tb-separator";
+      
+      // Insert right before sync button
+      (syncBtn.parentNode as any).insertBefore(btn, syncBtn);
+      (syncBtn.parentNode as any).insertBefore(separator, syncBtn);
+      
+      // Hook toggle click action
+      btn.addEventListener("click", () => {
+        toggleHermesSidebar(win);
+      });
+
+      // Deactivate Hermes if Beaver is activated to avoid overlapping panels
+      const beaverToggle = doc.getElementById("zotero-beaver-tb-chat-toggle") as any;
+      if (beaverToggle && !beaverToggle.dataset.hermesListener) {
+        beaverToggle.addEventListener("click", () => {
+          const hermesBtn = doc.getElementById("zotero-hermes-tb-chat-toggle");
+          if (hermesBtn && hermesBtn.getAttribute("aria-pressed") === "true") {
+            toggleHermesSidebar(win);
+          }
+        });
+        beaverToggle.dataset.hermesListener = "true";
+      }
+
+      // Synchronize initial layout state on startup/load
+      if (btn.getAttribute("aria-pressed") === "true") {
+        btn.setAttribute("aria-pressed", "false");
+        toggleHermesSidebar(win);
+      }
+
+      addon.log("Hermes sidebar toggle button registered successfully");
     }
-
-    // Skip if already registered (prevents double-registration from bootstrap)
-    if (doc.getElementById("hermes-pane")) {
-      addon.log("Hermes panel already exists, skipping registration");
-      return;
-    }
-
-    // Create the Hermes panel container inside the content pane
-    const mountPoint = doc.createElement("div");
-    mountPoint.setAttribute("id", "hermes-pane");
-    mountPoint.setAttribute("hidden", "");
-    mountPoint.style.width = "100%";
-    mountPoint.style.height = "100%";
-
-    // Create inner div for React mounting
-    const reactContainer = doc.createElement("div");
-    reactContainer.setAttribute("id", "hermes-react-root");
-    reactContainer.style.width = "100%";
-    reactContainer.style.height = "100%";
-    mountPoint.appendChild(reactContainer);
-
-    contentPane.appendChild(mountPoint);
-    addon.log("Hermes panel created inside zotero-item-pane-content");
-
-    // Add toolbar button
-    addHermesToolbarButton(win);
-
-    // Defer React mount until first toggle (ensures addon.data.hermes is ready)
-    addon.log("Hermes React mount deferred until first toggle");
   } catch (error) {
-    addon.log(`Failed to register Hermes sidebar: ${(error as Error).message}`);
+    addon.log(`Failed to register Hermes sidebar toggle button: ${(error as Error).message}`);
   }
 }
 
 /**
- * Add Hermes toggle button to the Zotero toolbar.
+ * Toggle the full-height Hermes sidebar view.
  */
-function addHermesToolbarButton(win: _ZoteroTypes.MainWindow): void {
-  const doc = win.document;
-  const toolbar = doc.querySelector("#zotero-tabs-toolbar");
-  if (!toolbar) {
-    addon.log("Hermes: zotero-tabs-toolbar not found");
-    return;
-  }
-
-  // Skip if button already exists (prevents double-registration)
-  if (doc.getElementById("zotero-hermes-tb-toggle")) {
-    return;
-  }
-
-  const btn = doc.createXULElement("toolbarbutton");
-  btn.setAttribute("id", "zotero-hermes-tb-toggle");
-  btn.setAttribute("class", "zotero-tb-button");
-  btn.setAttribute("type", "button");
-  btn.setAttribute("tooltiptext", "Toggle Hermes Chat");
-  btn.setAttribute("image", `chrome://${addon.data.config.addonRef}/content/icons/favicon@0.5x.png`);
-
-  // Multiple event handlers for maximum compatibility
-  const handleToggle = (evt?: Event) => {
-    if (evt) {
-      evt.preventDefault();
-      evt.stopPropagation();
-    }
-    addon.log("Hermes button clicked/toggled");
-    toggleHermesPanel(win);
-  };
-
-  btn.addEventListener("command", handleToggle);
-  btn.addEventListener("click", handleToggle);
-  (btn as any).onclick = handleToggle;
-
-  // Insert before sync button or at end
-  const syncBtn = toolbar.querySelector("#zotero-tb-sync");
-  if (syncBtn) {
-    toolbar.insertBefore(btn, syncBtn);
-  } else {
-    toolbar.appendChild(btn);
-  }
-  addon.log("Hermes toolbar button added");
-}
-
-/**
- * Toggle the Hermes panel visibility.
- */
-function toggleHermesPanel(win: _ZoteroTypes.MainWindow): void {
-  console.log("[Hermes] toggleHermesPanel called");
-  const doc = win.document;
-  const hermesPane = doc.getElementById("hermes-pane") as HTMLElement | null;
-  const contentPane = doc.getElementById("zotero-item-pane-content");
-  const btn = doc.getElementById("zotero-hermes-tb-toggle");
-
-  addon.log(`toggleHermesPanel: hermesPane=${!!hermesPane}, contentPane=${!!contentPane}, btn=${!!btn}`);
-  if (!hermesPane || !contentPane) {
-    addon.log("toggleHermesPanel: missing elements, returning");
-    return;
-  }
-
-  const isHidden = hermesPane.hasAttribute("hidden");
-  addon.log(`toggleHermesPanel: isHidden=${isHidden}`);
-
-  if (isHidden) {
-    // Show Hermes, hide default content children
-    hermesPane.removeAttribute("hidden");
-    addon.log(`toggleHermesPanel: hermesPane hidden removed`);
-    const children = Array.from(contentPane.children);
-    addon.log(`toggleHermesPanel: contentPane has ${children.length} children`);
-    for (const child of children) {
-      if (child.id !== "hermes-pane") {
-        (child as HTMLElement).setAttribute("hidden", "");
-        addon.log(`toggleHermesPanel: hid child ${child.id || child.tagName}`);
-      } else {
-        addon.log(`toggleHermesPanel: left hermes-pane visible`);
-      }
-    }
-    if (btn) btn.setAttribute("checked", "true");
-
-    // Log dimensions for debugging
-    const rect = hermesPane.getBoundingClientRect();
-    addon.log(`Hermes pane dimensions: ${rect.width}x${rect.height}`);
-    const contentRect = contentPane.getBoundingClientRect();
-    addon.log(`Content pane dimensions: ${contentRect.width}x${contentRect.height}`);
-
-    // Mount React on first toggle (ensures addon.data.hermes is ready)
-    const reactContainer = doc.getElementById("hermes-react-root") as HTMLElement | null;
-    if (reactContainer && !reactContainer.dataset.mounted) {
-      try {
-        const unmount = mountHermesChat(reactContainer, addon);
-        reactContainer.dataset.mounted = "true";
-        (reactContainer as any)._unmount = unmount;
-        addon.log("Hermes React chat mounted on first toggle");
-      } catch (err) {
-        addon.log(`Hermes React mount error: ${(err as Error).message}`);
-      }
-    }
-
-    addon.log("Hermes panel shown");
-  } else {
-    // Hide Hermes, show default content children
-    hermesPane.setAttribute("hidden", "");
-    for (const child of Array.from(contentPane.children)) {
-      if (child.id !== "hermes-pane") {
-        (child as HTMLElement).removeAttribute("hidden");
-      }
-    }
-    if (btn) btn.removeAttribute("checked");
-    addon.log("Hermes panel hidden");
-  }
-}
-
-/**
- * Remove Hermes panel and toolbar button for cleanup.
- */
-function removeHermesSidebarTab(win: _ZoteroTypes.MainWindow): void {
+function toggleHermesSidebar(win: _ZoteroTypes.MainWindow): void {
   try {
     const doc = win.document;
-
-    // Unmount React
-    const reactContainer = doc.getElementById("hermes-react-root");
-    if (reactContainer && (reactContainer as any)._unmount) {
-      (reactContainer as any)._unmount();
-    }
-
-    // Remove panel
-    const panel = doc.getElementById("hermes-pane");
-    if (panel) panel.remove();
-
-    // Remove toolbar button
-    const btn = doc.getElementById("zotero-hermes-tb-toggle");
-    if (btn) btn.remove();
-
-    // Restore default content visibility
-    const contentPane = doc.getElementById("zotero-item-pane-content");
-    if (contentPane) {
-      for (const child of Array.from(contentPane.children)) {
-        if (child.id !== "hermes-pane") {
-          (child as HTMLElement).removeAttribute("hidden");
+    const btn = doc.getElementById("zotero-hermes-tb-chat-toggle");
+    if (!btn) return;
+    
+    const isPressed = btn.getAttribute("aria-pressed") === "true";
+    
+    const itemPane = doc.getElementById("zotero-item-pane") as any;
+    const deck = doc.getElementById("zotero-item-pane-content") as any;
+    const sidenav = doc.getElementById("zotero-view-item-sidenav") as any;
+    if (!itemPane || !deck || !sidenav) return;
+    
+    let hermesPane = doc.getElementById("hermes-pane-library") as any;
+    
+    if (!isPressed) {
+      // 1. Deactivate Beaver if active to avoid collisions
+      const beaverToggle = doc.getElementById("zotero-beaver-tb-chat-toggle");
+      if (beaverToggle && beaverToggle.getAttribute("aria-pressed") === "true") {
+        (beaverToggle as any).click();
+      }
+      
+      // 2. Hide default Zotero details panel & vertical sidenav tabs
+      deck.style.display = "none";
+      sidenav.style.display = "none";
+      
+      // 3. Create full-height Hermes sidebar if needed
+      if (!hermesPane) {
+        hermesPane = doc.createXULElement("vbox") as any;
+        hermesPane.setAttribute("id", "hermes-pane-library");
+        hermesPane.className = "display-flex flex-1 h-full min-w-0";
+        hermesPane.style.minWidth = "0px";
+        hermesPane.style.width = "100%";
+        
+        const reactContainer = doc.createElement("div") as any;
+        reactContainer.setAttribute("id", "hermes-react-root");
+        reactContainer.setAttribute("style", "width: 100%; height: 100%; display: flex; flex-direction: column;");
+        
+        hermesPane.appendChild(reactContainer);
+        itemPane.appendChild(hermesPane);
+      }
+      
+      // 4. Show panel and mount React Chat
+      hermesPane.style.display = "flex";
+      
+      const reactContainer = doc.getElementById("hermes-react-root") as any;
+      if (reactContainer && !reactContainer.dataset.mounted) {
+        try {
+          const unmount = mountHermesChat(reactContainer as HTMLElement, addon);
+          reactContainer.dataset.mounted = "true";
+          reactContainer._unmount = unmount;
+          addon.log("Hermes Chat React component successfully mounted in full sidebar");
+        } catch (err) {
+          addon.log(`Hermes React mount error in full sidebar: ${(err as Error).message}`);
         }
       }
+      
+      btn.setAttribute("aria-pressed", "true");
+      addon.log("Hermes full sidebar view toggled ON");
+    } else {
+      // Hide Hermes panel and restore default Zotero views
+      if (hermesPane) {
+        hermesPane.style.display = "none";
+      }
+      deck.style.display = "";
+      sidenav.style.display = "";
+      btn.setAttribute("aria-pressed", "false");
+      addon.log("Hermes full sidebar view toggled OFF");
     }
-
-    addon.log("Hermes sidebar removed");
   } catch (error) {
-    addon.log(`Error removing Hermes sidebar: ${(error as Error).message}`);
+    addon.log(`Error toggling Hermes sidebar: ${(error as Error).message}`);
+  }
+}
+
+/**
+ * Remove all Hermes sidebar elements and restore layout.
+ */
+function unregisterHermesSidebar(win: Window): void {
+  try {
+    const doc = win.document;
+    
+    // 1. Remove toolbar button and separator
+    const btn = doc.getElementById("zotero-hermes-tb-chat-toggle");
+    if (btn) {
+      btn.parentNode?.removeChild(btn);
+    }
+    const separator = doc.getElementById("hermes-tb-separator");
+    if (separator) {
+      separator.parentNode?.removeChild(separator);
+    }
+    
+    // 2. Clean up Hermes sidebar panel
+    const hermesPane = doc.getElementById("hermes-pane-library") as any;
+    if (hermesPane) {
+      const reactContainer = doc.getElementById("hermes-react-root") as any;
+      if (reactContainer && reactContainer._unmount) {
+        try {
+          reactContainer._unmount();
+        } catch (e) {}
+      }
+      hermesPane.parentNode?.removeChild(hermesPane);
+    }
+    
+    // 3. Restore Zotero default sidebars
+    const deck = doc.getElementById("zotero-item-pane-content") as any;
+    if (deck) {
+      deck.style.display = "";
+    }
+    const sidenav = doc.getElementById("zotero-view-item-sidenav") as any;
+    if (sidenav) {
+      sidenav.style.display = "";
+    }
+    addon.log("Hermes sidebar fully cleaned up and Zotero layout restored");
+  } catch (error) {
+    addon.log(`Error cleaning up Hermes sidebar: ${(error as Error).message}`);
   }
 }
 
@@ -328,11 +331,11 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
     text: `[30%] ${getString("startup-begin")}`,
   });
 
-  // Only essential UI setup - all example code removed
+  // Only essential UI setup
   UIExampleFactory.registerStyleSheet(win);
-
-  // Register Hermes sidebar tab for this window
-  registerHermesSidebarTab(win);
+  
+  // Register full-height sidebar and toolbar button
+  registerHermesSidebar(win);
 
   await Zotero.Promise.delay(1000);
 
@@ -344,18 +347,22 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
 }
 
 async function onMainWindowUnload(win: Window): Promise<void> {
-  // Remove Hermes sidebar for this window
-  removeHermesSidebarTab(win as _ZoteroTypes.MainWindow);
+  unregisterHermesSidebar(win);
   addon.data.ztoolkit.unregisterAll();
   addon.data.dialog?.window?.close();
 }
 
 function onShutdown(): void {
-  // Clean up all windows
-  const windows = Zotero.getMainWindows();
-  for (const win of windows) {
-    removeHermesSidebarTab(win);
+  try {
+    const mainWindows = Zotero.getMainWindows();
+    for (const win of mainWindows) {
+      unregisterHermesSidebar(win);
+    }
+    addon.log("Hermes sidebar unregistered from all windows during shutdown");
+  } catch (error) {
+    addon.log(`Error during shutdown unregistration: ${(error as Error).message}`);
   }
+
   addon.data.ztoolkit?.unregisterAll();
   addon.data.dialog?.window?.close();
   // Remove addon object

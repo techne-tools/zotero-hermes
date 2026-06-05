@@ -22,6 +22,7 @@ import {
   getSlashCommands,
   parseSlashCommand,
 } from "../modules/hermes/SlashCommands";
+import type { SlashCommand } from "../modules/hermes/SlashCommands";
 
 export interface ChatMessage {
   content: string;
@@ -77,6 +78,120 @@ function isDarkColor(color: string): boolean {
   return false;
 }
 
+// ─── SVG Icons (matching Obsidian plugin) ───
+
+const SearchIcon = () => (
+  <svg fill="none" height="16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="16">
+    <circle cx="11" cy="11" r="8" />
+    <path d="m21 21-4.35-4.35" />
+  </svg>
+);
+
+const MenuIcon = () => (
+  <svg fill="none" height="16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="16">
+    <path d="M3 12h18M3 6h18M3 18h18" />
+  </svg>
+);
+
+const PlusIcon = () => (
+  <svg fill="none" height="16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="16">
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+);
+
+const SettingsIcon = () => (
+  <svg fill="none" height="16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="16">
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l-.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+  </svg>
+);
+
+const CopyIcon = () => (
+  <svg fill="none" height="12" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="12">
+    <rect height="13" rx="2" ry="2" width="13" x="9" y="9" />
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg fill="none" height="12" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="12">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+const ChevronDownIcon = () => (
+  <svg fill="none" height="12" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="12">
+    <polyline points="6 9 12 15 18 9" />
+  </svg>
+);
+
+const ChevronUpIcon = () => (
+  <svg fill="none" height="12" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="12">
+    <polyline points="18 15 12 9 6 15" />
+  </svg>
+);
+
+const StopIcon = () => (
+  <svg fill="none" height="16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="16">
+    <rect height="12" width="12" x="6" y="6" />
+  </svg>
+);
+
+const AttachIcon = () => (
+  <svg fill="none" height="16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="16">
+    <circle cx="12" cy="12" r="4" />
+    <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.9" />
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg fill="none" height="12" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="12">
+    <line x1="18" x2="6" y1="6" y2="18" />
+    <line x1="6" x2="18" y1="6" y2="18" />
+  </svg>
+);
+
+const HELIX_FRAMES = ['⢌⣉⢎⣉', '⣉⡱⣉⡱', '⣉⢎⣉⢎', '⡱⣉⡱⣉'];
+
+function HelixSpinner({ isRunning }: { isRunning: boolean }): React.ReactElement {
+  const [frame, setFrame] = useState(0);
+
+  useEffect(() => {
+    if (!isRunning) return;
+    const interval = setInterval(() => {
+      setFrame((f) => (f + 1) % HELIX_FRAMES.length);
+    }, 80);
+    return () => clearInterval(interval);
+  }, [isRunning]);
+
+  return <span style={{ fontFamily: "monospace" }}>{HELIX_FRAMES[frame]}</span>;
+}
+
+const BRAILLE_SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+
+function TypingIndicator({ agentName }: { agentName: string }): React.ReactElement {
+  const [frame, setFrame] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFrame((prev) => (prev + 1) % BRAILLE_SPINNER.length);
+    }, 80);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="hermes-message hermes-message-assistant hermes-typing-indicator">
+      <div className="hermes-typing-header">
+        <span className="hermes-message-role">{agentName}</span>
+        <span className="hermes-typing-status">
+          <span className="hermes-typing-spinner">{BRAILLE_SPINNER[frame]}</span>
+          {' Typing'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
   addon.log("HermesChatViewComponent: React component rendering");
 
@@ -94,6 +209,20 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchMatches, setSearchMatches] = useState<number[]>([]);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+
+  // Session settings state
+  const [isSessionSettingsOpen, setIsSessionSettingsOpen] = useState(false);
+
+  // Onboarding state
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return !settings.get("hasSeenOnboarding", false);
+  });
+
+  // Slash command autocomplete state
+  const [slashSuggestions, setSlashSuggestions] = useState<SlashCommand[]>([]);
+  const [isSlashOpen, setIsSlashOpen] = useState(false);
+  const [slashSelectionIndex, setSlashSelectionIndex] = useState(0);
+  const slashDropdownRef = useRef<HTMLDivElement>(null);
 
   const lastSendTimeRef = useRef<number>(0);
   const RATE_LIMIT_MS = 2000;
@@ -300,12 +429,28 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
   // (onChange, onClick, onKeyDown). All user interaction goes through native
   // addEventListener via refs.
 
-  // 1. Textarea input → sync to state
+  // 1. Textarea input → sync to state + slash command detection
   useEffect(() => {
     const textarea = inputRef.current;
     if (!textarea) return;
     const handler = (e: Event) => {
-      setInput((e.target as HTMLTextAreaElement).value);
+      const value = (e.target as HTMLTextAreaElement).value;
+      setInput(value);
+
+      // Slash command autocomplete
+      if (value.startsWith("/") && !value.includes(" ")) {
+        const query = value.slice(1).toLowerCase();
+        const commands = getSlashCommands();
+        const filtered = commands.filter((cmd) =>
+          cmd.name.toLowerCase().includes(query),
+        );
+        setSlashSuggestions(filtered);
+        setIsSlashOpen(filtered.length > 0);
+        setSlashSelectionIndex(0);
+      } else {
+        setIsSlashOpen(false);
+        setSlashSuggestions([]);
+      }
     };
     textarea.addEventListener("input", handler);
     return () => textarea.removeEventListener("input", handler);
@@ -328,19 +473,38 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
     return () => btn.removeEventListener("click", handler);
   }, [sendMessage]);
 
-  // 4. Textarea Enter key → native
+  // 4. Textarea Enter key → native + slash command navigation
   useEffect(() => {
     const textarea = inputRef.current;
     if (!textarea) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Enter" && !e.shiftKey) {
+        if (isSlashOpen && slashSuggestions.length > 0) {
+          e.preventDefault();
+          const selected = slashSuggestions[slashSelectionIndex];
+          if (selected) {
+            setInput(`/${selected.name} `);
+            setIsSlashOpen(false);
+          }
+          return;
+        }
         e.preventDefault();
         void sendMessage();
+      } else if (e.key === "ArrowDown" && isSlashOpen) {
+        e.preventDefault();
+        setSlashSelectionIndex((prev) =>
+          Math.min(prev + 1, slashSuggestions.length - 1),
+        );
+      } else if (e.key === "ArrowUp" && isSlashOpen) {
+        e.preventDefault();
+        setSlashSelectionIndex((prev) => Math.max(prev - 1, 0));
+      } else if (e.key === "Escape" && isSlashOpen) {
+        setIsSlashOpen(false);
       }
     };
     textarea.addEventListener("keydown", handler);
     return () => textarea.removeEventListener("keydown", handler);
-  }, [sendMessage]);
+  }, [sendMessage, isSlashOpen, slashSuggestions, slashSelectionIndex]);
 
   // 5. Stream subscription — consume agent responses, reasoning, tools, etc.
   // NOTE: This effect intentionally has minimal deps. The callbacks use refs for
@@ -674,126 +838,78 @@ ${messages
   }, [hermes.chat, hermes.conversations]);
 
   return (
-    <div className="hermes-chat-view" style={chatViewStyle}>
-      {/* Header */}
-      <div className="hermes-chat-header" style={headerStyle}>
-        <span style={{ fontWeight: 600 }}>Hermes Agent</span>
-        <div style={{ display: "flex", gap: "8px" }}>
+    <div className="hermes-chat-view">
+      {/* Header with SVG icons (matching Obsidian plugin) */}
+      <div className="hermes-chat-header">
+        <div className="hermes-chat-header-left">
+          <span className="hermes-chat-agent-name">{settings.get("chatAgentName", "Hermes")}</span>
+        </div>
+        <div className="hermes-chat-header-right">
+          <button
+            onClick={() => {
+              setIsSearchOpen((prev) => !prev);
+              if (!isSearchOpen) setTimeout(() => searchInputRef.current?.focus(), 0);
+            }}
+            className="hermes-icon-btn"
+            title="Search Messages (Ctrl+F)"
+          >
+            <SearchIcon />
+          </button>
           <button
             onClick={() => {
               loadConversationList();
               setIsConversationListOpen((prev) => !prev);
             }}
-            style={iconBtnStyle}
+            className="hermes-icon-btn"
             title="Previous Conversations"
           >
-            📋
-          </button>
-          <button
-            onClick={() => {
-              setIsSearchOpen((prev) => !prev);
-              if (!isSearchOpen) {
-                setTimeout(() => searchInputRef.current?.focus(), 0);
-              }
-            }}
-            style={iconBtnStyle}
-            title="Search (Ctrl+F)"
-          >
-            🔍
-          </button>
-          <button
-            onClick={exportToHtml}
-            style={iconBtnStyle}
-            title="Export as HTML"
-          >
-            📄
-          </button>
-          <button
-            onClick={exportToJson}
-            style={iconBtnStyle}
-            title="Export as JSON"
-          >
-            📦
-          </button>
-          <button
-            onClick={exportToMarkdown}
-            style={iconBtnStyle}
-            title="Export as Markdown"
-          >
-            📝
-          </button>
-          <button onClick={newChat} style={iconBtnStyle} title="New Chat">
-            🆕
+            <MenuIcon />
           </button>
           <button
             onClick={attachSelectedItems}
-            style={iconBtnStyle}
+            className="hermes-icon-btn"
             title="Attach Selected Items"
           >
-            📎
+            <AttachIcon />
+          </button>
+          <button onClick={newChat} className="hermes-icon-btn" title="New Chat">
+            <PlusIcon />
+          </button>
+          <button
+            onClick={() => setIsSessionSettingsOpen((prev) => !prev)}
+            className="hermes-icon-btn"
+            title="Session Settings"
+          >
+            <SettingsIcon />
           </button>
         </div>
       </div>
 
       {/* Conversation List */}
       {isConversationListOpen && (
-        <div
-          style={{
-            padding: "8px",
-            borderBottom: "1px solid var(--hermes-border, #ccc)",
-            maxHeight: "200px",
-            overflowY: "auto",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              marginBottom: "8px",
-            }}
-          >
-            <strong>Previous Conversations</strong>
-            <button
-              onClick={() => setIsConversationListOpen(false)}
-              style={smallBtnStyle}
-            >
-              ✕
+        <div className="hermes-conversation-list">
+          <div className="hermes-conversation-list-header">
+            <span className="hermes-conversation-list-title">Previous Conversations</span>
+            <button onClick={() => setIsConversationListOpen(false)} className="hermes-small-btn">
+              <CloseIcon />
             </button>
           </div>
           {conversations.length === 0 ? (
-            <div style={{ opacity: 0.7 }}>No saved conversations</div>
+            <div className="hermes-conversation-empty">No saved conversations</div>
           ) : (
             <ul style={{ margin: 0, padding: "0 0 0 1em" }}>
               {conversations.slice(0, 10).map((conv) => (
-                <li
-                  key={conv.id}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: "4px",
-                  }}
-                >
+                <li key={conv.id} className="hermes-conversation-item">
                   <button
                     onClick={() => handleLoadConversation(conv.id)}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      color: "inherit",
-                      textDecoration: "underline",
-                      padding: 0,
-                      textAlign: "left",
-                    }}
+                    className="hermes-conversation-item-btn"
                   >
                     {conv.title}
                   </button>
                   <button
                     onClick={() => handleDeleteConversation(conv.id)}
-                    style={{
-                      ...smallBtnStyle,
-                      color: "red",
-                      padding: "0 4px",
-                    }}
+                    className="hermes-small-btn"
+                    style={{ color: "red", padding: "0 4px" }}
                     title="Delete"
                   >
                     🗑️
@@ -807,147 +923,182 @@ ${messages
 
       {/* Search Bar */}
       {isSearchOpen && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            padding: "8px",
-            borderBottom: "1px solid var(--hermes-border, #ccc)",
-          }}
-        >
+        <div className="hermes-search-bar">
           <input
             ref={searchInputRef}
             value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              performSearch(e.target.value);
-            }}
+            onChange={(e) => { setSearchQuery(e.target.value); performSearch(e.target.value); }}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                jumpToMatch("next");
-              } else if (e.key === "Escape") {
-                setIsSearchOpen(false);
-                setSearchQuery("");
-                setSearchMatches([]);
-              }
+              if (e.key === "Enter") { e.preventDefault(); jumpToMatch("next"); }
+              else if (e.key === "Escape") { setIsSearchOpen(false); setSearchQuery(""); setSearchMatches([]); }
             }}
             placeholder="Search messages..."
-            style={{
-              flex: 1,
-              padding: "4px 8px",
-              border: "1px solid var(--hermes-border, #ccc)",
-              borderRadius: "4px",
-              backgroundColor: "var(--hermes-input-bg, #fff)",
-              color: "inherit",
-            }}
+            className="hermes-search-input"
           />
           {searchMatches.length > 0 && (
-            <span style={{ fontSize: "0.8em", opacity: 0.7 }}>
-              {currentMatchIndex + 1} / {searchMatches.length}
-            </span>
+            <span className="hermes-search-count">{currentMatchIndex + 1} / {searchMatches.length}</span>
           )}
-          <button
-            onClick={() => jumpToMatch("prev")}
-            style={iconBtnStyle}
-            title="Previous"
-          >
-            ↑
-          </button>
-          <button
-            onClick={() => jumpToMatch("next")}
-            style={iconBtnStyle}
-            title="Next"
-          >
-            ↓
-          </button>
-          <button
-            onClick={() => {
-              setIsSearchOpen(false);
-              setSearchQuery("");
-              setSearchMatches([]);
-            }}
-            style={iconBtnStyle}
-            title="Close"
-          >
-            ✕
-          </button>
+          <button onClick={() => jumpToMatch("prev")} className="hermes-small-btn" title="Previous">↑</button>
+          <button onClick={() => jumpToMatch("next")} className="hermes-small-btn" title="Next">↓</button>
+          <button onClick={() => { setIsSearchOpen(false); setSearchQuery(""); setSearchMatches([]); }} className="hermes-small-btn" title="Close"><CloseIcon /></button>
+        </div>
+      )}
+
+      {/* Session Settings */}
+      {isSessionSettingsOpen && (
+        <div className="hermes-session-settings">
+          <div className="hermes-session-settings-header">
+            <span className="hermes-session-settings-title">Session Settings</span>
+            <button onClick={() => setIsSessionSettingsOpen(false)} className="hermes-small-btn">
+              <CloseIcon />
+            </button>
+          </div>
+          <p className="hermes-session-settings-desc">
+            Configure tool permissions for this conversation. Disabled tools will not be available to the agent.
+          </p>
+          <div className="hermes-session-settings-actions">
+            <button
+              onClick={() => setAllowedTools(null)}
+              className="hermes-session-btn-secondary"
+            >
+              Allow All
+            </button>
+            <button
+              onClick={() => setAllowedTools([])}
+              className="hermes-session-btn-secondary"
+            >
+              Block All
+            </button>
+          </div>
+          <div>
+            {["read_file", "write_file", "terminal"].map((tool) => (
+              <label key={tool} className="hermes-session-tool-toggle">
+                <input
+                  type="checkbox"
+                  checked={allowedTools === null || allowedTools.includes(tool)}
+                  onChange={(e) => {
+                    const current = allowedTools ?? ["read_file", "write_file", "terminal"];
+                    if (e.target.checked) {
+                      setAllowedTools([...current, tool]);
+                    } else {
+                      setAllowedTools(current.filter((t) => t !== tool));
+                    }
+                  }}
+                />
+                {tool === "read_file" && "Read Files"}
+                {tool === "write_file" && "Write Files"}
+                {tool === "terminal" && "Terminal Commands"}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Onboarding Panel */}
+      {showOnboarding && messages.length === 0 && (
+        <div className="hermes-onboarding">
+          <div className="hermes-onboarding-header">
+            <span>Welcome to Hermes</span>
+            <button onClick={() => { setShowOnboarding(false); settings.set("hasSeenOnboarding", true); }} className="hermes-small-btn">
+              <CloseIcon />
+            </button>
+          </div>
+          <div className="hermes-onboarding-content">
+            <p>Hermes is an AI assistant that helps you work with your Zotero library.</p>
+            <ul>
+              <li><strong>Attach items</strong> — Select Zotero items and click the paperclip icon to provide context</li>
+              <li><strong>Ask questions</strong> — Chat with Hermes about your research, annotations, and metadata</li>
+              <li><strong>Slash commands</strong> — Type <code>/help</code> to see available commands</li>
+              <li><strong>Session settings</strong> — Control which tools the agent can use</li>
+            </ul>
+            <p>Your conversations are saved locally and can be searched or exported.</p>
+          </div>
+          <div className="hermes-onboarding-security">
+            🔒 Hermes runs locally. Your data stays on your machine.
+          </div>
         </div>
       )}
 
       {/* Messages */}
-      <div className="hermes-messages" style={messagesStyle}>
-        {messages.map((msg) => (
-          <ChatMessageItem key={msg.id} message={msg} />
-        ))}
-        {isTyping && (
-          <div style={typingIndicatorStyle}>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <span style={{ fontSize: "0.85em", opacity: 0.7 }}>Hermes is thinking</span>
-              <span className="hermes-typing-dots" style={{ display: "inline-flex", gap: "3px" }}>
-                <span style={dotStyle}>●</span>
-                <span style={{ ...dotStyle, animationDelay: "0.2s" }}>●</span>
-                <span style={{ ...dotStyle, animationDelay: "0.4s" }}>●</span>
-              </span>
-            </div>
-          </div>
-        )}
+      <div className="hermes-messages">
+        {messages.map((msg) => {
+          if (isTyping && msg.role === "assistant" && !msg.content) return null;
+          return <ChatMessageItem key={msg.id} message={msg} />;
+        })}
+        {isTyping && <TypingIndicator agentName={settings.get("chatAgentName", "Hermes")} />}
         {error && (
-          <div style={errorStyle}>
-            ⚠️ {error}
-            <button
-              onClick={() => setError(null)}
-              style={{
-                marginLeft: "8px",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-              }}
-            >
-              ✕
-            </button>
+          <div className="hermes-error-bar">
+            <span>⚠️</span>
+            <span style={{ flex: 1 }}>{error}</span>
+            <button onClick={() => setError(null)} className="hermes-error-bar-close">✕</button>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Context bar */}
+      {/* Context items chips */}
       {contextItems.length > 0 && (
-        <div style={contextBarStyle}>
-          <span>📚 {contextItems.length} item(s) attached</span>
-          <button onClick={clearContext} style={smallBtnStyle}>
+        <div className="hermes-context-bar">
+          <div className="hermes-context-chips">
+            {contextItems.map((item) => (
+              <div key={item.id} className="hermes-context-chip">
+                <span style={{ fontSize: "0.8em" }}>{item.text}</span>
+                <button onClick={() => setContextItems((prev) => prev.filter((c) => c.id !== item.id))} className="hermes-context-chip-remove">
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+          <button onClick={clearContext} className="hermes-context-clear">
             Clear
           </button>
         </div>
       )}
 
-      {/* Input */}
-      <div className="hermes-input-area" style={inputAreaStyle}>
-        <textarea
-          ref={inputRef}
-          defaultValue={input}
-          placeholder="Ask Hermes about your research..."
-          rows={3}
-          style={textareaStyle}
-        />
-        <button
-          ref={sendBtnRef}
-          disabled={!input.trim() || isTyping}
-          style={{
-            ...sendBtnStyle,
-            opacity: !input.trim() || isTyping ? 0.5 : 1,
-          }}
-        >
-          Send
-        </button>
+      {/* Input area */}
+      <div className="hermes-input-area">
+        {/* Slash command dropdown */}
+        {isSlashOpen && slashSuggestions.length > 0 && (
+          <div className="hermes-slash-dropdown" ref={slashDropdownRef}>
+            {slashSuggestions.map((cmd, idx) => (
+              <button
+                key={cmd.name}
+                className={`hermes-slash-item${idx === slashSelectionIndex ? " hermes-slash-item-selected" : ""}`}
+                onClick={() => {
+                  setInput(`/${cmd.name} `);
+                  setIsSlashOpen(false);
+                }}
+              >
+                <span className="hermes-slash-item-name">/{cmd.name}</span>
+                <span className="hermes-slash-item-desc">{cmd.description}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="hermes-input-row">
+          <textarea
+            ref={inputRef}
+            defaultValue={input}
+            placeholder="Message Hermes..."
+            rows={1}
+            className="hermes-textarea"
+          />
+          <button
+            ref={sendBtnRef}
+            disabled={!input.trim() || isTyping}
+            className="hermes-send-btn"
+            style={{ opacity: !input.trim() || isTyping ? 0.5 : 1 }}
+          >
+            {isTyping ? <StopIcon /> : "Send"}
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
 /**
- * Render a single chat message as the appropriate bubble type.
+ * Render a single chat message matching Obsidian plugin layout.
  */
 const ChatMessageItem = memo(function ChatMessageItem({
   message,
@@ -955,6 +1106,7 @@ const ChatMessageItem = memo(function ChatMessageItem({
   message: ChatMessage;
 }) {
   const [collapsed, setCollapsed] = useState(message.isCollapsed ?? false);
+  const [isCopied, setIsCopied] = useState(false);
 
   const toggleCollapse = useCallback(() => {
     setCollapsed((prev) => !prev);
@@ -962,145 +1114,125 @@ const ChatMessageItem = memo(function ChatMessageItem({
 
   const content = stripAnsi(message.content);
 
-  if (message.role === "reasoning") {
-    return (
-      <div style={reasoningBubbleStyle}>
-        <div
-          style={reasoningHeaderStyle}
-          onClick={toggleCollapse}
-        >
-          <span>🧠 {collapsed ? "Show" : "Hide"} reasoning</span>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                try {
-                  const clipboard = (Components as any).classes["@mozilla.org/widget/clipboardhelper;1"]
-                    .getService((Components as any).interfaces.nsIClipboardHelper);
-                  clipboard.copyString(content);
-                } catch {
-                  // ignore
-                }
-              }}
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                opacity: 0.5,
-                fontSize: "0.9em",
-                padding: "0 4px",
-              }}
-              title="Copy reasoning to clipboard"
-            >
-              📋
-            </button>
-            <span>{collapsed ? "▸" : "▾"}</span>
-          </div>
-        </div>
-        {!collapsed && content && (
-          <div style={reasoningContentStyle}>{content}</div>
-        )}
-      </div>
-    );
-  }
-
-  if (message.role === "tool") {
-    const helix = message.isRunning ? "⢌⣉⢎⣉" : "";
-    return (
-      <div style={toolBubbleStyle}>
-        <div style={toolHeaderStyle} onClick={toggleCollapse}>
-          <span>
-            {message.isRunning ? (
-              <span style={{ fontFamily: "monospace" }}>{helix} </span>
-            ) : (
-              "🔧 "
-            )}
-            {message.toolName || "tool"}
-            {message.toolStatus === "running" ? " (running...)" : ""}
-            {message.toolStatus === "error" ? " ❌" : ""}
-            {message.toolStatus === "complete" ? " ✅" : ""}
-          </span>
-          <span>{collapsed ? "▸" : "▾"}</span>
-        </div>
-        {!collapsed && content && (
-          <pre style={toolContentStyle}>{content}</pre>
-        )}
-      </div>
-    );
-  }
-
-  if (message.role === "terminal") {
-    return (
-      <div style={terminalBubbleStyle}>
-        <div style={terminalHeaderStyle}>
-          <span>💻 Terminal {message.isExited ? "(exited)" : ""}</span>
-        </div>
-        <pre style={terminalContentStyle}>{content}</pre>
-      </div>
-    );
-  }
-
-  if (message.role === "system") {
-    return (
-      <div style={systemBubbleStyle}>
-        <div style={systemContentStyle}>{content}</div>
-      </div>
-    );
-  }
-
-  const isUser = message.role === "user";
-  const label = isUser ? "You" : "Hermes";
-
   const handleCopy = useCallback(() => {
     try {
       const clipboard = (Components as any).classes["@mozilla.org/widget/clipboardhelper;1"]
         .getService((Components as any).interfaces.nsIClipboardHelper);
       clipboard.copyString(content);
+      setIsCopied(true);
+      const win = Zotero.getMainWindow();
+      win.setTimeout(() => setIsCopied(false), 2000);
     } catch {
-      // Fallback: do nothing if clipboard unavailable
+      // ignore
     }
   }, [content]);
 
-  return (
-    <div
-      style={{
-        ...messageBubbleStyle,
-        alignSelf: isUser ? "flex-end" : "flex-start",
-        backgroundColor: isUser
-          ? "var(--hermes-accent, #4a90d9)"
-          : "var(--hermes-bg-secondary, #f5f5f5)",
-        color: isUser ? "var(--hermes-accent-text, white)" : "inherit",
-      }}
-    >
-      <div style={{ fontSize: "0.75em", opacity: 0.7, marginBottom: "4px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span>{label}{" "}{new Date(message.timestamp).toLocaleTimeString()}</span>
-        <button
-          onClick={handleCopy}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            opacity: 0.5,
-            fontSize: "0.9em",
-            padding: "0 4px",
-          }}
-          title="Copy to clipboard"
-        >
-          📋
-        </button>
-      </div>
-      {isUser ? (
-        <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
-          {content}
+  let roleLabel: React.ReactNode = {
+    assistant: "Hermes",
+    reasoning: "Reasoning",
+    system: "System",
+    terminal: "Terminal Output",
+    tool: "Tool",
+    user: "You",
+  }[message.role];
+
+  // Tool role label with spinner
+  if (message.role === "tool") {
+    const isError = message.toolStatus === "error";
+    const isRunning = message.isRunning || message.toolStatus === "running";
+    const statusIcon = isError ? "❌ " : <HelixSpinner isRunning={isRunning} />;
+    roleLabel = <>{statusIcon}Tool: {message.toolName}</>;
+  }
+
+  // Collapsible reasoning and tool messages
+  if (message.role === "reasoning" || message.role === "tool") {
+    const [isExpanded, setIsExpanded] = useState(!message.isCollapsed);
+    const toggleExpand = useCallback(() => { setIsExpanded((prev) => !prev); }, []);
+    const isToolRunning = message.role === "tool" && (message.isRunning || message.toolStatus === "running");
+    const isToolError = message.role === "tool" && message.toolStatus === "error";
+
+    return (
+      <div className={`hermes-message hermes-message-${message.role}${isToolRunning ? " hermes-message-tool-running" : ""}${isToolError ? " hermes-message-tool-error" : ""}`}>
+        <div className="hermes-message-header">
+          <span className="hermes-message-role">{roleLabel}</span>
+          <span className="hermes-message-meta">
+            <button onClick={handleCopy} className="hermes-message-action-btn" title={isCopied ? "Copied!" : "Copy"}>
+              {isCopied ? <CheckIcon /> : <CopyIcon />}
+            </button>
+            <button onClick={toggleExpand} className="hermes-message-action-btn" title={isExpanded ? "Collapse" : "Expand"}>
+              {isExpanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
+            </button>
+            <span className="hermes-message-timestamp">{new Date(message.timestamp).toLocaleTimeString()}</span>
+          </span>
         </div>
-      ) : (
-        <MarkdownRenderer text={content} />
-      )}
+        {isExpanded && (
+          <div className="hermes-message-content">
+            {message.role === "reasoning" ? (
+              <div className="hermes-message-content-reasoning">{content}</div>
+            ) : (
+              <pre className="hermes-message-content-pre">{content}</pre>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Terminal messages
+  if (message.role === "terminal") {
+    return (
+      <div className="hermes-message hermes-message-terminal">
+        <div className="hermes-message-header">
+          <span className="hermes-message-role">{roleLabel}</span>
+          <span className="hermes-message-meta">
+            <button onClick={handleCopy} className="hermes-message-action-btn" title="Copy">
+              {isCopied ? <CheckIcon /> : <CopyIcon />}
+            </button>
+            <span className="hermes-message-timestamp">{new Date(message.timestamp).toLocaleTimeString()}</span>
+          </span>
+        </div>
+        <pre className="hermes-terminal-content">{content}</pre>
+        {!message.isExited && (
+          <button onClick={() => { /* TODO: abort terminal */ }} className="hermes-abort-btn">🛑 Abort</button>
+        )}
+      </div>
+    );
+  }
+
+  // System messages
+  if (message.role === "system") {
+    return <div className="hermes-message hermes-message-system">{content}</div>;
+  }
+
+  // User and assistant messages
+  const isUser = message.role === "user";
+  return (
+    <div className={`hermes-message hermes-message-${message.role}`}>
+      <div className="hermes-message-header">
+        <span className="hermes-message-role">{roleLabel}</span>
+        <span className="hermes-message-meta">
+          {message.role === "user" && (
+            <button onClick={handleCopy} className="hermes-message-action-btn" title="Copy">
+              {isCopied ? <CheckIcon /> : <CopyIcon />}
+            </button>
+          )}
+          <span className="hermes-message-timestamp">{new Date(message.timestamp).toLocaleTimeString()}</span>
+        </span>
+      </div>
+      <div className="hermes-message-content">
+        {isUser ? (
+          <div className="hermes-message-content-text">{content}</div>
+        ) : (
+          <div className="hermes-message-markdown">
+            <MarkdownRenderer text={content} />
+          </div>
+        )}
+      </div>
     </div>
   );
 });
 
-// --- Inline Styles ---
+// --- Inline Styles (Obsidian-aligned) ---
 
 const chatViewStyle: React.CSSProperties = {
   display: "flex",
@@ -1116,205 +1248,212 @@ const headerStyle: React.CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  padding: "12px 16px",
+  padding: "8px 12px",
   borderBottom: "1px solid var(--hermes-border, #e0e0e0)",
   backgroundColor: "var(--hermes-bg-secondary, #fafafa)",
+  minHeight: "40px",
 };
 
 const messagesStyle: React.CSSProperties = {
   flex: 1,
   overflowY: "auto",
-  padding: "16px",
+  padding: "8px 12px",
   display: "flex",
   flexDirection: "column",
-  gap: "12px",
+  gap: "8px",
+  minWidth: 0,
 };
 
-const messageBubbleStyle: React.CSSProperties = {
-  padding: "12px",
-  borderRadius: "12px",
+// ─── User message bubble ───
+const userMsgStyle: React.CSSProperties = {
+  borderRadius: "8px",
+  backgroundColor: "var(--hermes-accent, #4a90d9)",
+  color: "var(--hermes-accent-text, white)",
+  alignSelf: "flex-end",
   maxWidth: "85%",
-  wordBreak: "break-word",
+  minWidth: 0,
+  overflowWrap: "break-word",
 };
 
-// ─── Reasoning bubble ───
-const reasoningBubbleStyle: React.CSSProperties = {
+// ─── Assistant message bubble ───
+const assistantMsgStyle: React.CSSProperties = {
+  borderRadius: "8px",
+  backgroundColor: "var(--hermes-bg-secondary, #f5f5f5)",
+  color: "inherit",
   alignSelf: "flex-start",
   maxWidth: "85%",
-  borderRadius: "8px",
-  border: "1px solid var(--hermes-border, #e0e0e0)",
-  backgroundColor: "var(--hermes-bg-tertiary, #f8f4e8)",
+  minWidth: 0,
+  overflowWrap: "break-word",
 };
 
-const reasoningHeaderStyle: React.CSSProperties = {
+const assistantMessageBubbleStyle: React.CSSProperties = {
+  ...assistantMsgStyle,
+};
+
+// ─── Header row shared across all messages ───
+const msgHeaderRowStyle: React.CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  padding: "8px 12px",
-  cursor: "pointer",
-  fontSize: "0.85em",
+  padding: "10px 12px",
+  fontSize: "0.8em",
+};
+
+const msgRoleStyle: React.CSSProperties = {
+  fontWeight: 600,
   opacity: 0.8,
-  userSelect: "none",
 };
 
-const reasoningContentStyle: React.CSSProperties = {
-  padding: "8px 12px 12px",
-  fontSize: "0.9em",
-  lineHeight: 1.5,
-  whiteSpace: "pre-wrap",
-  wordBreak: "break-word",
-  opacity: 0.85,
-  borderTop: "1px solid var(--hermes-border, #e0e0e0)",
+const msgMetaStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: "4px",
 };
 
-// ─── Tool bubble ───
-const toolBubbleStyle: React.CSSProperties = {
+const msgActionBtnStyle: React.CSSProperties = {
+  background: "none",
+  border: "none",
+  cursor: "pointer",
+  padding: "2px",
+  display: "inline-flex",
+  alignItems: "center",
+  opacity: 0.4,
+  color: "inherit",
+};
+
+const msgContentPadStyle: React.CSSProperties = {
+  padding: "0 12px 10px",
+};
+
+// ─── Collapsible message (reasoning, tool) ───
+const collapsibleMsgStyle: React.CSSProperties = {
   alignSelf: "flex-start",
   maxWidth: "85%",
+  minWidth: 0,
   borderRadius: "8px",
   border: "1px solid var(--hermes-border, #e0e0e0)",
-  backgroundColor: "var(--hermes-bg-tertiary, #f0f4ff)",
-  overflow: "hidden",
-  fontSize: "0.9em",
 };
 
-const toolHeaderStyle: React.CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  padding: "6px 12px",
-  cursor: "pointer",
-  userSelect: "none",
-};
-
-const toolContentStyle: React.CSSProperties = {
-  padding: "8px 12px 12px",
-  margin: 0,
-  whiteSpace: "pre-wrap",
-  fontSize: "0.85em",
-  lineHeight: 1.4,
-  borderTop: "1px solid var(--hermes-border, #e0e0e0)",
-  maxHeight: "300px",
-  overflowY: "auto",
-};
-
-// ─── Terminal bubble ───
-const terminalBubbleStyle: React.CSSProperties = {
+// ─── Terminal message ───
+const terminalMsgStyle: React.CSSProperties = {
   alignSelf: "stretch",
   borderRadius: "8px",
   backgroundColor: "#1e1e2e",
   color: "#cdd6f4",
-  overflow: "hidden",
   fontFamily: "monospace",
   fontSize: "0.85em",
 };
 
-const terminalHeaderStyle: React.CSSProperties = {
-  padding: "6px 12px",
-  backgroundColor: "rgba(255,255,255,0.05)",
+const abortBtnStyle: React.CSSProperties = {
+  background: "rgba(255,255,255,0.1)",
+  border: "none",
+  cursor: "pointer",
+  color: "#cdd6f4",
+  padding: "4px 12px",
   fontSize: "0.8em",
-  opacity: 0.7,
 };
 
-const terminalContentStyle: React.CSSProperties = {
+// ─── Error bar ───
+const errorBarStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
   padding: "8px 12px",
-  margin: 0,
-  whiteSpace: "pre-wrap",
-  lineHeight: 1.4,
-  maxHeight: "200px",
-  overflowY: "auto",
-};
-
-// ─── System bubble ───
-const systemBubbleStyle: React.CSSProperties = {
-  alignSelf: "center",
-  maxWidth: "90%",
-};
-
-const systemContentStyle: React.CSSProperties = {
-  padding: "6px 12px",
-  fontSize: "0.85em",
-  opacity: 0.7,
-  textAlign: "center",
-};
-
-const typingIndicatorStyle: React.CSSProperties = {
-  alignSelf: "flex-start",
-  padding: "8px 16px",
-  opacity: 0.6,
-};
-
-const dotStyle: React.CSSProperties = {
-  fontSize: "0.6em",
-  opacity: 0.5,
-};
-
-const errorStyle: React.CSSProperties = {
-  alignSelf: "center",
-  padding: "8px 12px",
-  backgroundColor: "var(--hermes-bg-tertiary, #ffebee)",
-  color: "var(--hermes-text, #c62828)",
+  backgroundColor: "var(--hermes-error-bg, #fff0f0)",
+  color: "var(--hermes-error-text, #c00)",
   borderRadius: "8px",
-  fontSize: "0.9em",
+  fontSize: "0.85em",
+  margin: "4px 0",
 };
 
+// ─── Context bar ───
 const contextBarStyle: React.CSSProperties = {
   display: "flex",
-  justifyContent: "space-between",
   alignItems: "center",
-  padding: "8px 16px",
-  backgroundColor: "var(--hermes-bg-tertiary, #f0f0f0)",
+  gap: "8px",
+  padding: "6px 12px",
   borderTop: "1px solid var(--hermes-border, #e0e0e0)",
-  fontSize: "0.85em",
+  backgroundColor: "var(--hermes-bg-secondary, #fafafa)",
 };
 
-const inputAreaStyle: React.CSSProperties = {
+const contextChipStyle: React.CSSProperties = {
   display: "flex",
-  gap: "8px",
-  padding: "12px 16px",
+  alignItems: "center",
+  gap: "4px",
+  padding: "2px 8px",
+  borderRadius: "12px",
+  backgroundColor: "var(--hermes-bg-tertiary, #eee)",
+  fontSize: "0.8em",
+};
+
+const chipRemoveBtnStyle: React.CSSProperties = {
+  background: "none",
+  border: "none",
+  cursor: "pointer",
+  padding: "0 2px",
+  fontSize: "0.8em",
+  opacity: 0.5,
+  color: "inherit",
+};
+
+// ─── Input area ───
+const inputAreaStyle: React.CSSProperties = {
+  padding: "8px",
   borderTop: "1px solid var(--hermes-border, #e0e0e0)",
   backgroundColor: "var(--hermes-bg-secondary, #fafafa)",
 };
 
 const textareaStyle: React.CSSProperties = {
   flex: 1,
+  border: "none",
+  outline: "none",
   resize: "none",
-  padding: "10px",
-  borderRadius: "8px",
-  border: "1px solid var(--hermes-border, #ccc)",
-  fontFamily: "inherit",
-  fontSize: "14px",
-  backgroundColor: "var(--hermes-input-bg, #fff)",
+  padding: "8px 0",
+  backgroundColor: "transparent",
   color: "inherit",
+  fontFamily: "inherit",
+  fontSize: "0.9em",
+  lineHeight: 1.5,
 };
 
 const sendBtnStyle: React.CSSProperties = {
-  padding: "10px 20px",
-  backgroundColor: "var(--hermes-accent, #4a90d9)",
-  color: "var(--hermes-accent-text, white)",
+  padding: "6px 16px",
   border: "none",
-  borderRadius: "8px",
+  borderRadius: "6px",
+  backgroundColor: "var(--hermes-accent, #4a90d9)",
+  color: "white",
   cursor: "pointer",
   fontWeight: 600,
+  fontSize: "0.85em",
+  whiteSpace: "nowrap",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "4px",
 };
 
+// ─── Icon button (header toolbar) ───
 const iconBtnStyle: React.CSSProperties = {
   background: "none",
   border: "none",
   cursor: "pointer",
-  fontSize: "16px",
   padding: "4px",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  borderRadius: "4px",
   color: "inherit",
+  opacity: 0.7,
 };
 
 const smallBtnStyle: React.CSSProperties = {
-  padding: "4px 8px",
-  fontSize: "0.8em",
-  backgroundColor: "var(--hermes-bg, #fff)",
-  border: "1px solid var(--hermes-border, #ccc)",
-  borderRadius: "4px",
+  background: "none",
+  border: "none",
   cursor: "pointer",
+  padding: "2px 6px",
+  display: "inline-flex",
+  alignItems: "center",
   color: "inherit",
+  opacity: 0.6,
 };
 
 /**
@@ -1444,6 +1583,43 @@ export function mountHermesChat(
     } else {
       addonInstance.log("Hermes theme: WARNING — no parent element found for style tag");
     }
+  }
+
+  // Load external CSS file (hermes-chat.css) via chrome URL and inject via CSSOM
+  try {
+    const cssUrl = `chrome://hermes/content/hermes-chat.css`;
+    addonInstance.log(`Hermes theme: loading CSS from ${cssUrl}`);
+    const xhr = new XMLHttpRequest();
+    xhr.open("GET", cssUrl, true);
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState === 4 && xhr.status === 200) {
+        const cssText = xhr.responseText;
+        if (doc && cssText) {
+          const existingCss = doc.getElementById("hermes-chat-css");
+          if (existingCss) existingCss.remove();
+          const cssStyleEl = doc.createElement("style");
+          cssStyleEl.setAttribute("id", "hermes-chat-css");
+          cssStyleEl.setAttribute("type", "text/css");
+          const cssParent = doc.documentElement || doc.head || doc.body;
+          if (cssParent) {
+            cssParent.appendChild(cssStyleEl);
+            const cssSheet = (cssStyleEl as any).sheet;
+            if (cssSheet && cssSheet.insertRule) {
+              // Insert the entire CSS as one rule (browsers handle this)
+              cssSheet.insertRule(cssText, 0);
+              addonInstance.log(`Hermes theme: injected hermes-chat.css (${cssText.length} chars)`);
+            } else {
+              addonInstance.log("Hermes theme: WARNING — cssSheet or insertRule not available");
+            }
+          }
+        }
+      } else if (xhr.readyState === 4) {
+        addonInstance.log(`Hermes theme: WARNING — failed to load CSS: ${xhr.status}`);
+      }
+    };
+    xhr.send();
+  } catch (e) {
+    addonInstance.log(`Hermes theme: CSS load error: ${(e as Error).message}`);
   }
 
   // Listen for OS theme changes and update dynamically

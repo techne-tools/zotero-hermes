@@ -1,10 +1,10 @@
 # Zotero Hermes Plugin — Full Rework TODO
 
 **Created:** 21 May 2026  
-**Updated:** 30 May 2026  
+**Updated:** 5 June 2026  
 **Target Version:** 0.1.0 (Alpha)  
 **Platform:** Zotero 9.0.0+  
-**Status:** ✅ Core Infrastructure Complete — API Mode & Preferences UI Added
+**Status:** ✅ Core Infrastructure Complete — API Mode, Preferences UI, Chat Polish & Sound/Haptic Added
 
 ---
 
@@ -124,9 +124,63 @@
   - Solution: Removed second pair of `zoteroDataDir`/`zoteroStorageDir` declarations
   - File: `src/modules/hermes/HermesClient.ts`
 
----
+### Bug Fixes (5 June 2026) — Session: UI/UX Alignment with Obsidian Plugin
 
-## Phase 2: Zotero Integration
+- [x] **Align chat UI/UX with obsidian-hermes**
+  - Unified CSS classes, inline style fallbacks for Zotero sandbox reliability
+  - Added session settings panel, onboarding panel, slash command autocomplete
+  - Replaced old icon with Lucide `Bot` icon
+  - Fixed overflow and cramped reasoning bubble spacing
+  - Files: `src/views/HermesChatView.tsx`, `addon/content/hermes-chat.css`, `addon/content/icons/hermes-sidenav.svg`
+
+- [x] **Fix CSS injection crash**
+  - `insertRule(cssText)` failed in Firefox/XUL sandbox
+  - Solution: Use `textContent` on `<style>` element; add inline style fallbacks to critical containers
+  - Files: `src/views/HermesChatView.tsx`
+
+- [x] **Fix TDZ error on startup**
+  - `useState(() => !settings.get(...))` accessed `settings` before declaration
+  - Solution: Initialise as `true` + `useEffect` correction after settings is available
+  - File: `src/views/HermesChatView.tsx`
+
+- [x] **Fix sidebar layout broken after CSS crash**
+  - CSS not loading caused buttons to fall back to XUL defaults
+  - Solution: Inline style fallbacks on all critical layout containers
+  - File: `src/views/HermesChatView.tsx`
+
+### Enhancements (5 June 2026) — Session: Proper Preferences Pane
+
+- [x] **Rewrite preferences.xhtml with full section layout**
+  - 8 sections matching obsidian-hermes design: 🤖 Agent Personality, 💬 Chat Display, 🔌 Connection, 📎 Automatic Context, 🗂️ Saving Conversations, 🔊 Sound & Feel, 🛡️ Security, 🐛 Troubleshooting
+  - Dynamic show/hide for local vs remote connection settings
+  - MCP server enable/disable with warning and path textarea
+  - Test connection buttons for both local and remote modes
+  - Reset onboarding button
+  - File: `addon/content/preferences.xhtml`
+
+- [x] **Add all missing preference defaults**
+  - `hermesAgentName`, `hasSeenOnboarding`, `enableTypingSound`, `enableHapticFeedback`, `allowTerminal`, `mcpServersEnabled`, `mcpServersList`, `conversationOrganization`, `chatSaveFolder`
+  - File: `src/modules/hermes/PreferencesManager.ts`
+
+- [x] **Update preferenceScript.ts with dynamic UI logic**
+  - Connection mode section toggle, MCP checkbox → textarea toggle
+  - Test connection buttons (local + remote), reset onboarding button
+  - File: `src/modules/preferenceScript.ts`
+
+- [x] **Wire enableTypingSound and enableHapticFeedback in chat view**
+  - Soft 800Hz sine click via Web Audio API in `useStreamBuffer.ts`
+  - Haptic feedback (navigator.vibrate) on agent response start in `HermesChatView.tsx`
+  - Files: `src/views/useStreamBuffer.ts`, `src/views/HermesChatView.tsx`
+
+- [x] **Add conversation organisation to ConversationManager**
+  - Respects `chatSaveFolder` and `conversationOrganization` prefs
+  - Supports flat (default) and by-date monthly subfolders
+  - File: `src/modules/hermes/ConversationManager.ts`
+
+- [x] **Fix preferences pane not appearing in Zotero Settings**
+  - Missing `Zotero.PreferencePanes.register()` call during startup
+  - Solution: Register pane after Hermes modules initialise in `onStartup()`
+  - File: `src/hooks.ts`
 
 ### Item Context
 
@@ -296,7 +350,7 @@ All features must follow Zotero Hermes coding conventions.
 
 ## Phase 4: Preferences & Settings (Week 4: Jun 9-15)
 
-### ✅ Completed - Preferences Panel (30 May 2026)
+### ✅ Completed - Preferences Panel (30 May 2026 → 5 June 2026)
 
 - [x] **Connection Settings**
   - [x] Create preferences.xhtml panel
@@ -304,24 +358,39 @@ All features must follow Zotero Hermes coding conventions.
   - [x] Hermes binary path input
   - [x] API URL and key inputs (API mode)
   - [x] Dynamic show/hide fields based on connection mode
-  - Files: `addon/content/preferences.xhtml`, `src/modules/preferenceScript.ts`
+  - [x] Test connection buttons for local and remote modes
+  - Files: `addon/content/preferences.xhtml`, `src/modules/preferenceScript.ts`, `src/hooks.ts`
 
 - [x] **Chat Settings**
   - [x] Show reasoning toggle
+  - [x] Show tool use toggle
+  - [x] Show token count toggle
   - [x] Auto-save toggle
-  - [x] Enable citations/annotations/tags toggles
   - File: `addon/content/preferences.xhtml`
 
-- [ ] **Security Settings**
-  - [ ] Auto-approve threshold (e.g., small edits)
-  - [ ] Require approval for all changes toggle
-  - [ ] MCP server configuration
-  - [ ] Security warning dialogs
-  - **Estimated:** 2 days
-  - **Dependencies:** Preferences panel
-  - **Status:** Not started
+- [x] **Security Settings**
+  - [x] Allow terminal commands toggle with danger warning
+  - [x] MCP server enable/disable with warning
+  - [x] MCP server paths textarea
+  - File: `addon/content/preferences.xhtml`
 
-### ⚪ Future - Conversation Persistence
+- [x] **Sound & Feel**
+  - [x] Typing sounds toggle (Web Audio API)
+  - [x] Haptic feedback toggle (navigator.vibrate)
+  - Files: `src/views/useStreamBuffer.ts`, `src/views/HermesChatView.tsx`
+
+- [x] **Saving Conversations**
+  - [x] Save folder name input
+  - [x] Folder organisation dropdown (flat / by-date / by-project)
+  - [x] ConversationManager respects prefs
+  - Files: `addon/content/preferences.xhtml`, `src/modules/hermes/ConversationManager.ts`
+
+- [x] **Troubleshooting**
+  - [x] Debug mode toggle
+  - [x] Reset onboarding button
+  - File: `addon/content/preferences.xhtml`, `src/modules/preferenceScript.ts`
+
+### ⚪ Future - Conversation Persistence Enhancements
 
 - [ ] **Save Conversations to Notes**
   - [ ] Implement `saveToNote()` with formatting

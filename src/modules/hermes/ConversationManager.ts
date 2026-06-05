@@ -24,20 +24,44 @@ export class ConversationManager {
   }
 
   /**
-   * Get the conversations directory path.
+   * Get the base conversations directory path.
    */
-  private getConversationsDir(): string {
+  private getBaseDir(): string {
     const profileDir = Zotero.getProfileDirectory?.();
     if (!profileDir) {
       return "/tmp/zotero-hermes-conversations";
     }
-    const convDir = profileDir.clone() as nsIFile;
-    convDir.append("zotero-hermes");
-    convDir.append("conversations");
-    if (!convDir.exists()) {
-      convDir.create(Components.interfaces.nsIFile.DIRECTORY_TYPE as number, 0o755);
+    const baseDir = profileDir.clone() as nsIFile;
+    const folderName = this.addon.data.hermes?.preferences?.get("chatSaveFolder", "hermes") || "hermes";
+    baseDir.append("zotero-hermes");
+    baseDir.append(folderName);
+    if (!baseDir.exists()) {
+      baseDir.create(Components.interfaces.nsIFile.DIRECTORY_TYPE as number, 0o755);
     }
-    return convDir.path;
+    return baseDir.path;
+  }
+
+  /**
+   * Get the conversations directory path, respecting organization preference.
+   */
+  private getConversationsDir(): string {
+    const baseDir = this.getBaseDir();
+    const organization = this.addon.data.hermes?.preferences?.get<string>("conversationOrganization", "flat") || "flat";
+
+    if (organization === "by-date") {
+      const now = new Date();
+      const monthDir = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      const dir = Zotero.File.pathToFile(baseDir);
+      const subDir = dir.clone() as nsIFile;
+      subDir.append(monthDir);
+      if (!subDir.exists()) {
+        subDir.create(Components.interfaces.nsIFile.DIRECTORY_TYPE as number, 0o755);
+      }
+      return subDir.path;
+    }
+
+    // flat (default) or by-project (not yet implemented)
+    return baseDir;
   }
 
   /**

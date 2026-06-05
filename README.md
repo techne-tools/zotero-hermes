@@ -112,14 +112,16 @@ Starts Zotero with the plugin loaded and enables **auto hot reload** — changes
 
 ## Configuration
 
-Open Zotero Preferences → Hermes Agent to configure:
+Open **Zotero → Edit → Settings → Hermes Agent** to configure:
 
-- **Connection Mode** — ACP (stdio) or API (HTTP)
-- **Hermes Binary Path** — Path to `hermes` executable (ACP mode)
-- **API URL** — `http://localhost:8642/v1/chat/completions` (API mode)
-- **API Key** — Bearer token for API authentication
-- **Show Reasoning** — Toggle reasoning/thought process display
-- **Auto-Save** — Automatically save conversations
+- **🤖 Agent Personality** — Customise the assistant's display name
+- **💬 Chat Display** — Toggle reasoning steps, tool use notices, token counter, and auto-save
+- **🔌 Connection** — Choose Local (ACP/stdio) or Remote (API/SSE) mode, with test-connection buttons
+- **📎 Automatic Context** — Enable citation generation, annotation reading, and tag management
+- **🗂️ Saving Conversations** — Set save folder and organisation mode (flat / by-date)
+- **🔊 Sound & Feel** — Typing sounds and haptic feedback toggles
+- **🛡️ Security** — Terminal command approval and MCP server configuration
+- **🐛 Troubleshooting** — Debug mode and onboarding reset
 
 ## Usage
 
@@ -138,6 +140,7 @@ Open Zotero Preferences → Hermes Agent to configure:
 ## Recent Changes (5 June 2026)
 
 ### Fixed
+- **Preferences pane not appearing** — Added `Zotero.PreferencePanes.register()` call during startup so the Hermes Agent settings pane appears in Zotero Settings
 - **Metadata context** — Full item metadata (title, authors, abstract, tags, date, DOI, URL) now passed to agent, preventing hallucinations
 - **Storage folder resolution** — Attachment item key (not parent key) used for correct storage path
 - **Stuck typing indicator** — Safety timeout restarts on activity, clears after 60s of no terminal event
@@ -145,6 +148,12 @@ Open Zotero Preferences → Hermes Agent to configure:
 - **Build errors** — Duplicate variable declarations in `HermesClient.ts`
 
 ### Added
+- **Proper preferences pane** — Full 8-section settings UI aligned with obsidian-hermes: Agent Personality, Chat Display, Connection (local/remote with test buttons), Automatic Context, Saving Conversations, Sound & Feel, Security, Troubleshooting
+- **Conversation organisation** — Flat or by-date monthly subfolders for saved conversations
+- **Typing sounds** — Soft click sound via Web Audio API while agent writes (toggleable)
+- **Haptic feedback** — Vibrate on agent response start (toggleable)
+- **MCP server support** — Enable/disable external tool servers with path configuration
+- **Reset onboarding** — Button to show welcome message again
 - **Copy to clipboard** — 📋 buttons on assistant messages and reasoning bubbles
 - **Stronger system prompt** — Explicitly instructs agent to answer from provided metadata
 - **MCP removal** — Removed flaky MCP dependency; uses direct fs-based access

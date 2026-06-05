@@ -4,22 +4,65 @@
 <vbox
   onload="Zotero.__addonInstance__.hooks.onPrefsEvent('load', { window })"
 >
-  <!-- Connection Settings -->
+  <!-- 🤖 Agent Personality -->
   <groupbox>
-    <label><html:h2 data-l10n-id="pref-connection-title"></html:h2></label>
+    <label><html:h2>🤖 Agent Personality</html:h2></label>
+
+    <hbox align="center">
+      <html:label
+        for="zotero-prefpane-__addonRef__-chat-agent-name"
+      >What you call your assistant in the chat</html:label>
+      <html:input
+        type="text"
+        id="zotero-prefpane-__addonRef__-chat-agent-name"
+        preference="extensions.zotero.hermes.chatAgentName"
+        placeholder="Hermes"
+        style="flex: 1;"
+      ></html:input>
+    </hbox>
+  </groupbox>
+
+  <!-- 💬 Chat Display -->
+  <groupbox>
+    <label><html:h2>💬 Chat Display</html:h2></label>
+
+    <checkbox
+      id="zotero-prefpane-__addonRef__-show-reasoning"
+      preference="extensions.zotero.hermes.showReasoning"
+      label="Show Reasoning Steps — display the agent's chain-of-thought"
+    />
+    <checkbox
+      id="zotero-prefpane-__addonRef__-show-tool-use"
+      preference="extensions.zotero.hermes.showToolUse"
+      label="Show Tool Use — display a notice when the agent reads files or runs commands"
+    />
+    <checkbox
+      id="zotero-prefpane-__addonRef__-show-token-count"
+      preference="extensions.zotero.hermes.showTokenCount"
+      label="Show Token Count — display real-time token usage in chat"
+    />
+    <checkbox
+      id="zotero-prefpane-__addonRef__-auto-save"
+      preference="extensions.zotero.hermes.autoSave"
+      label="Auto-Save Conversations"
+    />
+  </groupbox>
+
+  <!-- 🔌 Connection -->
+  <groupbox>
+    <label><html:h2>🔌 Connection</html:h2></label>
 
     <hbox align="center">
       <html:label
         for="zotero-prefpane-__addonRef__-connection-mode"
-        data-l10n-id="pref-connection-mode"
-      ></html:label>
+      >How Hermes connects to your AI agent</html:label>
       <menulist
         id="zotero-prefpane-__addonRef__-connection-mode"
         preference="extensions.zotero.hermes.connectionMode"
       >
         <menupopup>
-          <menuitem label="ACP (stdio subprocess)" value="stdio" />
-          <menuitem label="API Server (HTTP)" value="api" />
+          <menuitem label="Local — runs on this computer" value="stdio" />
+          <menuitem label="Remote — connects to a server" value="api" />
         </menupopup>
       </menulist>
     </hbox>
@@ -27,12 +70,12 @@
     <hbox align="center" id="__addonRef__-binary-path-row">
       <html:label
         for="zotero-prefpane-__addonRef__-binary-path"
-        data-l10n-id="pref-binary-path"
-      ></html:label>
+      >Hermes program location (leave blank for auto-detect)</html:label>
       <html:input
         type="text"
         id="zotero-prefpane-__addonRef__-binary-path"
         preference="extensions.zotero.hermes.binaryPath"
+        placeholder="/opt/homebrew/bin/hermes"
         style="flex: 1;"
       ></html:input>
     </hbox>
@@ -40,8 +83,7 @@
     <hbox align="center" id="__addonRef__-api-url-row">
       <html:label
         for="zotero-prefpane-__addonRef__-api-url"
-        data-l10n-id="pref-api-url"
-      ></html:label>
+      >Server address</html:label>
       <html:input
         type="text"
         id="zotero-prefpane-__addonRef__-api-url"
@@ -54,8 +96,7 @@
     <hbox align="center" id="__addonRef__-api-key-row">
       <html:label
         for="zotero-prefpane-__addonRef__-api-key"
-        data-l10n-id="pref-api-key"
-      ></html:label>
+      >API key (stored securely)</html:label>
       <html:input
         type="password"
         id="zotero-prefpane-__addonRef__-api-key"
@@ -65,38 +106,39 @@
     </hbox>
   </groupbox>
 
-  <!-- General Settings -->
+  <!-- 🛡️ Security -->
   <groupbox>
-    <label><html:h2 data-l10n-id="pref-general-title"></html:h2></label>
+    <label><html:h2>🛡️ Security</html:h2></label>
 
-    <checkbox
-      id="zotero-prefpane-__addonRef__-auto-save"
-      preference="extensions.zotero.hermes.autoSave"
-      data-l10n-id="pref-auto-save"
-    />
-    <checkbox
-      id="zotero-prefpane-__addonRef__-show-reasoning"
-      preference="extensions.zotero.hermes.showReasoning"
-      data-l10n-id="pref-show-reasoning"
-    />
     <checkbox
       id="zotero-prefpane-__addonRef__-enable-citations"
       preference="extensions.zotero.hermes.enableCitations"
-      data-l10n-id="pref-enable-citations"
+      label="Enable citation generation"
     />
     <checkbox
       id="zotero-prefpane-__addonRef__-enable-annotations"
       preference="extensions.zotero.hermes.enableAnnotations"
-      data-l10n-id="pref-enable-annotations"
+      label="Enable annotation reading"
     />
     <checkbox
       id="zotero-prefpane-__addonRef__-enable-tags"
       preference="extensions.zotero.hermes.enableTags"
-      data-l10n-id="pref-enable-tags"
+      label="Enable tag management"
     />
   </groupbox>
 
-  <!-- Help / About -->
+  <!-- 🐛 Troubleshooting -->
+  <groupbox>
+    <label><html:h2>🐛 Troubleshooting</html:h2></label>
+
+    <checkbox
+      id="zotero-prefpane-__addonRef__-enable-debug-mode"
+      preference="extensions.zotero.hermes.enableDebugMode"
+      label="Debug Mode — write detailed logs to the browser console"
+    />
+  </groupbox>
+
+  <!-- ℹ️ About -->
   <vbox>
     <html:label
       data-l10n-id="pref-help"

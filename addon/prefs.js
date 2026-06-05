@@ -1,2 +1,13 @@
-pref("enable", true);
-pref("input", "This is input");
+pref("extensions.zotero.hermes.binaryPath", "");
+pref("extensions.zotero.hermes.connectionMode", "stdio");
+pref("extensions.zotero.hermes.apiUrl", "");
+pref("extensions.zotero.hermes.apiKey", "");
+pref("extensions.zotero.hermes.chatAgentName", "Hermes");
+pref("extensions.zotero.hermes.autoSave", true);
+pref("extensions.zotero.hermes.showReasoning", true);
+pref("extensions.zotero.hermes.showToolUse", true);
+pref("extensions.zotero.hermes.showTokenCount", false);
+pref("extensions.zotero.hermes.enableDebugMode", false);
+pref("extensions.zotero.hermes.enableCitations", true);
+pref("extensions.zotero.hermes.enableAnnotations", true);
+pref("extensions.zotero.hermes.enableTags", true);

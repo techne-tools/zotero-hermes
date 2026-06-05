@@ -1,203 +1,156 @@
-# Commands and Settings Implementation
+<!--
+Source: Based on the zotero-hermes codebase, Zotero preference system, and zotero-plugin-toolkit
+-->
 
-## Registering Commands
+# Commands & Settings
 
-### Menu Commands
+## Preferences System
 
-Add items to Zotero's context menus:
+Zotero plugins use the browser-standard `pref()` system (in `addon/prefs.js`) and XUL preference bindings (in `addon/content/preferences.xhtml`).
 
-```typescript
-// Register right-click menu item
-ztoolkit.Menu.register("item", {
-  tag: "menuitem",
-  id: "zotero-itemmenu-hermes-summarize",
-  label: "Summarize with Hermes",
-  commandListener: (ev) => {
-    const items = Zotero.getActiveZoteroPane().getSelectedItems();
-    summarizeItems(items);
-  },
-  icon: `chrome://${addon.data.config.addonRef}/content/icons/favicon@0.5x.png`,
-});
+### Default Preference Values (`addon/prefs.js`)
+
+```javascript
+pref("extensions.zotero.hermes.binaryPath", "");
+pref("extensions.zotero.hermes.connectionMode", "stdio");
+pref("extensions.zotero.hermes.apiUrl", "");
+pref("extensions.zotero.hermes.apiKey", "");
+pref("extensions.zotero.hermes.autoSave", true);
+pref("extensions.zotero.hermes.showReasoning", true);
+pref("extensions.zotero.hermes.enableCitations", true);
+pref("extensions.zotero.hermes.enableAnnotations", true);
+pref("extensions.zotero.hermes.enableTags", true);
 ```
 
-### Keyboard Shortcuts
-
-Register global keyboard shortcuts:
-
-```typescript
-ztoolkit.Keyboard.register((ev, keyOptions) => {
-  // Alt+H to open Hermes sidebar
-  if (keyOptions.keyboard?.equals("alt,h")) {
-    toggleHermesSidebar();
-  }
-
-  // Shift+Ctrl+A to attach selected items
-  if (ev.shiftKey && ev.ctrlKey && ev.key === "A") {
-    attachSelectedItems();
-  }
-});
-```
-
-### Toolbar Buttons
-
-Add buttons to Zotero's toolbar:
-
-```typescript
-ztoolkit.UI.appendElement(
-  {
-    tag: "toolbarbutton",
-    id: "zotero-tb-hermes",
-    type: "menu-button",
-    class: "zotero-tb-button",
-    properties: {
-      label: "Hermes Agent",
-      tooltiptext: "Open Hermes AI Assistant (Alt+H)",
-      image: `chrome://${addon.data.config.addonRef}/content/icons/favicon@0.5x.png`,
-    },
-    listeners: {
-      command: () => toggleHermesSidebar(),
-    },
-  },
-  Zotero.getMainWindow().document.getElementById("zotero-tb-add"),
-);
-```
-
-## Settings Implementation
-
-### Preference Schema
-
-Define preferences in `zotero-plugin.config.ts`:
-
-```typescript
-// zotero-plugin.config.ts
-build: {
-  prefs: {
-    prefix: "extensions.zotero.hermes",
-    defaults: {
-      "connectionMode": "local",
-      "hermesBinaryPath": "",
-      "hermesApiUrl": "http://localhost:8642",
-      "apiKey": "",
-      "showReasoning": false,
-      "showToolUse": false,
-      "enableTypingSound": false,
-      "conversationOrganization": "flat",
-    },
-  },
-}
-```
-
-### Reading Preferences
-
-```typescript
-// Get preference value
-const mode = Zotero.Prefs.get(
-  "extensions.zotero.hermes.connectionMode",
-  true,
-) as string;
-
-// Get with default
-const path =
-  (Zotero.Prefs.get(
-    "extensions.zotero.hermes.hermesBinaryPath",
-    true,
-  ) as string) || "";
-
-// Check boolean
-const showReasoning = Zotero.Prefs.get(
-  "extensions.zotero.hermes.showReasoning",
-  true,
-) as boolean;
-```
-
-### Writing Preferences
-
-```typescript
-// Set preference value
-Zotero.Prefs.set("extensions.zotero.hermes.connectionMode", "remote", true);
-
-// Set boolean
-Zotero.Prefs.set("extensions.zotero.hermes.showReasoning", true, true);
-
-// Clear preference (reset to default)
-Zotero.Prefs.clear("extensions.zotero.hermes.apiKey", true);
-```
-
-### Secure Storage
-
-For sensitive data like API keys:
-
-```typescript
-// Store encrypted
-function storeApiKey(key: string): void {
-  // In production, use proper encryption
-  const encrypted = btoa(key); // Simple base64 for example
-  Zotero.Prefs.set("extensions.zotero.hermes.apiKey", encrypted, true);
-}
-
-// Retrieve and decrypt
-function getApiKey(): string {
-  const encrypted = Zotero.Prefs.get(
-    "extensions.zotero.hermes.apiKey",
-    true,
-  ) as string;
-  if (!encrypted) return "";
-  return atob(encrypted); // Simple base64 for example
-}
-```
-
-## Preferences UI
-
-### Creating Preferences Panel
+### Preferences XHTML Binding (`addon/content/preferences.xhtml`)
 
 ```xml
-<!-- addon/content/preferences.xhtml -->
-<linkset>
-  <html:link rel="localization" href="hermes-preferences.ftl" />
-</linkset>
+<!-- Connection mode selector with conditional field visibility -->
+<menulist id="zotero-prefpane-__addonRef__-connection-mode"
+          preference="extensions.zotero.hermes.connectionMode">
+  <menupopup>
+    <menuitem label="ACP (stdio subprocess)" value="stdio" />
+    <menuitem label="API Server (HTTP)" value="api" />
+  </menupopup>
+</menulist>
 
-<groupbox
-  onload="Zotero.__addonInstance__.hooks.onPrefsEvent('load', { window })"
->
-  <label><html:h2 data-l10n-id="pref-title"></html:h2></label>
+<!-- Binary path (visible in stdio mode) -->
+<hbox align="center" id="__addonRef__-binary-path-row">
+  <html:input type="text"
+    id="zotero-prefpane-__addonRef__-binary-path"
+    preference="extensions.zotero.hermes.binaryPath" />
+</hbox>
 
-  <!-- Connection Settings -->
-  <html:h3 data-l10n-id="pref-connection-title"></html:h3>
+<!-- API URL/Key (visible in API mode) -->
+<hbox align="center" id="__addonRef__-api-url-row">
+  <html:input type="text"
+    id="zotero-prefpane-__addonRef__-api-url"
+    preference="extensions.zotero.hermes.apiUrl" />
+</hbox>
+<hbox align="center" id="__addonRef__-api-key-row">
+  <html:input type="password"
+    id="zotero-prefpane-__addonRef__-api-key"
+    preference="extensions.zotero.hermes.apiKey" />
+</hbox>
+```
 
-  <radiogroup preference="connectionMode">
-    <radio value="local" data-l10n-id="pref-connection-local" />
-    <radio value="remote" data-l10n-id="pref-connection-remote" />
-  </radiogroup>
+### Conditional Field Visibility (`src/modules/preferenceScript.ts`)
 
-  <hbox>
-    <html:label for="hermes-path" data-l10n-id="pref-hermes-path"></html:label>
-    <html:input type="text" id="hermes-path" preference="hermesBinaryPath" />
-    <button label="Browse..." oncommand="browseForHermes()" />
-  </hbox>
+```typescript
+function updateConnectionModeUI(): void {
+  const modeDropdown = doc.querySelector(
+    `#zotero-prefpane-${config.addonRef}-connection-mode`,
+  ) as any;
+  const binaryRow = doc.getElementById(`${config.addonRef}-binary-path-row`);
+  const apiUrlRow = doc.getElementById(`${config.addonRef}-api-url-row`);
+  const apiKeyRow = doc.getElementById(`${config.addonRef}-api-key-row`);
 
-  <hbox>
-    <html:label for="api-url" data-l10n-id="pref-api-url"></html:label>
-    <html:input type="text" id="api-url" preference="hermesApiUrl" />
-  </hbox>
+  const mode = modeDropdown?.value || "stdio";
 
-  <hbox>
-    <html:label for="api-key" data-l10n-id="pref-api-key"></html:label>
-    <html:input type="password" id="api-key" preference="apiKey" />
-  </hbox>
+  if (mode === "api") {
+    binaryRow.style.display = "none";
+    apiUrlRow.style.display = "";
+    apiKeyRow.style.display = "";
+  } else {
+    binaryRow.style.display = "";
+    apiUrlRow.style.display = "none";
+    apiKeyRow.style.display = "none";
+  }
+}
+```
 
-  <button label="Test Connection" oncommand="testConnection()" />
+## PreferencesManager Pattern (`src/modules/hermes/PreferencesManager.ts`)
 
-  <!-- Chat Settings -->
-  <html:h3 data-l10n-id="pref-chat-title"></html:h3>
+```typescript
+export class PreferencesManager {
+  private readonly defaults: Record<string, any> = {
+    "extensions.zotero.hermes.binaryPath": "",
+    "extensions.zotero.hermes.connectionMode": "stdio",
+    "extensions.zotero.hermes.apiUrl": "",
+    "extensions.zotero.hermes.apiKey": "",
+    "extensions.zotero.hermes.autoSave": true,
+    "extensions.zotero.hermes.showReasoning": true,
+  };
 
-  <checkbox preference="showReasoning" data-l10n-id="pref-show-reasoning" />
-  <checkbox preference="showToolUse" data-l10n-id="pref-show-tool-use" />
-  <checkbox preference="enableTypingSound" data-l10n-id="pref-typing-sound" />
+  constructor(addon: any) {
+    this.addon = addon;
+    this.initializeDefaults();
+  }
 
-  <!-- Security Settings -->
-  <html:h3 data-l10n-id="pref-security-title"></html:h3>
+  private initializeDefaults(): void {
+    for (const [key, value] of Object.entries(this.defaults)) {
+      if (Zotero.Prefs.get(key) === undefined) {
+        Zotero.Prefs.set(key, value);
+      }
+    }
+  }
 
-  <checkbox preference="requireApproval" data-l10n-id="pref-require-approval" />
+  public get<T>(key: string, defaultValue?: T): T {
+    const fullKey = key.startsWith("extensions.zotero.hermes.")
+      ? key : `extensions.zotero.hermes.${key}`;
+    const value = Zotero.Prefs.get(fullKey);
+    return value !== undefined ? (value as T) : (defaultValue as T);
+  }
+
+  public set<T extends string | number | boolean>(key: string, value: T): void {
+    const fullKey = key.startsWith("extensions.zotero.hermes.")
+      ? key : `extensions.zotero.hermes.${key}`;
+    Zotero.Prefs.set(fullKey, value);
+  }
+
+  public getConnectionMode(): string {
+    return this.get<string>("connectionMode", "stdio");
+  }
+
+  public getHermesPath(): string {
+    return this.get<string>("binaryPath", "");
+  }
+}
+```
+
+## Using Preferences at Runtime
+
+```typescript
+// Via PreferencesManager
+const prefs = new PreferencesManager(addon);
+const mode = prefs.getConnectionMode();   // "stdio" | "api"
+const path = prefs.getHermesPath();       // e.g. "/usr/local/bin/hermes"
+const showReasoning = prefs.get("showReasoning", true);
+
+// Direct Zotero API
+const binaryPath = Zotero.Prefs.get(
+  "extensions.zotero.hermes.binaryPath",
+  true,
+) as string;
+Zotero.Prefs.set("extensions.zotero.hermes.connectionMode", "api", true);
+```
+
+## Stable Preference Keys
+
+- Use stable preference keys; avoid renaming once released
+- Pattern: `extensions.zotero.<addonRef>.<key>` — from `config.prefsPrefix` in `package.json`
+- Migrate old preference keys with backwards-compatible fallbacks
+- Boolean defaults should match the XHTML `<checkbox>` default state
 </groupbox>
 ```
 

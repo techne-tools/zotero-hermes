@@ -1,203 +1,122 @@
+<!--
+Source: Based on TypeScript best practices, Zotero plugin conventions, and the zotero-hermes codebase
+-->
+
 # Coding Conventions
 
 ## TypeScript Guidelines
 
-### Type Safety
+- **Use `strict: true`** in `tsconfig.json`
+- **Avoid `any` type**: Use proper types, `unknown`, or type assertions. `any` defeats type safety.
+- **Keep entry points minimal**: `src/index.ts` and `src/addon.ts` should only handle lifecycle and module registration. Delegate feature logic to separate modules.
+- **Split large files**: If a file exceeds ~300 lines, break it into smaller, focused modules.
+- **Bundle everything**: esbuild target `firefox115` bundles into a single output file.
+- **No Node/Electron APIs** — Zotero runs on Firefox 115 ESR.
+- **Prefer `async/await`** over promise chains; handle errors gracefully with user-friendly messages.
 
-- Use strict TypeScript mode
-- Avoid `any` type - use `unknown` or proper types
-- Define interfaces for all data structures
-- Use generics where appropriate
+## Naming Conventions
 
-```typescript
-// Good
-interface ChatMessage {
-  id: string;
-  content: string;
-  role: "user" | "assistant" | "system";
-  timestamp: number;
-}
+| Element | Convention | Example |
+|---------|-----------|---------|
+| **Classes** | PascalCase | `HermesClient`, `ChatManager`, `ApprovalDialog` |
+| **Methods** | camelCase | `sendPrompt()`, `getSelectedItems()`, `writeToStdin()` |
+| **Constants** | UPPER_SNAKE_CASE | `MAX_RECONNECT_ATTEMPTS`, `PROTOCOL_VERSION` |
+| **Files (classes)** | PascalCase | `HermesClient.ts`, `ChatManager.ts` |
+| **Files (utils)** | camelCase | `locale.ts`, `ztoolkit.ts` |
+| **Interfaces** | PascalCase | `ChatSessionUpdate`, `PromptContextItem`, `AttachedItem` |
 
-// Bad
-const message: any = { content: "Hello" };
+## Module Organization
+
+```
+src/
+├── index.ts              # Entry — sets browser globals, instantiates Addon
+├── addon.ts              # Addon class — typed registry, logging, config
+├── hooks.ts              # Lifecycle — startup/shutdown/window events
+├── modules/
+│   └── hermes/           # Core integration modules
+│       ├── types.ts              # SHARED type interfaces (ChatClient, ChatSessionUpdate, PendingFileChange, PromptContextItem)
+│       ├── HermesClient.ts       # ACP/stdio subprocess (implements ChatClient)
+│       ├── HermesApiClient.ts    # REST + SSE streaming (implements ChatClient)
+│       ├── ChatManager.ts        # Conversation state bridge
+│       ├── ConversationManager.ts # JSON file persistence
+│       ├── NoteManager.ts        # Note CRUD
+│       ├── ItemManager.ts        # Item metadata extraction
+│       ├── AnnotationManager.ts  # PDF annotation reading
+│       ├── CitationManager.ts    # CSL citation generation
+│       ├── TagManager.ts         # Tag operations
+│       ├── SlashCommands.ts      # /slash command registry
+│       ├── ApprovalDialog.ts     # File change approval UI
+│       └── PreferencesManager.ts # Zotero prefs wrapper
+├── views/
+│   ├── HermesChatView.tsx        # React chat UI (600+ lines)
+│   └── useStreamBuffer.ts        # rAF-buffered streaming hook
+└── utils/
+    ├── uuid.ts                   # generateMessageId() — mirrors obsidian-hermes/src/utils/uuid.ts
+    ├── stripAnsi.ts              # ANSI escape code stripping — mirrors obsidian-hermes
+    ├── DebugLogger.ts            # Toggleable debug logging — mirrors obsidian-hermes/src/DebugLogger.ts
+    ├── AuditLog.ts               # Persistent audit log — mirrors obsidian-hermes/src/AuditLog.ts
+    ├── locale.ts                 # Fluent/Fluent localization
+    ├── prefs.ts                  # Preference helpers
+    └── ztoolkit.ts               # Toolkit initialization
 ```
 
-### Naming Conventions
+## Module Boundaries
 
-#### Classes
+Each module has a single, well-defined responsibility:
 
-Use PascalCase for class names:
+| Module | Responsible For | Does NOT Handle |
+|--------|----------------|-----------------|
+| `HermesClient` | ACP protocol stdio (implements `ChatClient`) | Conversation state, UI |
+| `HermesApiClient` | REST API with SSE (implements `ChatClient`) | Conversation state, UI |
+| `ChatManager` | Bridging messages ↔ ConversationManager | Protocol, file I/O |
+| `ConversationManager` | JSON file persistence | UI, protocol |
+| `NoteManager` | Note read/write/search | Approval UI, prompts |
+| `ItemManager` | Item metadata extraction | Note CRUD, annotations |
+| `AnnotationManager` | Annotation extraction from items | Item metadata, citations |
+| `CitationManager` | CSL citation/bibliography gen | Annotations, tags |
+| `TagManager` | Tag CRUD | Annotations, topics |
+| `ApprovalDialog` | Pending file change approval | File I/O, protocol |
+| `PreferencesManager` | Preference get/set with defaults | UI, protocol |
+| `DebugLogger` | Gated debug logging (toggle via `enableDebugMode`) | Audit history |
+| `AuditLog` | Persistent action log (JSON file) | Live debugging |
 
-```typescript
-class HermesClient {}
-class ChatManager {}
-class NoteManager {}
-```
+## React Conventions
 
-#### Interfaces
+- Use **React 18 `createRoot()`** (not legacy `ReactDOM.render`)
+- Mount roots in XUL `<div>` containers
+- Use **native DOM event listeners** when React synthetic events are unreliable (Zotero sandbox)
+- Store unmount functions on the container element: `container._unmount = () => root.unmount()`
+- Use `useRef` for DOM access and stream buffers instead of state
+- Use `requestAnimationFrame` for buffered stream updates (see `useStreamBuffer.ts`)
+- Clean up subscriptions in `useEffect` return callbacks
 
-Use PascalCase with descriptive names:
+## Error Handling
 
-```typescript
-interface ConnectionConfig {
-  mode: "local" | "remote";
-  url?: string;
-  apiKey?: string;
-}
-```
+- Wrap async operations in try/catch with user-friendly error messages
+- Log errors via `addon.log()` for debugging
+- Use `AbortController` for fetch/stream cancellation
+- Implement retry logic with exponential backoff for transient failures
+- Guard stale callbacks: `if (!addon?.data.alive) return;`
+- Network errors should trigger reconnect logic, not crash the UI
 
-#### Functions and Methods
-
-Use camelCase:
-
-```typescript
-function sendMessage(text: string): Promise<void> {}
-function handleError(error: Error): void {}
-```
-
-#### Constants
-
-Use UPPER_SNAKE_CASE for true constants:
-
-```typescript
-const MAX_RECONNECT_ATTEMPTS = 5;
-const DEFAULT_TIMEOUT_MS = 30000;
-```
-
-#### Private Members
-
-Prefix with underscore for private class members:
-
-```typescript
-class ChatManager {
-  private _messages: ChatMessage[] = [];
-  private _listeners: Set<() => void> = new Set();
-}
-```
-
-### File Organization
-
-#### Imports
-
-Order imports by category:
+## Import Order
 
 ```typescript
 // 1. External libraries
 import { createRoot } from "react-dom/client";
+import { useState, useEffect, useRef, useCallback } from "react";
 
-// 2. Zotero APIs
-import { Zotero } from "zotero";
+// 2. Project modules
+import { HermesClient } from "../modules/hermes/HermesClient";
+import { ChatManager } from "../modules/hermes/ChatManager";
 
-// 3. Internal modules
-import { HermesClient } from "./HermesClient";
-import { ChatManager } from "./ChatManager";
+// 3. Utilities
+import { getString, initLocale } from "../utils/locale";
 
-// 4. Utilities
-import { debounce } from "../utils/debounce";
+// 4. Config
+import { config } from "../../package.json";
+import pkg from "../../package.json";
 ```
-
-#### File Structure
-
-Each file should have a single responsibility:
-
-```
-HermesClient.ts    - ACP protocol communication
-ChatManager.ts     - Conversation state
-NoteManager.ts     - Note operations
-ItemManager.ts     - Item metadata
-```
-
-### Error Handling
-
-#### Always Handle Errors
-
-```typescript
-// Good
-try {
-  await saveNote(content);
-} catch (error) {
-  if (error instanceof Zotero.Error) {
-    handleZoteroError(error);
-  } else {
-    handleGenericError(error);
-  }
-}
-
-// Bad - Silent failure
-await saveNote(content).catch(() => {});
-```
-
-#### Use Custom Error Types
-
-```typescript
-class HermesError extends Error {
-  constructor(
-    message: string,
-    public code: string,
-  ) {
-    super(message);
-    this.name = "HermesError";
-  }
-}
-
-class ConnectionError extends HermesError {
-  constructor(message: string) {
-    super(message, "CONNECTION_ERROR");
-  }
-}
-```
-
-### Async Patterns
-
-#### Prefer Async/Await
-
-```typescript
-// Good
-async function loadItems(): Promise<Zotero.Item[]> {
-  const items = await Zotero.Items.getAll();
-  return items.filter((item) => item.isNote());
-}
-
-// Bad - Promise chains
-function loadItems(): Promise<Zotero.Item[]> {
-  return Zotero.Items.getAll().then((items) =>
-    items.filter((item) => item.isNote()),
-  );
-}
-```
-
-#### Handle Concurrent Operations
-
-```typescript
-// Good - Process in parallel with limit
-async function processBatch(items: Zotero.Item[]): Promise<void> {
-  const limit = 5;
-  for (let i = 0; i < items.length; i += limit) {
-    const batch = items.slice(i, i + limit);
-    await Promise.all(batch.map(processItem));
-  }
-}
-
-// Bad - Process all at once (may overwhelm system)
-await Promise.all(items.map(processItem));
-```
-
-### Documentation
-
-#### JSDoc Comments
-
-Document all public APIs:
-
-```typescript
-/**
- * Send a message to the Hermes agent.
- * @param text - The message content
- * @param context - Optional context items to include
- * @returns Promise that resolves when message is sent
- * @throws {ConnectionError} If not connected to agent
- * @example
- * await client.sendMessage("Summarize this paper", [item]);
- */
 public async sendMessage(
   text: string,
   context?: ContextItem[],

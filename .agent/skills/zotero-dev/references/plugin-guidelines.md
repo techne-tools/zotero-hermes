@@ -1,203 +1,165 @@
-# Zotero Plugin Development Guidelines
+<!--
+Source: Based on Zotero plugin development guidelines, windingwind's zotero-plugin-template docs, and the zotero-hermes codebase
+-->
+
+# Plugin Guidelines
 
 ## Architecture Overview
 
-Zotero plugins are built using a combination of:
-
+Zotero plugins use:
 - **XUL/XHTML**: Native UI framework (Firefox-based)
-- **JavaScript/TypeScript**: Core logic
-- **React**: For complex interactive components (optional)
-- **zotero-plugin-toolkit**: Helper library for common operations
+- **TypeScript**: Core logic (bundled via esbuild)
+- **React 18**: For complex interactive components (chat UI)
+- **zotero-plugin-toolkit**: Helper library for UI, menus, preferences
+- **zotero-plugin-scaffold**: Build system with hot reload
 
 ## Plugin Lifecycle
 
 ### Startup Sequence
 
-1. `bootstrap.js` loads the plugin
-2. `addon.ts` creates the plugin instance
-3. `hooks.ts` `onStartup()` initializes modules
-4. `onMainWindowLoad()` sets up UI for each window
+1. `src/index.ts` — Sets browser globals for React in Zotero sandbox, instantiates `Addon`
+2. `src/addon.ts` — Configures addon data with typed module registry
+3. `src/hooks.ts` `onStartup()` — Waits for Zotero promises, initializes all Hermes modules, sets up UI for all existing windows
+4. `onMainWindowLoad()` — Inserts FTL, registers toolbar button, creates sidebar, mounts React
 
 ### Shutdown Sequence
 
-1. `onShutdown()` cleans up resources
-2. Unregister all observers and listeners
-3. Close any open dialogs
+1. `onShutdown()` — Unregisters sidebar from all windows, cleans up toolkit, closes dialogs
+2. `onMainWindowUnload()` — Per-window cleanup of sidebar and React roots
 
-## UI Development
+## Security
 
-### XUL Elements
+### Avoid innerHTML
 
-Zotero's UI is built with XUL (XML User Interface Language):
-
-```xml
-<vbox id="hermes-sidebar" flex="1">
-  <html:div id="chat-messages" />
-  <hbox>
-    <html:textarea id="input" />
-    <button label="Send" />
-  </hbox>
-</vbox>
-```
-
-### Creating Elements Programmatically
-
-Use `ztoolkit.UI.createElement()`:
+Building DOM from AI-generated content using `innerHTML` poses XSS risks:
 
 ```typescript
-const button = ztoolkit.UI.createElement(doc, "button", {
-  id: "hermes-btn",
-  class: "hermes-primary",
-  properties: { label: "Send" },
-  listeners: { command: () => handleClick() },
+// BAD — security risk
+container.innerHTML = aiGeneratedContent;
+
+// GOOD — use DOM API
+const div = doc.createElement("div");
+div.textContent = aiGeneratedContent;
+container.appendChild(div);
+```
+
+### API Key Storage
+
+- Store API keys in Zotero Preferences via `<html:input type="password">`
+- Never log API keys to console or debug output
+- Use the `PreferencesManager` for typed get/set access
+- Keys are stored in Zotero's secure preference storage
+
+### Approval System
+
+All file/note modifications require user approval — use the `ApprovalDialog`:
+
+```typescript
+const approved = await approvalDialog.addPendingChange({
+  id: "change_1",
+  path: "/path/to/file",
+  content: "new content",
+  action: "update",
 });
+if (!approved) return; // User denied the change
 ```
 
-### React Integration
+## Guard Against Stale References
 
-For complex components like chat interfaces:
-
-```typescript
-import { createRoot } from "react-dom/client";
-
-const container = doc.getElementById("hermes-chat-container");
-const root = createRoot(container);
-root.render(<ChatComponent />);
-```
-
-## Zotero API Patterns
-
-### Item Operations
-
-```typescript
-// Reading
-const item = await Zotero.Items.getAsync(id);
-const title = item.getDisplayTitle();
-const note = item.getNote();
-
-// Writing
-const newItem = new Zotero.Item("note");
-newItem.setNote("Content");
-await newItem.saveTx();
-```
-
-### Collections
-
-```typescript
-const collections = await Zotero.Collections.getAll(libraryID);
-for (const collection of collections) {
-  const items = await collection.getChildItems();
-}
-```
-
-### Annotations
-
-```typescript
-const annotations = await item.getAnnotations();
-for (const annotation of annotations) {
-  const text = annotation.annotationText;
-  const comment = annotation.annotationComment;
-}
-```
-
-## Event Handling
-
-### Notifiers
-
-Register observers for Zotero events:
+Always check `addon.data.alive` in async callbacks:
 
 ```typescript
 const callback = {
   notify: async (event, type, ids, extraData) => {
-    if (event === "select" && type === "tab") {
-      // Handle tab selection
-    }
+    if (!addon?.data.alive) return; // CRITICAL — prevents errors after shutdown
+    addon.hooks.onNotify(event, type, ids, extraData);
   },
 };
-const notifierID = Zotero.Notifier.registerObserver(callback, ["tab", "item"]);
 ```
 
-### Keyboard Shortcuts
+## Window Management
+
+Zotero can have multiple windows. Always iterate all windows:
 
 ```typescript
-ztoolkit.Keyboard.register((ev, keyOptions) => {
-  if (keyOptions.keyboard?.equals("shift,l")) {
-    // Handle Shift+L
-  }
-});
+// Register in all existing windows
+const mainWindows = Zotero.getMainWindows();
+await Promise.all(mainWindows.map((win) => onMainWindowLoad(win)));
+
+// Cleanup from all windows on shutdown
+for (const win of Zotero.getMainWindows()) {
+  unregisterHermesSidebar(win);
+}
 ```
 
-## Common Pitfalls
+## React in Zotero Sandbox
 
-### 1. Async Operations
+### Critical: Use Native DOM Events
 
-Always use `await` for Zotero API calls:
+React synthetic `onChange` is unreliable in Zotero's sandboxed Firefox. Use native DOM event listeners instead:
 
 ```typescript
-// Bad
-const item = Zotero.Items.get(id); // May return promise
-
-// Good
-const item = await Zotero.Items.getAsync(id);
+// In React component:
+useEffect(() => {
+  const textarea = inputRef.current;
+  if (!textarea) return;
+  const handler = (e: Event) => {
+    setInput((e.target as HTMLTextAreaElement).value);
+  };
+  textarea.addEventListener("input", handler);
+  return () => textarea.removeEventListener("input", handler);
+}, []);
 ```
 
-### 2. Window Management
-
-Zotero can have multiple windows:
+### Mount/Unmount Lifecycle
 
 ```typescript
-// Get all windows
-const windows = Zotero.getMainWindows();
+// Mount
+const root = createRoot(container);
+root.render(<HermesChatViewComponent addon={addon} />);
+container._unmount = () => root.unmount();
+container.dataset.mounted = "true";
 
-// Current window
-const win = Zotero.getMainWindow();
-```
-
-### 3. Memory Leaks
-
-Always unregister observers:
-
-```typescript
-// Register
-const id = Zotero.Notifier.registerObserver(callback, ["item"]);
-
-// Unregister on shutdown
-Zotero.Notifier.unregisterObserver(id);
-```
-
-### 4. UI Updates
-
-Use `Zotero.Promise.delay()` for UI animations:
-
-```typescript
-await Zotero.Promise.delay(1000); // Wait 1 second
-```
-
-## Testing
-
-### Unit Tests
-
-Use vitest with Zotero mocks:
-
-```typescript
-import { describe, it, expect, vi } from "vitest";
-
-vi.mock("zotero", () => ({
-  Items: { getAsync: vi.fn() },
-}));
-```
-
-### Integration Tests
-
-Test with actual Zotero instance:
-
-```typescript
-// Requires Zotero to be running
-const item = await Zotero.Items.getAsync(1);
-expect(item).toBeDefined();
+// Unmount (on window unload or sidebar toggle)
+if (container?._unmount) {
+  container._unmount();
+}
 ```
 
 ## Performance
+
+- Use `requestAnimationFrame` for stream buffering (see `useStreamBuffer.ts`)
+- Debounce rapid input events
+- Batch Zotero item operations when possible
+- Limit context items to prevent excessive token usage
+- Lazy load React components
+- Use `addon.log()` for debug, not for production hot paths
+
+## ACP/Subprocess Communication
+
+```typescript
+// Spawn via Firefox Subprocess.sys.mjs
+const { Subprocess } = ChromeUtils.importESModule(
+  "resource://gre/modules/Subprocess.sys.mjs",
+);
+this.childProcess = await Subprocess.call({
+  command: "/bin/zsh",
+  arguments: ["-c", `"${hermesPath}" acp`],
+  stdin: "pipe",
+  stdout: "pipe",
+  stderr: "pipe",
+  environment: { PYTHONUNBUFFERED: "1" },
+  environmentAppend: true,
+});
+```
+
+## Version Compatibility
+
+- Target Zotero 9.0.0+ (Firefox 115 ESR)
+- Set `strict_min_version` in `addon/manifest.json`
+- Use `zotero-types` for type definitions matching target version
+- Test with Zotero beta releases
+- Manifest: `strict_max_version: "9.*"`
 
 ### Large Libraries
 

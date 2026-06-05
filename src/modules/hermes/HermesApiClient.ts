@@ -1,45 +1,6 @@
 import { config } from "../../../package.json";
 
-export interface ChatSessionUpdate {
-  type:
-    | "message"
-    | "reasoning"
-    | "stop"
-    | "tool_start"
-    | "tool_progress"
-    | "tool_complete"
-    | "error"
-    | "available_commands"
-    | "terminal_output"
-    | "usage";
-  content?: string;
-  reasoning?: string;
-  toolCall?: {
-    callId: string;
-    name: string;
-    status: "complete" | "error" | "running";
-    result?: string;
-  };
-  terminal?: {
-    id: string;
-    output: string;
-    isExited?: boolean;
-  };
-  usage?: {
-    inputTokens: number;
-    outputTokens: number;
-    totalTokens: number;
-  };
-  availableCommands?: Array<{ description: string; name: string }>;
-}
-
-export interface PromptContextItem {
-  id: string;
-  type: "note" | "selection" | "folder" | "image" | "pdf" | "item";
-  text: string;
-  data?: string;
-  mimeType?: string;
-}
+import type { ChatClient, ChatSessionUpdate, PromptContextItem } from "./types";
 
 /**
  * Client for the Hermes Agent REST API with Server-Sent Events streaming.
@@ -53,7 +14,7 @@ export interface PromptContextItem {
  *   and other consumers don't need to know which backend is active.
  * - Uses Zotero preferences for API URL and key storage.
  */
-export class HermesApiClient {
+export class HermesApiClient implements ChatClient {
   private _isConnected = false;
   private readonly addon: any;
   private activeAbortController: AbortController | null = null;

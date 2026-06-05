@@ -1,102 +1,176 @@
-# Zotero Plugin Template
+# Hermes Agent for Zotero
 
-[![zotero target version](https://img.shields.io/badge/Zotero-7-green?style=flat-square&logo=zotero&logoColor=CC2936)](https://www.zotero.org)
-[![Using Zotero Plugin Template](https://img.shields.io/badge/Using-Zotero%20Plugin%20Template-blue?style=flat-square&logo=github)](https://github.com/windingwind/zotero-plugin-template)
+[![zotero target version](https://img.shields.io/badge/Zotero-9.0+-green?style=flat-square&logo=zotero&logoColor=CC2936)](https://www.zotero.org)
+[![Version](https://img.shields.io/badge/version-0.1.0-blue?style=flat-square)](./package.json)
 
-This is a plugin template for [Zotero](https://www.zotero.org/).
-
-[English](README.md) | [简体中文](doc/README-zhCN.md) | [Français](doc/README-frFR.md)
-
-- Documentation for plugins development
-  - [📖 Plugin Development Documentation](https://zotero-chinese.com/plugin-dev-guide/) (Chinese, not yet complete)
-  - [📖 Plugin Development Documentation for Zotero 7](https://www.zotero.org/support/dev/zotero_7_for_developers)
-- Tools for plugins development
-  - [🛠️ Zotero Plugin Toolkit](https://github.com/windingwind/zotero-plugin-toolkit) | [API Documentation](https://github.com/windingwind/zotero-plugin-toolkit/blob/master/docs/zotero-plugin-toolkit.md)
-  - [🛠️ Zotero Plugin Scaffold](https://github.com/northword/zotero-plugin-scaffold)
-  - [ℹ️ Zotero Type Definitions](https://github.com/windingwind/zotero-types)
-  - [📜 Zotero Source Code](https://github.com/zotero/zotero)
-  - [📌 Zotero Plugin Template](https://github.com/windingwind/zotero-plugin-template) (This repo)
-
-> [!tip]
-> 👁 Watch this repo so that you can be notified whenever there are fixes & updates.
-
-## Plugins built with this template
-
-[![GitHub Repo stars](https://img.shields.io/github/stars/windingwind/zotero-better-notes?label=zotero-better-notes&style=flat-square)](https://github.com/windingwind/zotero-better-notes)
-[![GitHub Repo stars](https://img.shields.io/github/stars/windingwind/zotero-pdf-preview?label=zotero-pdf-preview&style=flat-square)](https://github.com/windingwind/zotero-pdf-preview)
-[![GitHub Repo stars](https://img.shields.io/github/stars/windingwind/zotero-pdf-translate?label=zotero-pdf-translate&style=flat-square)](https://github.com/windingwind/zotero-pdf-translate)
-[![GitHub Repo stars](https://img.shields.io/github/stars/windingwind/zotero-tag?label=zotero-tag&style=flat-square)](https://github.com/windingwind/zotero-tag)
-[![GitHub Repo stars](https://img.shields.io/github/stars/iShareStuff/ZoteroTheme?label=zotero-theme&style=flat-square)](https://github.com/iShareStuff/ZoteroTheme)
-[![GitHub Repo stars](https://img.shields.io/github/stars/MuiseDestiny/zotero-reference?label=zotero-reference&style=flat-square)](https://github.com/MuiseDestiny/zotero-reference)
-[![GitHub Repo stars](https://img.shields.io/github/stars/MuiseDestiny/zotero-citation?label=zotero-citation&style=flat-square)](https://github.com/MuiseDestiny/zotero-citation)
-[![GitHub Repo stars](https://img.shields.io/github/stars/MuiseDestiny/ZoteroStyle?label=zotero-style&style=flat-square)](https://github.com/MuiseDestiny/ZoteroStyle)
-[![GitHub Repo stars](https://img.shields.io/github/stars/volatile-static/Chartero?label=Chartero&style=flat-square)](https://github.com/volatile-static/Chartero)
-[![GitHub Repo stars](https://img.shields.io/github/stars/l0o0/tara?label=tara&style=flat-square)](https://github.com/l0o0/tara)
-[![GitHub Repo stars](https://img.shields.io/github/stars/redleafnew/delitemwithatt?label=delitemwithatt&style=flat-square)](https://github.com/redleafnew/delitemwithatt)
-[![GitHub Repo stars](https://img.shields.io/github/stars/redleafnew/zotero-updateifsE?label=zotero-updateifsE&style=flat-square)](https://github.com/redleafnew/zotero-updateifsE)
-[![GitHub Repo stars](https://img.shields.io/github/stars/northword/zotero-format-metadata?label=zotero-format-metadata&style=flat-square)](https://github.com/northword/zotero-format-metadata)
-[![GitHub Repo stars](https://img.shields.io/github/stars/inciteful-xyz/inciteful-zotero-plugin?label=inciteful-zotero-plugin&style=flat-square)](https://github.com/inciteful-xyz/inciteful-zotero-plugin)
-[![GitHub Repo stars](https://img.shields.io/github/stars/MuiseDestiny/zotero-gpt?label=zotero-gpt&style=flat-square)](https://github.com/MuiseDestiny/zotero-gpt)
-[![GitHub Repo stars](https://img.shields.io/github/stars/zoushucai/zotero-journalabbr?label=zotero-journalabbr&style=flat-square)](https://github.com/zoushucai/zotero-journalabbr)
-[![GitHub Repo stars](https://img.shields.io/github/stars/MuiseDestiny/zotero-figure?label=zotero-figure&style=flat-square)](https://github.com/MuiseDestiny/zotero-figure)
-[![GitHub Repo stars](https://img.shields.io/github/stars/l0o0/jasminum?label=jasminum&style=flat-square)](https://github.com/l0o0/jasminum)
-[![GitHub Repo stars](https://img.shields.io/github/stars/lifan0127/ai-research-assistant?label=ai-research-assistant&style=flat-square)](https://github.com/lifan0127/ai-research-assistant)
-[![GitHub Repo stars](https://img.shields.io/github/stars/daeh/zotero-markdb-connect?label=zotero-markdb-connect&style=flat-square)](https://github.com/daeh/zotero-markdb-connect)
-[![GitHub Repo stars](https://img.shields.io/github/stars/daeh/zotero-citation-tally?label=citation-tally&style=flat-square)](https://github.com/daeh/zotero-citation-tally)
-
-If you are using this repo, I recommended that you put the following badge on your README:
-
-[![Using Zotero Plugin Template](https://img.shields.io/badge/Using-Zotero%20Plugin%20Template-blue?style=flat-square&logo=github)](https://github.com/windingwind/zotero-plugin-template)
-
-```md
-[![Using Zotero Plugin Template](https://img.shields.io/badge/Using-Zotero%20Plugin%20Template-blue?style=flat-square&logo=github)](https://github.com/windingwind/zotero-plugin-template)
-```
+A Zotero plugin that integrates the [Hermes Agent](https://github.com/nousresearch/hermes) directly into your research workflow. Chat with an AI assistant that has full context of your Zotero library — no copy-pasting, no context switching.
 
 ## Features
 
-- Event-driven, functional programming, under extensive skeleton;
-- Simple and user-friendly, works out-of-the-box.
-- Abundant examples in `src/modules/examples.ts`, covering most of the commonly used APIs in plugins (using [zotero-plugin-toolkit](https://github.com/windingwind/zotero-plugin-toolkit));
-- TypeScript support:
-  - Full type definition support for the whole Zotero project, which is written in JavaScript (using [zotero-types](https://github.com/windingwind/zotero-types));
-  - Global variables and environment setup;
-- Plugin develop/build/release workflow:
-  - ⭐ [New!] Auto hot reload! Whenever the source code is modified, automatically compile and reload. [See here→](#auto-hot-reload)
-  - Automatically generate/update plugin id/version, update configrations, and set environment variables (`development` / `production`);
-  - Automatically release to GitHub;
-- Prettier and ES Lint integration.
+- **AI Chat in Zotero** — Chat with Hermes Agent in a dedicated sidebar tab
+- **Zotero-First Context** — Attach selected Zotero items to conversations; the agent receives full metadata (title, authors, abstract, tags, date, DOI, URL)
+- **Dual Connection Modes**
+  - **ACP (stdio)** — Spawns `hermes acp` as a subprocess, communicates via JSON-RPC over stdio/NDJSON
+  - **API (HTTP)** — Connects to `hermes gateway` via OpenAI-compatible `/v1/chat/completions` with SSE streaming
+- **Streaming Responses** — Real-time message streaming with typing indicator
+- **Reasoning Display** — Collapsible reasoning/thought process bubbles
+- **Tool Call Visualization** — Expandable tool call panels with status indicators
+- **Copy to Clipboard** — 📋 buttons on all message bubbles for easy text extraction
+- **Markdown Rendering** — Custom sandbox-safe markdown renderer supporting headers, bold, italic, code, links, lists, blockquotes, tables, and horizontal rules
+- **Dark/Light Theme** — Automatic theme detection and CSS variable-based styling
+- **Slash Commands** — Built-in commands: `/clear`, `/search`, and extensible command registry
+- **Preferences Panel** — Connection settings, chat toggles, and feature flags
 
-## Examples
+## Architecture
 
-This repo provides examples for [zotero-plugin-toolkit](https://github.com/windingwind/zotero-plugin-toolkit) APIs.
+```
+┌─────────────────────────────────────────┐
+│  Zotero Main Window                     │
+│  ┌─────────────────────────────────────┐  │
+│  │  Hermes Chat Tab (React 18)       │  │
+│  │  ┌─────────────────────────────┐  │  │
+│  │  │  Messages (MarkdownRenderer)│  │  │
+│  │  │  Input + Send Button        │  │  │
+│  │  │  Context Items Bar          │  │  │
+│  │  └─────────────────────────────┘  │  │
+│  └─────────────────────────────────────┘  │
+└─────────────────────────────────────────┘
+                    │
+        ┌───────────┴───────────┐
+        ▼                       ▼
+┌───────────────┐      ┌───────────────┐
+│ HermesClient  │      │ HermesApiClient│
+│ (ACP / stdio) │      │ (REST / SSE)   │
+└───────────────┘      └───────────────┘
+        │                       │
+        └───────────┬───────────┘
+                    ▼
+            ┌───────────────┐
+            │ hermes CLI   │
+            │ (local AI)   │
+            └───────────────┘
+```
 
-Search `@example` in `src/examples.ts`. The examples are called in `src/hooks.ts`.
+### Key Files
 
-### Basic Examples
+| File | Purpose |
+|------|---------|
+| `src/views/HermesChatView.tsx` | Main React chat UI — messages, input, context items, stream subscription |
+| `src/modules/hermes/HermesClient.ts` | ACP client — JSON-RPC over stdio, auto-discovery, notification handling |
+| `src/modules/hermes/HermesApiClient.ts` | API client — REST + SSE streaming, OpenAI-compatible |
+| `src/modules/hermes/ChatManager.ts` | Conversation state persistence |
+| `src/modules/hermes/ItemManager.ts` | Zotero item metadata extraction and attachment resolution |
+| `src/modules/hermes/NoteManager.ts` | Note read/write operations |
+| `src/modules/hermes/SlashCommands.ts` | Built-in slash command registry |
+| `src/utils/MarkdownRenderer.tsx` | Sandbox-safe markdown-to-React renderer (no `dangerouslySetInnerHTML`) |
+| `src/views/useStreamBuffer.ts` | Buffered streaming hook with `setTimeout` flush |
+| `addon/content/preferences.xhtml` | Settings panel UI |
 
-- registerNotifier
-- registerPrefs, unregisterPrefs
+## Zotero Sandbox Constraints
 
-### Shortcut Keys Examples
+Zotero plugins run in a **Firefox 115 ESR sandbox** with significant React limitations:
 
-- registerShortcuts
-- exampleShortcutLargerCallback
-- exampleShortcutSmallerCallback
-- exampleShortcutConflictionCallback
+- **Synthetic events fail** — `onChange`, `onClick`, `onKeyDown` on React elements don't work
+- **Solution** — All user interaction uses native `addEventListener` via refs
+- **State ref pattern** — `stateRef` mirrors all React state for native callback access
+- **No `dangerouslySetInnerHTML`** — Crashes the sandbox; use `MarkdownRenderer` instead
+- **No `DOMParser`** — Also crashes; pure React element creation only
 
-### UI Examples
+## Installation
 
-![image](https://user-images.githubusercontent.com/33902321/211739774-cc5c2df8-5fd9-42f0-9cdf-0f2e5946d427.png)
+### Prerequisites
 
-- registerStyleSheet(the official make-it-red example)
-- registerRightClickMenuItem
-- registerRightClickMenuPopup
-- registerWindowMenuWithSeprator
-- registerExtraColumn
-- registerExtraColumnWithCustomCell
-- registerCustomItemBoxRow
-- registerLibraryTabPanel
-- registerReaderTabPanel
+1. Zotero 9.0.0 or later
+2. [Hermes CLI](https://github.com/nousresearch/hermes) installed and available in `$PATH`
+3. Node.js 18+ and npm
+
+### Build from Source
+
+```bash
+git clone https://github.com/prismatic7/zotero-hermes.git
+cd zotero-hermes
+npm install
+npm run build
+```
+
+The built `.xpi` will be in `.scaffold/build/hermes-agent-for-zotero.xpi`.
+
+### Install in Zotero
+
+1. Open Zotero → Tools → Add-ons
+2. Click the gear icon → Install Add-on From File
+3. Select `.scaffold/build/hermes-agent-for-zotero.xpi`
+4. Restart Zotero
+
+### Development
+
+```bash
+npm start
+```
+
+Starts Zotero with the plugin loaded and enables **auto hot reload** — changes to `src/` or `addon/` are automatically compiled and reloaded.
+
+## Configuration
+
+Open Zotero Preferences → Hermes Agent to configure:
+
+- **Connection Mode** — ACP (stdio) or API (HTTP)
+- **Hermes Binary Path** — Path to `hermes` executable (ACP mode)
+- **API URL** — `http://localhost:8642/v1/chat/completions` (API mode)
+- **API Key** — Bearer token for API authentication
+- **Show Reasoning** — Toggle reasoning/thought process display
+- **Auto-Save** — Automatically save conversations
+
+## Usage
+
+1. Select items in your Zotero library
+2. Click the 📎 paperclip icon in the chat to attach them as context
+3. Type your question and press Send
+4. The agent answers using the attached items' metadata
+
+### Example Queries
+
+- "Summarize this paper" (with item attached)
+- "What are the key findings?" (with item attached)
+- "Compare these two articles" (with multiple items attached)
+- "/clear" — Clear the conversation
+
+## Recent Changes (5 June 2026)
+
+### Fixed
+- **Metadata context** — Full item metadata (title, authors, abstract, tags, date, DOI, URL) now passed to agent, preventing hallucinations
+- **Storage folder resolution** — Attachment item key (not parent key) used for correct storage path
+- **Stuck typing indicator** — Safety timeout restarts on activity, clears after 60s of no terminal event
+- **Markdown tables** — Custom table rendering in sandbox-safe markdown renderer
+- **Build errors** — Duplicate variable declarations in `HermesClient.ts`
+
+### Added
+- **Copy to clipboard** — 📋 buttons on assistant messages and reasoning bubbles
+- **Stronger system prompt** — Explicitly instructs agent to answer from provided metadata
+- **MCP removal** — Removed flaky MCP dependency; uses direct fs-based access
+
+### Changed
+- **System instruction** — Clarified that SQLite is locked and MCP is unavailable
+
+## Known Issues
+
+- SQLite database cannot be read while Zotero is running (locked)
+- PDF content extraction requires the PDF to be in Zotero storage
+- Large conversations may benefit from virtualized scrolling (not yet implemented)
+
+## Roadmap
+
+See [TODO.md](./TODO.md) for detailed implementation plan and feature backlog.
+
+## License
+
+[MIT](./LICENSE)
+
+## Acknowledgments
+
+- Built with [zotero-plugin-template](https://github.com/windingwind/zotero-plugin-template) by windingwind
+- Uses [zotero-plugin-toolkit](https://github.com/windingwind/zotero-plugin-toolkit) for Zotero API integration
+- Hermes Agent by [Nous Research](https://nousresearch.com)
 
 ### Preference Pane Examples
 

@@ -293,7 +293,12 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
     flushNow,
     reasoningMessageIdRef,
     streamingMessageIdRef,
-  } = useStreamBuffer(setMessages, settings.get("showReasoning", true));
+  } = useStreamBuffer(
+    setMessages,
+    settings.get("showReasoning", true),
+    settings.get("enableTypingSound", false),
+    settings.get("enableHapticFeedback", false),
+  );
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -325,6 +330,12 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
     ]);
     setInput("");
     setIsTyping(true);
+
+    // Haptic feedback when agent starts responding
+    if (settings.get("enableHapticFeedback", false) && typeof navigator !== "undefined" && navigator.vibrate) {
+      navigator.vibrate(50);
+    }
+
     // Safety timeout: clear typing indicator after 60s if no stop/session_info arrives
     typingTimeoutRef.current = setTimeout(() => {
       addon.log("[ChatView] Typing timeout reached, clearing indicator");

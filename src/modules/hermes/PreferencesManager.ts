@@ -9,6 +9,7 @@ export class PreferencesManager {
     "extensions.zotero.hermes.apiUrl": "",
     "extensions.zotero.hermes.apiKey": "",
     "extensions.zotero.hermes.chatAgentName": "Hermes",
+    "extensions.zotero.hermes.hermesAgentName": "hermes-agent",
     "extensions.zotero.hermes.autoSave": true,
     "extensions.zotero.hermes.showReasoning": true,
     "extensions.zotero.hermes.showToolUse": true,
@@ -17,6 +18,14 @@ export class PreferencesManager {
     "extensions.zotero.hermes.enableCitations": true,
     "extensions.zotero.hermes.enableAnnotations": true,
     "extensions.zotero.hermes.enableTags": true,
+    "extensions.zotero.hermes.hasSeenOnboarding": false,
+    "extensions.zotero.hermes.enableTypingSound": false,
+    "extensions.zotero.hermes.enableHapticFeedback": false,
+    "extensions.zotero.hermes.allowTerminal": false,
+    "extensions.zotero.hermes.mcpServersEnabled": false,
+    "extensions.zotero.hermes.mcpServersList": "",
+    "extensions.zotero.hermes.conversationOrganization": "flat",
+    "extensions.zotero.hermes.chatSaveFolder": "hermes",
   };
 
   constructor(addon: any) {

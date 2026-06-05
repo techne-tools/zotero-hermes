@@ -45,6 +45,30 @@ export function useStreamBuffer(
       return;
     }
 
+    // Typing sound: soft click when new content arrives
+    if (enableTypingSound && content && typeof globalThis !== "undefined" && (globalThis as any).AudioContext) {
+      const now = Date.now();
+      if (now - lastSoundTimeRef.current > 80) {
+        lastSoundTimeRef.current = now;
+        try {
+          const g = globalThis as any;
+          const audioCtx = new (g.AudioContext || g.webkitAudioContext)();
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+          gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+          osc.start(audioCtx.currentTime);
+          osc.stop(audioCtx.currentTime + 0.05);
+        } catch {
+          // AudioContext may not be available in sandbox; silently ignore
+        }
+      }
+    }
+
     setMessages((prev) => {
       const latestContent = pendingContentRef.current;
       const latestReasoning = pendingReasoningRef.current;

@@ -213,10 +213,8 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
   // Session settings state
   const [isSessionSettingsOpen, setIsSessionSettingsOpen] = useState(false);
 
-  // Onboarding state
-  const [showOnboarding, setShowOnboarding] = useState(() => {
-    return !settings.get("hasSeenOnboarding", false);
-  });
+  // Onboarding state — initialised as true, corrected after settings is available
+  const [showOnboarding, setShowOnboarding] = useState(true);
 
   // Slash command autocomplete state
   const [slashSuggestions, setSlashSuggestions] = useState<SlashCommand[]>([]);
@@ -283,6 +281,11 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
   }
 
   const settings = hermes.preferences;
+
+  // Correct onboarding state now that settings is available
+  useEffect(() => {
+    setShowOnboarding(!settings.get("hasSeenOnboarding", false));
+  }, [settings]);
 
   const {
     appendContent,
@@ -1585,7 +1588,7 @@ export function mountHermesChat(
     }
   }
 
-  // Load external CSS file (hermes-chat.css) via chrome URL and inject via CSSOM
+  // Load external CSS file (hermes-chat.css) via chrome URL and inject
   try {
     const cssUrl = `chrome://hermes/content/hermes-chat.css`;
     addonInstance.log(`Hermes theme: loading CSS from ${cssUrl}`);
@@ -1603,13 +1606,26 @@ export function mountHermesChat(
           const cssParent = doc.documentElement || doc.head || doc.body;
           if (cssParent) {
             cssParent.appendChild(cssStyleEl);
+            // Use CSSOM insertRule for each rule — safest in XUL
             const cssSheet = (cssStyleEl as any).sheet;
-            if (cssSheet && cssSheet.insertRule) {
-              // Insert the entire CSS as one rule (browsers handle this)
-              cssSheet.insertRule(cssText, 0);
-              addonInstance.log(`Hermes theme: injected hermes-chat.css (${cssText.length} chars)`);
-            } else {
-              addonInstance.log("Hermes theme: WARNING — cssSheet or insertRule not available");
+            if (cssSheet && cssSheet.cssRules !== undefined) {
+              // Parse CSS into individual rules (split on closing braces)
+              let ruleBuffer = "";
+              let inserted = 0;
+              for (const ch of cssText) {
+                ruleBuffer += ch;
+                if (ch === "}") {
+                  const trimmed = ruleBuffer.trim();
+                  if (trimmed && !trimmed.startsWith("/*")) {
+                    try {
+                      cssSheet.insertRule(trimmed, cssSheet.cssRules.length);
+                      inserted++;
+                    } catch (_e) { /* skip malformed */ }
+                  }
+                  ruleBuffer = "";
+                }
+              }
+              addonInstance.log(`Hermes theme: injected hermes-chat.css (${inserted} rules)`);
             }
           }
         }

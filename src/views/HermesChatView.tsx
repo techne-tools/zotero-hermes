@@ -841,13 +841,13 @@ ${messages
   }, [hermes.chat, hermes.conversations]);
 
   return (
-    <div className="hermes-chat-view">
+    <div className="hermes-chat-view" style={{ display: "flex", flexDirection: "column", height: "100%", backgroundColor: "var(--hermes-bg, #fff)", color: "var(--hermes-text, #333)", fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "14px" }}>
       {/* Header with SVG icons (matching Obsidian plugin) */}
-      <div className="hermes-chat-header">
-        <div className="hermes-chat-header-left">
-          <span className="hermes-chat-agent-name">{settings.get("chatAgentName", "Hermes")}</span>
+      <div className="hermes-chat-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", borderBottom: "1px solid var(--hermes-border, #e0e0e0)", backgroundColor: "var(--hermes-bg-secondary, #fafafa)", minHeight: "40px" }}>
+        <div className="hermes-chat-header-left" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span className="hermes-chat-agent-name" style={{ fontWeight: 600, fontSize: "0.95em" }}>{settings.get("chatAgentName", "Hermes")}</span>
         </div>
-        <div className="hermes-chat-header-right">
+        <div className="hermes-chat-header-right" style={{ display: "flex", gap: "4px", alignItems: "center" }}>
           <button
             onClick={() => {
               setIsSearchOpen((prev) => !prev);
@@ -1023,7 +1023,7 @@ ${messages
       )}
 
       {/* Messages */}
-      <div className="hermes-messages">
+      <div className="hermes-messages" style={{ flex: 1, overflowY: "auto", padding: "8px 12px", display: "flex", flexDirection: "column", gap: "8px", minWidth: 0 }}>
         {messages.map((msg) => {
           if (isTyping && msg.role === "assistant" && !msg.content) return null;
           return <ChatMessageItem key={msg.id} message={msg} />;
@@ -1041,7 +1041,7 @@ ${messages
 
       {/* Context items chips */}
       {contextItems.length > 0 && (
-        <div className="hermes-context-bar">
+        <div className="hermes-context-bar" style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 12px", borderTop: "1px solid var(--hermes-border, #e0e0e0)", backgroundColor: "var(--hermes-bg-secondary, #fafafa)" }}>
           <div className="hermes-context-chips">
             {contextItems.map((item) => (
               <div key={item.id} className="hermes-context-chip">
@@ -1059,7 +1059,7 @@ ${messages
       )}
 
       {/* Input area */}
-      <div className="hermes-input-area">
+      <div className="hermes-input-area" style={{ padding: "8px", borderTop: "1px solid var(--hermes-border, #e0e0e0)", backgroundColor: "var(--hermes-bg-secondary, #fafafa)" }}>
         {/* Slash command dropdown */}
         {isSlashOpen && slashSuggestions.length > 0 && (
           <div className="hermes-slash-dropdown" ref={slashDropdownRef}>
@@ -1078,19 +1078,20 @@ ${messages
             ))}
           </div>
         )}
-        <div className="hermes-input-row">
+        <div className="hermes-input-row" style={{ display: "flex", gap: "6px", alignItems: "center", padding: "0 8px" }}>
           <textarea
             ref={inputRef}
             defaultValue={input}
             placeholder="Message Hermes..."
             rows={1}
             className="hermes-textarea"
+            style={{ flex: 1, border: "none", outline: "none", resize: "none", padding: "8px 0", backgroundColor: "transparent", color: "inherit", fontFamily: "inherit", fontSize: "0.9em", lineHeight: 1.5 }}
           />
           <button
             ref={sendBtnRef}
             disabled={!input.trim() || isTyping}
             className="hermes-send-btn"
-            style={{ opacity: !input.trim() || isTyping ? 0.5 : 1 }}
+            style={{ padding: "6px 16px", border: "none", borderRadius: "6px", backgroundColor: "var(--hermes-accent, #4a90d9)", color: "white", cursor: "pointer", fontWeight: 600, fontSize: "0.85em", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: "4px", opacity: !input.trim() || isTyping ? 0.5 : 1 }}
           >
             {isTyping ? <StopIcon /> : "Send"}
           </button>
@@ -1606,27 +1607,9 @@ export function mountHermesChat(
           const cssParent = doc.documentElement || doc.head || doc.body;
           if (cssParent) {
             cssParent.appendChild(cssStyleEl);
-            // Use CSSOM insertRule for each rule — safest in XUL
-            const cssSheet = (cssStyleEl as any).sheet;
-            if (cssSheet && cssSheet.cssRules !== undefined) {
-              // Parse CSS into individual rules (split on closing braces)
-              let ruleBuffer = "";
-              let inserted = 0;
-              for (const ch of cssText) {
-                ruleBuffer += ch;
-                if (ch === "}") {
-                  const trimmed = ruleBuffer.trim();
-                  if (trimmed && !trimmed.startsWith("/*")) {
-                    try {
-                      cssSheet.insertRule(trimmed, cssSheet.cssRules.length);
-                      inserted++;
-                    } catch (_e) { /* skip malformed */ }
-                  }
-                  ruleBuffer = "";
-                }
-              }
-              addonInstance.log(`Hermes theme: injected hermes-chat.css (${inserted} rules)`);
-            }
+            // textContent works for <style> in Firefox — much more reliable than insertRule
+            cssStyleEl.textContent = cssText;
+            addonInstance.log(`Hermes theme: injected hermes-chat.css (${cssText.length} chars)`);
           }
         }
       } else if (xhr.readyState === 4) {

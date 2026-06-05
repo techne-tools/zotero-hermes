@@ -129,6 +129,19 @@ async function onStartup() {
     }
     addon.log("Step 26: onMainWindowLoad complete for all windows");
 
+    // Register preferences pane in Zotero Settings
+    try {
+      Zotero.PreferencePanes.register({
+        pluginID: addon.data.config.addonID,
+        src: rootURI + "content/preferences.xhtml",
+        label: getString("prefs-title"),
+        image: `chrome://${addon.data.config.addonRef}/content/icons/favicon.png`,
+      });
+      addon.log("Step 27: Preference pane registered");
+    } catch (prefErr) {
+      addon.log(`Failed to register preference pane: ${(prefErr as Error).message}`);
+    }
+
     addon.data.initialized = true;
     addon.log("Hermes startup complete");
   } catch (error) {

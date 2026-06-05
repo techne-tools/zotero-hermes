@@ -21,6 +21,8 @@ class Addon {
       conversations: import("./modules/hermes/ConversationManager").ConversationManager;
       preferences: import("./modules/hermes/PreferencesManager").PreferencesManager;
       approvalDialog: import("./modules/hermes/ApprovalDialog").ApprovalDialog;
+      debug: import("./utils/DebugLogger").DebugLogger;
+      auditLog: import("./utils/AuditLog").AuditLog;
     };
     locale?: {
       current: any;

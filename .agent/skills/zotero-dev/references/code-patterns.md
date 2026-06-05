@@ -1,202 +1,400 @@
-# Common Code Patterns
+<!--
+Source: Based on the zotero-hermes codebase, zotero-plugin-toolkit, and Zotero API patterns
+-->
 
-## UI Component Patterns
+# Code Patterns
 
-### Creating a Sidebar Panel
+Complete, production-ready patterns for Zotero Hermes plugin development.
+
+## Plugin Instance Setup (`src/index.ts`)
 
 ```typescript
-function createSidebarPanel(doc: Document): XUL.Element {
-  const panel = ztoolkit.UI.createElement(doc, "vbox", {
-    id: "hermes-sidebar",
-    class: "hermes-panel",
-    attributes: { flex: "1" },
-    children: [
-      {
-        tag: "html:div",
-        id: "hermes-messages",
-        class: "hermes-messages",
-      },
-      {
-        tag: "hbox",
-        class: "hermes-input-container",
-        children: [
-          {
-            tag: "html:textarea",
-            id: "hermes-input",
-            attributes: { placeholder: "Ask Hermes..." },
-          },
-          {
-            tag: "button",
-            id: "hermes-send",
-            attributes: { label: "Send" },
-            listeners: {
-              command: () => handleSend(),
-            },
-          },
-        ],
-      },
-    ],
-  });
-  return panel;
+import { BasicTool } from "zotero-plugin-toolkit";
+import Addon from "./addon";
+import { config } from "../package.json";
+
+// Ensure browser globals for React in Zotero sandbox
+const mainWindow = Zotero.getMainWindow();
+if (mainWindow) {
+  if (typeof (globalThis as any).window === "undefined") {
+    (globalThis as any).window = mainWindow;
+  }
+  if (typeof (globalThis as any).document === "undefined") {
+    (globalThis as any).document = mainWindow.document;
+  }
+  if (typeof (globalThis as any).navigator === "undefined") {
+    (globalThis as any).navigator = mainWindow.navigator;
+  }
+  if (typeof (globalThis as any).console === "undefined") {
+    (globalThis as any).console = mainWindow.console;
+  }
+}
+
+const basicTool = new BasicTool();
+
+if (!basicTool.getGlobal("Zotero")[config.addonInstance]) {
+  _globalThis.addon = new Addon();
+  Zotero[config.addonInstance] = addon;
 }
 ```
 
-### React Component in XUL
+## Addon Class with Typed Module Registry (`src/addon.ts`)
 
 ```typescript
-import { createRoot } from "react-dom/client";
-import { ChatInterface } from "./ChatInterface";
-
-function mountReactComponent(doc: Document, containerId: string): void {
-  const container = doc.getElementById(containerId);
-  if (!container) return;
-
-  const root = createRoot(container);
-  root.render(<ChatInterface />);
-}
-```
-
-## Data Management Patterns
-
-### State Management
-
-```typescript
-class ChatManager {
-  private messages: ChatMessage[] = [];
-  private listeners: Set<() => void> = new Set();
-
-  addMessage(message: ChatMessage): void {
-    this.messages.push(message);
-    this.notifyListeners();
-  }
-
-  subscribe(listener: () => void): () => void {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
-  }
-
-  private notifyListeners(): void {
-    this.listeners.forEach((listener) => listener());
-  }
-}
-```
-
-### Async Queue
-
-```typescript
-class AsyncQueue<T> {
-  private queue: T[] = [];
-  private processing = false;
-
-  async add(item: T): Promise<void> {
-    this.queue.push(item);
-    if (!this.processing) {
-      await this.process();
-    }
-  }
-
-  private async process(): Promise<void> {
-    this.processing = true;
-    while (this.queue.length > 0) {
-      const item = this.queue.shift()!;
-      await this.handleItem(item);
-    }
-    this.processing = false;
-  }
-
-  private async handleItem(item: T): Promise<void> {
-    // Process item
-  }
-}
-```
-
-## Zotero Integration Patterns
-
-### Item Selection Handler
-
-```typescript
-function setupItemSelectionHandler(): void {
-  const callback = {
-    notify: async (event: string, type: string, ids: number[]) => {
-      if (event === "select" && type === "item") {
-        const items = await Zotero.Items.getAsync(ids);
-        handleSelectedItems(items);
-      }
-    },
+class Addon {
+  public data: {
+    alive: boolean;
+    config: typeof config;
+    env: "development" | "production";
+    initialized?: boolean;
+    ztoolkit: ZToolkit;
+    hermes?: {
+      client: HermesClient | HermesApiClient;
+      chat: ChatManager;
+      notes: NoteManager;
+      items: ItemManager;
+      citations: CitationManager;
+      annotations: AnnotationManager;
+      tags: TagManager;
+      conversations: ConversationManager;
+      preferences: PreferencesManager;
+      approvalDialog: ApprovalDialog;
+    };
   };
+  public hooks: typeof hooks;
 
-  const notifierID = Zotero.Notifier.registerObserver(callback, ["item"]);
+  constructor() {
+    this.data = {
+      alive: true,
+      config,
+      env: __env__,
+      initialized: false,
+      ztoolkit: createZToolkit(),
+    };
+    this.hooks = hooks;
+  }
 
-  // Cleanup on shutdown
-  addon.hooks.onShutdown = () => {
-    Zotero.Notifier.unregisterObserver(notifierID);
-  };
+  public log(message: string, ...data: any[]): void {
+    Zotero.debug(`[Hermes] ${message}`);
+  }
 }
 ```
 
-### Batch Item Processing
+## Lifecycle Hooks Pattern (`src/hooks.ts`)
 
 ```typescript
-async function processItemsInBatches(
-  items: Zotero.Item[],
-  batchSize: number,
-  processor: (item: Zotero.Item) => Promise<void>,
-): Promise<void> {
-  const progress = new Zotero.ProgressWindow("Processing");
-  progress.show();
+async function onStartup() {
+  await Promise.all([
+    Zotero.initializationPromise,
+    Zotero.unlockPromise,
+    Zotero.uiReadyPromise,
+  ]);
 
-  for (let i = 0; i < items.length; i += batchSize) {
-    const batch = items.slice(i, i + batchSize);
-    await Promise.all(batch.map(processor));
+  initLocale();
 
-    progress.changeLine({
-      progress: (i / items.length) * 100,
-      text: `Processed ${i}/${items.length}`,
+  // Initialize all Hermes modules
+  const approvalDialog = new ApprovalDialog(addon);
+  const preferences = new PreferencesManager(addon);
+  const connectionMode = preferences.getConnectionMode();
+  const client = connectionMode === "api"
+    ? new HermesApiClient(addon)
+    : new HermesClient(addon);
+  const chat = new ChatManager(addon);
+  const notes = new NoteManager(addon, approvalDialog);
+  // ... remaining modules ...
+
+  addon.data.hermes = { client, chat, notes, /* ... */ };
+
+  // Load for existing windows
+  const mainWindows = Zotero.getMainWindows();
+  await Promise.all(mainWindows.map((win) => onMainWindowLoad(win)));
+
+  addon.data.initialized = true;
+}
+```
+
+## Toolbar Button (XUL) — Used in `hooks.ts`
+
+```typescript
+function registerHermesSidebar(win: _ZoteroTypes.MainWindow): void {
+  const doc = win.document;
+  const syncBtn = doc.getElementById("zotero-tb-sync") as any;
+
+  if (syncBtn && !doc.getElementById("zotero-hermes-tb-chat-toggle")) {
+    const btn = doc.createXULElement("toolbarbutton") as any;
+    btn.setAttribute("id", "zotero-hermes-tb-chat-toggle");
+    btn.setAttribute("tooltiptext", "Toggle Hermes Chat");
+    btn.setAttribute("aria-pressed", "false");
+    btn.style.listStyleImage =
+      "url('chrome://hermes/content/icons/hermes-sidenav.svg')";
+
+    const separator = doc.createElement("div") as any;
+    separator.className = "zotero-tb-separator";
+
+    (syncBtn.parentNode as any).insertBefore(btn, syncBtn);
+    (syncBtn.parentNode as any).insertBefore(separator, syncBtn);
+
+    btn.addEventListener("click", () => toggleHermesSidebar(win));
+  }
+}
+```
+
+## Full-Height Sidebar Toggle — Toggles item pane
+
+```typescript
+function toggleHermesSidebar(win: _ZoteroTypes.MainWindow): void {
+  const doc = win.document;
+  const btn = doc.getElementById("zotero-hermes-tb-chat-toggle");
+  const itemPane = doc.getElementById("zotero-item-pane") as any;
+  const deck = doc.getElementById("zotero-item-pane-content") as any;
+  const sidenav = doc.getElementById("zotero-view-item-sidenav") as any;
+
+  if (!isPressed) {
+    // Hide default panels, create & show Hermes pane
+    deck.style.display = "none";
+    sidenav.style.display = "none";
+
+    let hermesPane = doc.getElementById("hermes-pane-library") as any;
+    if (!hermesPane) {
+      hermesPane = doc.createXULElement("vbox") as any;
+      hermesPane.setAttribute("id", "hermes-pane-library");
+      const reactContainer = doc.createElement("div") as any;
+      reactContainer.setAttribute("id", "hermes-react-root");
+      hermesPane.appendChild(reactContainer);
+      itemPane.appendChild(hermesPane);
+    }
+    hermesPane.style.display = "flex";
+    btn.setAttribute("aria-pressed", "true");
+
+    // Mount React if not yet mounted
+    const root = doc.getElementById("hermes-react-root") as any;
+    if (root && !root.dataset.mounted) {
+      const unmount = mountHermesChat(root, addon);
+      root.dataset.mounted = "true";
+      root._unmount = unmount;
+    }
+  } else {
+    // Restore defaults
+    if (hermesPane) hermesPane.style.display = "none";
+    deck.style.display = "";
+    sidenav.style.display = "";
+    btn.setAttribute("aria-pressed", "false");
+  }
+}
+```
+
+## ACP Client — Hermes Subprocess Spawn (`HermesClient.ts`)
+
+```typescript
+const { Subprocess } = ChromeUtils.importESModule(
+  "resource://gre/modules/Subprocess.sys.mjs",
+);
+
+// Spawn via zsh with custom PATH for Homebrew
+this.childProcess = await Subprocess.call({
+  command: "/bin/zsh",
+  arguments: [
+    "-c",
+    `export PATH="${customPath}:$PATH" && "${hermesPath}" acp`,
+  ],
+  stdin: "pipe",
+  stdout: "pipe",
+  stderr: "pipe",
+  environment: { PYTHONUNBUFFERED: "1" },
+  environmentAppend: true,
+});
+
+// NDJSON parsing from stdout
+const stdoutDecoder = new TextDecoder();
+this.childProcess.stdout.onInput = (data: ArrayBuffer) => {
+  this.stdoutBuffer += stdoutDecoder.decode(data);
+  this.processStdoutBuffer();
+};
+```
+
+## API Client — SSE Streaming (`HermesApiClient.ts`)
+
+```typescript
+const response = await fetch(url, {
+  method: "POST",
+  headers: {
+    ...this.getAuthHeaders(),
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    model: "hermes-agent",
+    messages,
+    stream: true,
+  }),
+  signal: this.activeAbortController.signal,
+});
+
+// Parse SSE stream
+const reader = response.body.getReader();
+const decoder = new TextDecoder();
+let buffer = "";
+
+while (true) {
+  const { done, value } = await reader.read();
+  // ... SSE parsing logic ...
+  // Handle data: events, emit content/reasoning/stop/usage
+}
+```
+
+## React Chat View (`HermesChatView.tsx`)
+
+```typescript
+export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [contextItems, setContextItems] = useState<ContextItem[]>([]);
+
+  // Native DOM input listener (React onChange unreliable in Zotero sandbox)
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (!textarea) return;
+    const handler = (e: Event) => setInput((e.target as HTMLTextAreaElement).value);
+    textarea.addEventListener("input", handler);
+    return () => textarea.removeEventListener("input", handler);
+  }, []);
+
+  const {
+    appendContent,
+    appendReasoning,
+    flushNow,
+  } = useStreamBuffer(setMessages, settings.get("showReasoning", true));
+
+  // Subscribe to client updates
+  useEffect(() => {
+    const client = hermes.client;
+    const handleUpdate = (update: ChatSessionUpdate) => {
+      if (update.type === "message" && update.content) appendContent(update.content);
+      else if (update.type === "stop") flushNow();
+      // ... handle reasoning, tools, terminal, usage, errors
+    };
+    client.onUpdate(handleUpdate);
+    return () => { client.onUpdate(() => {}); };
+  }, [hermes.client]);
+}
+```
+
+## Stream Buffer Hook (`useStreamBuffer.ts`)
+
+```typescript
+export function useStreamBuffer(
+  setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>,
+  showReasoning: boolean,
+) {
+  const streamingMessageIdRef = useRef<string | null>(null);
+  const pendingContentRef = useRef("");
+  let flushQueued = false;
+
+  const appendContent = useCallback((chunk: string) => {
+    pendingContentRef.current += chunk;
+    if (!flushQueued) {
+      flushQueued = true;
+      requestAnimationFrame(() => {
+        setMessages((prev) => {
+          const content = pendingContentRef.current;
+          pendingContentRef.current = "";
+          flushQueued = false;
+          // Merge into existing assistant message or create new
+          // ...
+          return updated;
+        });
+      });
+    }
+  }, [setMessages]);
+}
+```
+
+## Item Manager — Extracting Zotero Item Metadata (`ItemManager.ts`)
+
+```typescript
+export class ItemManager {
+  public getSelectedItems(): Zotero.Item[] {
+    const zoteroPane = Zotero.getActiveZoteroPane();
+    return zoteroPane?.getSelectedItems() || [];
+  }
+
+  public extractItemData(item: Zotero.Item): AttachedItem | null {
+    return {
+      id: item.id,
+      key: item.key,
+      title: (item.getField("title") as string) || "Untitled",
+      itemType: item.itemType,
+      creators: this.formatCreators(item),
+      date: (item.getField("date") as string) || "",
+      abstract: (item.getField("abstractNote") as string) || "",
+      tags: item.getTags().map((t: any) => t.tag),
+      url: (item.getField("url") as string) || undefined,
+      doi: (item.getField("DOI") as string) || undefined,
+    };
+  }
+}
+```
+
+## Conversation Persistence (`ConversationManager.ts`)
+
+```typescript
+export class ConversationManager {
+  private getConversationsDir(): string {
+    const profileDir = Zotero.getProfileDirectory?.();
+    const convDir = profileDir.clone() as nsIFile;
+    convDir.append("zotero-hermes");
+    convDir.append("conversations");
+    if (!convDir.exists()) {
+      convDir.create(Components.interfaces.nsIFile.DIRECTORY_TYPE, 0o755);
+    }
+    return convDir.path;
+  }
+
+  public saveConversation(conversation: Conversation): void {
+    const filePath = this.getConversationFile(conversation.id);
+    const file = Zotero.File.pathToFile(filePath);
+    Zotero.File.putContents(file, JSON.stringify(conversation, null, 2));
+  }
+}
+```
+
+## Approval Dialog (`ApprovalDialog.ts`)
+
+```typescript
+export class ApprovalDialog {
+  public async addPendingChange(change: PendingFileChange): Promise<boolean> {
+    this.pendingChanges.set(change.id, change);
+    return this.showDialog(change);
+  }
+
+  private async showDialog(change: PendingFileChange): Promise<boolean> {
+    return new Promise((resolve) => {
+      const dialog = doc.createElement("dialog");
+      dialog.innerHTML = `
+        <h3>📝 ${change.action === "create" ? "Create" : "Update"} File</h3>
+        <p><code>${change.path}</code></p>
+        <pre>${change.content?.slice(0, 2000) || ""}</pre>
+        <button class="hermes-btn-approve">Approve</button>
+        <button class="hermes-btn-deny">Deny</button>
+      `;
+      // Wire event listeners, showModal()
     });
   }
-
-  progress.close();
 }
 ```
 
-## Hermes Integration Patterns
+## Configuration
 
-### Streaming Response Handler
+### Build Config (`zotero-plugin.config.ts`)
+- esbuild target: `firefox115`
+- Entry: `src/index.ts`
+- Output: `.scaffold/build/addon/content/scripts/hermes.js`
+- Pre-build assets from `addon/`
 
-```typescript
-async function handleStreamingResponse(
-  response: AsyncGenerator<string>,
-  onChunk: (chunk: string) => void,
-  onComplete: () => void,
-): Promise<void> {
-  try {
-    for await (const chunk of response) {
-      onChunk(chunk);
-    }
-    onComplete();
-  } catch (error) {
-    handleError(error);
-  }
-}
-```
-
-### Context Item Builder
-
-```typescript
-function buildContextFromItems(items: Zotero.Item[]): ContextItem[] {
-  return items.map((item) => ({
-    type: "item",
-    id: item.id,
-    title: item.getDisplayTitle(),
-    abstract: item.getField("abstractNote") as string,
-    authors: item.getCreators().map((c) => c.firstName + " " + c.lastName),
-    tags: item.getTags().map((t) => t.tag),
-    url: item.getField("url") as string,
-  }));
-}
-```
-
-## Error Handling Patterns
+### Preferences XHTML (`addon/content/preferences.xhtml`)
+- Connection mode dropdown (ACP vs API)
+- Binary path, API URL, API key fields with conditional visibility
+- Feature toggles: auto-save, show reasoning, citations, annotations, tags
 
 ### Retry with Exponential Backoff
 

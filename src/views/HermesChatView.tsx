@@ -9,11 +9,15 @@ import { createRoot } from "react-dom/client";
 
 import type {
   ChatSessionUpdate,
+  PendingFileChange,
   PromptContextItem,
-} from "../modules/hermes/HermesClient";
+} from "../modules/hermes/types";
 import type Addon from "../addon";
 
 import { useStreamBuffer } from "./useStreamBuffer";
+import { generateMessageId } from "../utils/uuid";
+import { stripAnsi } from "../utils/stripAnsi";
+import { MarkdownRenderer } from "../utils/MarkdownRenderer";
 import {
   getSlashCommands,
   parseSlashCommand,
@@ -22,7 +26,9 @@ import {
 export interface ChatMessage {
   content: string;
   id: string;
+  isCollapsed?: boolean;
   isExited?: boolean;
+  isRunning?: boolean;
   role:
     | "assistant"
     | "reasoning"
@@ -33,6 +39,8 @@ export interface ChatMessage {
   terminalId?: string;
   timestamp: number;
   toolCallId?: string;
+  toolName?: string;
+  toolStatus?: "complete" | "error" | "running";
 }
 
 export interface ContextItem {
@@ -40,25 +48,11 @@ export interface ContextItem {
   type: "item" | "selection" | "note";
   text: string;
   data?: Zotero.Item;
+  extracted?: import("../modules/hermes/ItemManager").AttachedItem | null;
 }
 
 interface HermesChatViewProps {
   addon: Addon;
-}
-
-function generateMessageId(): string {
-  return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-}
-
-/**
- * Strip ANSI escape codes from a string.
- */
-function stripAnsi(text: string): string {
-  return text
-    .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "")
-    .replace(/\x1b\][0-9;]*[^\x07\x1b]*(?:\x07|\x1b\\)/g, "")
-    .replace(/\x1b[()[\]{}#~%@\^=\/>!]/g, "")
-    .replace(/\x1b\x1b/g, "");
 }
 
 /**
@@ -104,25 +98,47 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
   const lastSendTimeRef = useRef<number>(0);
   const RATE_LIMIT_MS = 2000;
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const sendBtnRef = useRef<HTMLButtonElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Native DOM input listener: React synthetic onChange is unreliable in Zotero's sandboxed Firefox
+  // Keep a ref to latest state for native event callbacks
+  const stateRef = useRef({
+    input: "",
+    messages,
+    contextItems,
+    allowedTools,
+    isTyping,
+    isConversationListOpen,
+    isSearchOpen,
+    searchQuery,
+    searchMatches,
+    currentMatchIndex,
+    conversations,
+    error,
+  });
   useEffect(() => {
-    const textarea = inputRef.current;
-    if (!textarea) return;
-
-    const handleNativeInput = (e: Event) => {
-      const target = e.target as HTMLTextAreaElement;
-      setInput(target.value);
+    stateRef.current = {
+      input,
+      messages,
+      contextItems,
+      allowedTools,
+      isTyping,
+      isConversationListOpen,
+      isSearchOpen,
+      searchQuery,
+      searchMatches,
+      currentMatchIndex,
+      conversations,
+      error,
     };
-
-    textarea.addEventListener("input", handleNativeInput);
-    return () => {
-      textarea.removeEventListener("input", handleNativeInput);
-    };
-  }, []);
+  }, [
+    input, messages, contextItems, allowedTools, isTyping,
+    isConversationListOpen, isSearchOpen, searchQuery,
+    searchMatches, currentMatchIndex, conversations, error,
+  ]);
 
   // Guard: Hermes modules not initialized yet
   const hermes = addon.data.hermes;
@@ -152,90 +168,79 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  // Subscribe to Hermes client updates
-  useEffect(() => {
-    const client = hermes.client;
+  // ─── Send Logic ───
+  const sendToHermes = useCallback(async (text: string) => {
+    addon.log("[ChatView] sendToHermes called with text:", text.slice(0, 60));
+    const st = stateRef.current;
+    const streamingMessageId = generateMessageId();
+    streamingMessageIdRef.current = streamingMessageId;
+    reasoningMessageIdRef.current = null;
 
-    const handleUpdate = (update: ChatSessionUpdate) => {
-      if (update.type === "message" && update.content) {
-        appendContent(update.content);
-        setIsTyping(true);
-      } else if (update.type === "stop") {
-        flushNow();
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: generateMessageId(),
+        content: text,
+        role: "user",
+        timestamp: Date.now(),
+      },
+      {
+        content: "",
+        id: streamingMessageId,
+        role: "assistant",
+        timestamp: Date.now(),
+      },
+    ]);
+    setInput("");
+    setIsTyping(true);
+    // Safety timeout: clear typing indicator after 60s if no stop/session_info arrives
+    typingTimeoutRef.current = setTimeout(() => {
+      addon.log("[ChatView] Typing timeout reached, clearing indicator");
+      setIsTyping(false);
+      streamingMessageIdRef.current = null;
+      reasoningMessageIdRef.current = null;
+    }, 60000);
+
+    const client = hermes.client;
+    addon.log("[ChatView] client type:", client.constructor.name, "connected:", client.getIsConnected());
+    if (!client.getIsConnected()) {
+      try {
+        addon.log("[ChatView] Connecting client...");
+        await client.connect();
+        addon.log("[ChatView] Client connected successfully");
+      } catch (err) {
+        addon.log("[ChatView] Connection failed:", (err as Error).message);
+        setError(`Connection failed: ${(err as Error).message}`);
         setIsTyping(false);
         streamingMessageIdRef.current = null;
-        reasoningMessageIdRef.current = null;
-      } else if (update.type === "reasoning" && update.reasoning) {
-        if (settings.get("showReasoning", true)) {
-          appendReasoning(update.reasoning);
-        }
-      } else if (
-        update.type === "tool_start" ||
-        update.type === "tool_progress" ||
-        update.type === "tool_complete"
-      ) {
-        flushNow();
-        if (update.toolCall) {
-          const toolMsg = `🔧 **${update.toolCall.name}** (${update.toolCall.status})${update.toolCall.result ? `: ${update.toolCall.result}` : ""}`;
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: generateMessageId(),
-              content: toolMsg,
-              role: "tool",
-              timestamp: Date.now(),
-              toolCallId: update.toolCall?.callId,
-            },
-          ]);
-        }
-      } else if (update.type === "terminal_output" && update.terminal) {
-        flushNow();
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: generateMessageId(),
-            content: update.terminal!.output,
-            role: "terminal",
-            timestamp: Date.now(),
-            terminalId: update.terminal!.id,
-            isExited: update.terminal!.isExited,
-          },
-        ]);
-      } else if (update.type === "usage" && update.usage) {
-        flushNow();
-        const usageMsg = `📊 Tokens: ${update.usage.inputTokens} in, ${update.usage.outputTokens} out, ${update.usage.totalTokens} total`;
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: generateMessageId(),
-            content: usageMsg,
-            role: "system",
-            timestamp: Date.now(),
-          },
-        ]);
-      } else if (update.type === "error") {
-        setError(update.content || "An error occurred");
-        setIsTyping(false);
+        return;
       }
-    };
+    }
 
-    const handleError = (err: Error) => {
-      setError(err.message);
+    const promptContextItems: PromptContextItem[] = st.contextItems.map((item) => ({
+      id: item.id,
+      type: item.type,
+      text: item.text,
+      data: item.data ? JSON.stringify(item.data.toJSON()) : undefined,
+      extracted: item.extracted ? (item.extracted as unknown as Record<string, unknown>) : undefined,
+    }));
+
+    try {
+      addon.log("[ChatView] Calling client.sendPrompt...");
+      await client.sendPrompt(text, promptContextItems, { allowedTools: st.allowedTools });
+      addon.log("[ChatView] client.sendPrompt returned");
+    } catch (err) {
+      addon.log("[ChatView] sendPrompt failed:", (err as Error).message);
+      setError(`Send failed: ${(err as Error).message}`);
       setIsTyping(false);
-    };
-
-    client.onUpdate(handleUpdate);
-    client.onError(handleError);
-
-    return () => {
-      client.onUpdate(() => {});
-      client.onError(() => {});
-    };
-  }, [hermes.client, appendContent, appendReasoning, flushNow, settings, streamingMessageIdRef, reasoningMessageIdRef]);
+      streamingMessageIdRef.current = null;
+    }
+  }, [hermes.client, addon]);
 
   const sendMessage = useCallback(async () => {
-    const text = input.trim();
-    if (!text) return;
+    const st = stateRef.current;
+    const text = st.input.trim();
+    if (!text || st.isTyping) return;
 
     const now = Date.now();
     if (now - lastSendTimeRef.current < RATE_LIMIT_MS) {
@@ -249,17 +254,7 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
     const slashCmd = parseSlashCommand(text);
     if (slashCmd) {
       setInput("");
-      
-      // Add user message
-      const userMsg: ChatMessage = {
-        id: generateMessageId(),
-        content: text,
-        role: "user",
-        timestamp: now,
-      };
-      setMessages((prev) => [...prev, userMsg]);
 
-      // Handle built-in /clear command
       if (slashCmd.command.name === "clear") {
         setMessages([]);
         setContextItems([]);
@@ -268,87 +263,233 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         return;
       }
 
-      // Execute slash command
       try {
         const result = await slashCmd.command.execute(addon, slashCmd.args);
         if (result) {
-          const systemMsg: ChatMessage = {
-            id: generateMessageId(),
-            content: result,
-            role: "system",
-            timestamp: Date.now(),
-          };
-          setMessages((prev) => [...prev, systemMsg]);
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: generateMessageId(),
+              content: result,
+              role: "system",
+              timestamp: Date.now(),
+            },
+          ]);
         } else {
-          // Forward to Hermes as a prompt
           await sendToHermes(text);
         }
       } catch (err) {
-        const errorMsg: ChatMessage = {
-          id: generateMessageId(),
-          content: `Error executing /${slashCmd.command.name}: ${(err as Error).message}`,
-          role: "system",
-          timestamp: Date.now(),
-        };
-        setMessages((prev) => [...prev, errorMsg]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: generateMessageId(),
+            content: `Error executing /${slashCmd.command.name}: ${(err as Error).message}`,
+            role: "system",
+            timestamp: Date.now(),
+          },
+        ]);
       }
       return;
     }
 
-    // Regular message - send to Hermes
     await sendToHermes(text);
-  }, [input, addon, hermes.chat, hermes.conversations]);
+  }, [addon, hermes.chat, hermes.conversations, sendToHermes]);
 
-  const sendToHermes = useCallback(async (text: string) => {
-    // Add user message
-    const userMsg: ChatMessage = {
-      id: generateMessageId(),
-      content: text,
-      role: "user",
-      timestamp: Date.now(),
+  // ─── Native DOM event wiring ───
+  // Zotero's sandboxed Firefox does not reliably fire React synthetic events
+  // (onChange, onClick, onKeyDown). All user interaction goes through native
+  // addEventListener via refs.
+
+  // 1. Textarea input → sync to state
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (!textarea) return;
+    const handler = (e: Event) => {
+      setInput((e.target as HTMLTextAreaElement).value);
     };
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
-    setIsTyping(true);
+    textarea.addEventListener("input", handler);
+    return () => textarea.removeEventListener("input", handler);
+  }, []);
 
-    // Ensure connection
-    const client = hermes.client;
-    if (!client.getIsConnected()) {
-      try {
-        await client.connect();
-      } catch (err) {
-        setError(`Connection failed: ${(err as Error).message}`);
-        setIsTyping(false);
-        return;
-      }
+  // 2. Sync React state → textarea.value (for clearing on send)
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (textarea && textarea.value !== input) {
+      textarea.value = input;
     }
+  }, [input]);
 
-    // Convert context items to PromptContextItem format
-    const promptContextItems: PromptContextItem[] = contextItems.map((item) => ({
-      id: item.id,
-      type: item.type,
-      text: item.text,
-      data: item.data ? JSON.stringify(item.data.toJSON()) : undefined,
-    }));
+  // 3. Send button click → native
+  useEffect(() => {
+    const btn = sendBtnRef.current;
+    if (!btn) return;
+    const handler = () => void sendMessage();
+    btn.addEventListener("click", handler);
+    return () => btn.removeEventListener("click", handler);
+  }, [sendMessage]);
 
-    // Send to Hermes
-    try {
-      await client.sendPrompt(text, promptContextItems, { allowedTools });
-    } catch (err) {
-      setError(`Send failed: ${(err as Error).message}`);
-      setIsTyping(false);
-    }
-  }, [hermes.client, contextItems, allowedTools]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
+  // 4. Textarea Enter key → native
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (!textarea) return;
+    const handler = (e: KeyboardEvent) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         void sendMessage();
       }
-    },
-    [sendMessage],
-  );
+    };
+    textarea.addEventListener("keydown", handler);
+    return () => textarea.removeEventListener("keydown", handler);
+  }, [sendMessage]);
+
+  // 5. Stream subscription — consume agent responses, reasoning, tools, etc.
+  // NOTE: This effect intentionally has minimal deps. The callbacks use refs for
+  // mutable state (streamingMessageIdRef, reasoningMessageIdRef) and the
+  // client is accessed via hermes.client which is stable after init.
+  useEffect(() => {
+    const client = hermes.client;
+    addon.log("[ChatView] Subscribing to client updates");
+
+    const handleUpdate = (update: ChatSessionUpdate) => {
+      // Reset typing timeout on any activity, then restart it for non-terminal events
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+      const isTerminal = update.type === "stop" || update.type === "usage" || update.type === "session_info" || update.type === "error";
+      if (!isTerminal) {
+        typingTimeoutRef.current = setTimeout(() => {
+          addon.log("[ChatView] Typing timeout reached (no terminal event), clearing indicator");
+          setIsTyping(false);
+          streamingMessageIdRef.current = null;
+          reasoningMessageIdRef.current = null;
+        }, 60000);
+      }
+      // eslint-disable-next-line no-console
+      console.log("[ChatView] handleUpdate fired:", update.type, update.type === "message" ? "content length=" + (update.content?.length || 0) : "");
+      if (update.type === "message" && update.content) {
+        appendContent(update.content);
+        setIsTyping(true);
+      } else if (update.type === "stop") {
+        flushNow();
+        setIsTyping(false);
+        streamingMessageIdRef.current = null;
+        reasoningMessageIdRef.current = null;
+        setMessages((prev) =>
+          prev.map((m) => {
+            if (m.role === "tool" && m.isRunning) {
+              return { ...m, isRunning: false, toolStatus: "complete" as const };
+            }
+            return m;
+          }),
+        );
+      } else if (update.type === "reasoning" && update.reasoning) {
+        if (settings.get("showReasoning", true)) {
+          appendReasoning(update.reasoning);
+        }
+      } else if (
+        update.type === "tool_start" ||
+        update.type === "tool_progress" ||
+        update.type === "tool_complete"
+      ) {
+        flushNow();
+        if (update.toolCall) {
+          const isRunning =
+            update.type !== "tool_complete" && update.toolCall.status === "running";
+          const callId = update.toolCall.callId;
+          const status = update.toolCall.status === "error" ? "error" : isRunning ? "running" : "complete";
+          setMessages((prev) => {
+            const toolIndex = prev.findIndex(
+              (m) => m.role === "tool" && m.toolCallId === callId,
+            );
+            let toolName = update.toolCall!.name;
+            if (toolIndex >= 0 && (toolName === "other" || toolName === "unknown-tool")) {
+              toolName = prev[toolIndex]?.toolName || toolName;
+            }
+            const resultContent = update.toolCall!.result
+              ? `**Result:**\n\`\`\`text\n${update.toolCall!.result}\n\`\`\``
+              : "";
+            if (toolIndex >= 0) {
+              const updated = [...prev];
+              updated[toolIndex] = { ...updated[toolIndex]!, content: resultContent, isRunning, toolName, toolStatus: status };
+              return updated;
+            }
+            const newToolMsg: ChatMessage = {
+              content: resultContent,
+              id: generateMessageId(),
+              isRunning,
+              isCollapsed: true,
+              role: "tool",
+              timestamp: Date.now(),
+              toolCallId: callId,
+              toolName,
+              toolStatus: status,
+            };
+            const assistantIndex = prev.findIndex((m) => m.id === streamingMessageIdRef.current);
+            if (assistantIndex >= 0) {
+              const updated = [...prev];
+              updated.splice(assistantIndex, 0, newToolMsg);
+              return updated;
+            }
+            return [...prev, newToolMsg];
+          });
+        }
+      } else if (update.type === "terminal_output" && update.terminal) {
+        flushNow();
+        setMessages((prev) => {
+          const index = prev.findIndex((m) => m.role === "terminal" && m.terminalId === update.terminal!.id);
+          if (index >= 0) {
+            const updated = [...prev];
+            updated[index] = {
+              ...updated[index]!,
+              content: updated[index]!.content + update.terminal!.output,
+              isExited: (updated[index]!.isExited ?? false) || (update.terminal!.isExited ?? false),
+            };
+            return updated;
+          }
+          return [{ content: update.terminal!.output, id: generateMessageId(), isExited: update.terminal!.isExited ?? false, role: "terminal", terminalId: update.terminal!.id, timestamp: Date.now() }, ...prev];
+        });
+      } else if (update.type === "usage" && update.usage) {
+        flushNow();
+        setMessages((prev) => [...prev, { id: generateMessageId(), content: `📊 Tokens: ${update.usage!.inputTokens} in, ${update.usage!.outputTokens} out, ${update.usage!.totalTokens} total`, role: "system", timestamp: Date.now() }]);
+        // usage_update often signals the end of a turn when no stop is sent
+        setIsTyping(false);
+      } else if (update.type === "session_info") {
+        // session_info_update signals the end of a streaming session
+        flushNow();
+        setIsTyping(false);
+        streamingMessageIdRef.current = null;
+        reasoningMessageIdRef.current = null;
+      } else if (update.type === "error") {
+        flushNow();
+        const cleaned = stripAnsi(update.content || "").trim();
+        if (!cleaned) return;
+        setError(cleaned);
+        setIsTyping(false);
+        streamingMessageIdRef.current = null;
+        reasoningMessageIdRef.current = null;
+      }
+    };
+
+    const handleError = (err: Error) => {
+      addon.log("[ChatView] handleError fired:", err.message);
+      const cleaned = stripAnsi(err.message).trim();
+      if (!cleaned) return;
+      setError(cleaned);
+      setIsTyping(false);
+    };
+
+    const unsubUpdate = client.onUpdate(handleUpdate);
+    const unsubError = client.onError(handleError);
+    addon.log("[ChatView] Subscribed successfully");
+
+    return () => {
+      addon.log("[ChatView] Unsubscribing from client updates");
+      unsubUpdate();
+      unsubError();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hermes.client]);
 
   const attachSelectedItems = useCallback(() => {
     const items = hermes.items.getSelectedItems();
@@ -358,12 +499,16 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
     }
     setContextItems((prev) => {
       const newItems = items
-        .map((item) => ({
-          id: `item-${item.id}`,
-          type: "item" as const,
-          text: item.getDisplayTitle(),
-          data: item,
-        }))
+        .map((item) => {
+          const extracted = hermes.items.extractItemData(item);
+          return {
+            id: `item-${item.id}`,
+            type: "item" as const,
+            text: item.getDisplayTitle(),
+            data: item,
+            extracted,
+          };
+        })
         .filter((item) => !prev.some((p) => p.id === item.id));
       return [...prev, ...newItems];
     });
@@ -738,8 +883,13 @@ ${messages
         ))}
         {isTyping && (
           <div style={typingIndicatorStyle}>
-            <div className="hermes-typing-dots">
-              <span /><span /><span />
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ fontSize: "0.85em", opacity: 0.7 }}>Hermes is thinking</span>
+              <span className="hermes-typing-dots" style={{ display: "inline-flex", gap: "3px" }}>
+                <span style={dotStyle}>●</span>
+                <span style={{ ...dotStyle, animationDelay: "0.2s" }}>●</span>
+                <span style={{ ...dotStyle, animationDelay: "0.4s" }}>●</span>
+              </span>
             </div>
           </div>
         )}
@@ -777,13 +927,12 @@ ${messages
         <textarea
           ref={inputRef}
           defaultValue={input}
-          onKeyDown={handleKeyDown}
           placeholder="Ask Hermes about your research..."
           rows={3}
           style={textareaStyle}
         />
         <button
-          onClick={() => void sendMessage()}
+          ref={sendBtnRef}
           disabled={!input.trim() || isTyping}
           style={{
             ...sendBtnStyle,
@@ -797,13 +946,120 @@ ${messages
   );
 }
 
+/**
+ * Render a single chat message as the appropriate bubble type.
+ */
 const ChatMessageItem = memo(function ChatMessageItem({
   message,
 }: {
   message: ChatMessage;
 }) {
+  const [collapsed, setCollapsed] = useState(message.isCollapsed ?? false);
+
+  const toggleCollapse = useCallback(() => {
+    setCollapsed((prev) => !prev);
+  }, []);
+
+  const content = stripAnsi(message.content);
+
+  if (message.role === "reasoning") {
+    return (
+      <div style={reasoningBubbleStyle}>
+        <div
+          style={reasoningHeaderStyle}
+          onClick={toggleCollapse}
+        >
+          <span>🧠 {collapsed ? "Show" : "Hide"} reasoning</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                try {
+                  const clipboard = (Components as any).classes["@mozilla.org/widget/clipboardhelper;1"]
+                    .getService((Components as any).interfaces.nsIClipboardHelper);
+                  clipboard.copyString(content);
+                } catch {
+                  // ignore
+                }
+              }}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                opacity: 0.5,
+                fontSize: "0.9em",
+                padding: "0 4px",
+              }}
+              title="Copy reasoning to clipboard"
+            >
+              📋
+            </button>
+            <span>{collapsed ? "▸" : "▾"}</span>
+          </div>
+        </div>
+        {!collapsed && content && (
+          <div style={reasoningContentStyle}>{content}</div>
+        )}
+      </div>
+    );
+  }
+
+  if (message.role === "tool") {
+    const helix = message.isRunning ? "⢌⣉⢎⣉" : "";
+    return (
+      <div style={toolBubbleStyle}>
+        <div style={toolHeaderStyle} onClick={toggleCollapse}>
+          <span>
+            {message.isRunning ? (
+              <span style={{ fontFamily: "monospace" }}>{helix} </span>
+            ) : (
+              "🔧 "
+            )}
+            {message.toolName || "tool"}
+            {message.toolStatus === "running" ? " (running...)" : ""}
+            {message.toolStatus === "error" ? " ❌" : ""}
+            {message.toolStatus === "complete" ? " ✅" : ""}
+          </span>
+          <span>{collapsed ? "▸" : "▾"}</span>
+        </div>
+        {!collapsed && content && (
+          <pre style={toolContentStyle}>{content}</pre>
+        )}
+      </div>
+    );
+  }
+
+  if (message.role === "terminal") {
+    return (
+      <div style={terminalBubbleStyle}>
+        <div style={terminalHeaderStyle}>
+          <span>💻 Terminal {message.isExited ? "(exited)" : ""}</span>
+        </div>
+        <pre style={terminalContentStyle}>{content}</pre>
+      </div>
+    );
+  }
+
+  if (message.role === "system") {
+    return (
+      <div style={systemBubbleStyle}>
+        <div style={systemContentStyle}>{content}</div>
+      </div>
+    );
+  }
+
   const isUser = message.role === "user";
-  const isAssistant = message.role === "assistant";
+  const label = isUser ? "You" : "Hermes";
+
+  const handleCopy = useCallback(() => {
+    try {
+      const clipboard = (Components as any).classes["@mozilla.org/widget/clipboardhelper;1"]
+        .getService((Components as any).interfaces.nsIClipboardHelper);
+      clipboard.copyString(content);
+    } catch {
+      // Fallback: do nothing if clipboard unavailable
+    }
+  }, [content]);
 
   return (
     <div
@@ -816,14 +1072,30 @@ const ChatMessageItem = memo(function ChatMessageItem({
         color: isUser ? "var(--hermes-accent-text, white)" : "inherit",
       }}
     >
-      <div style={{ fontSize: "0.75em", opacity: 0.7, marginBottom: "4px" }}>
-        {isUser ? "You" : isAssistant ? "Hermes" : message.role}
-        {" "}
-        {new Date(message.timestamp).toLocaleTimeString()}
+      <div style={{ fontSize: "0.75em", opacity: 0.7, marginBottom: "4px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span>{label}{" "}{new Date(message.timestamp).toLocaleTimeString()}</span>
+        <button
+          onClick={handleCopy}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            opacity: 0.5,
+            fontSize: "0.9em",
+            padding: "0 4px",
+          }}
+          title="Copy to clipboard"
+        >
+          📋
+        </button>
       </div>
-      <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
-        {stripAnsi(message.content)}
-      </div>
+      {isUser ? (
+        <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
+          {content}
+        </div>
+      ) : (
+        <MarkdownRenderer text={content} />
+      )}
     </div>
   );
 });
@@ -865,10 +1137,116 @@ const messageBubbleStyle: React.CSSProperties = {
   wordBreak: "break-word",
 };
 
+// ─── Reasoning bubble ───
+const reasoningBubbleStyle: React.CSSProperties = {
+  alignSelf: "flex-start",
+  maxWidth: "85%",
+  borderRadius: "8px",
+  border: "1px solid var(--hermes-border, #e0e0e0)",
+  backgroundColor: "var(--hermes-bg-tertiary, #f8f4e8)",
+};
+
+const reasoningHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  padding: "8px 12px",
+  cursor: "pointer",
+  fontSize: "0.85em",
+  opacity: 0.8,
+  userSelect: "none",
+};
+
+const reasoningContentStyle: React.CSSProperties = {
+  padding: "8px 12px 12px",
+  fontSize: "0.9em",
+  lineHeight: 1.5,
+  whiteSpace: "pre-wrap",
+  wordBreak: "break-word",
+  opacity: 0.85,
+  borderTop: "1px solid var(--hermes-border, #e0e0e0)",
+};
+
+// ─── Tool bubble ───
+const toolBubbleStyle: React.CSSProperties = {
+  alignSelf: "flex-start",
+  maxWidth: "85%",
+  borderRadius: "8px",
+  border: "1px solid var(--hermes-border, #e0e0e0)",
+  backgroundColor: "var(--hermes-bg-tertiary, #f0f4ff)",
+  overflow: "hidden",
+  fontSize: "0.9em",
+};
+
+const toolHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  padding: "6px 12px",
+  cursor: "pointer",
+  userSelect: "none",
+};
+
+const toolContentStyle: React.CSSProperties = {
+  padding: "8px 12px 12px",
+  margin: 0,
+  whiteSpace: "pre-wrap",
+  fontSize: "0.85em",
+  lineHeight: 1.4,
+  borderTop: "1px solid var(--hermes-border, #e0e0e0)",
+  maxHeight: "300px",
+  overflowY: "auto",
+};
+
+// ─── Terminal bubble ───
+const terminalBubbleStyle: React.CSSProperties = {
+  alignSelf: "stretch",
+  borderRadius: "8px",
+  backgroundColor: "#1e1e2e",
+  color: "#cdd6f4",
+  overflow: "hidden",
+  fontFamily: "monospace",
+  fontSize: "0.85em",
+};
+
+const terminalHeaderStyle: React.CSSProperties = {
+  padding: "6px 12px",
+  backgroundColor: "rgba(255,255,255,0.05)",
+  fontSize: "0.8em",
+  opacity: 0.7,
+};
+
+const terminalContentStyle: React.CSSProperties = {
+  padding: "8px 12px",
+  margin: 0,
+  whiteSpace: "pre-wrap",
+  lineHeight: 1.4,
+  maxHeight: "200px",
+  overflowY: "auto",
+};
+
+// ─── System bubble ───
+const systemBubbleStyle: React.CSSProperties = {
+  alignSelf: "center",
+  maxWidth: "90%",
+};
+
+const systemContentStyle: React.CSSProperties = {
+  padding: "6px 12px",
+  fontSize: "0.85em",
+  opacity: 0.7,
+  textAlign: "center",
+};
+
 const typingIndicatorStyle: React.CSSProperties = {
   alignSelf: "flex-start",
   padding: "8px 16px",
   opacity: 0.6,
+};
+
+const dotStyle: React.CSSProperties = {
+  fontSize: "0.6em",
+  opacity: 0.5,
 };
 
 const errorStyle: React.CSSProperties = {
@@ -1097,7 +1475,7 @@ export function mountHermesChat(
       };
       mq.addEventListener("change", onThemeChange);
     }
-  } catch (e) {
+  } catch {
     // ignore
   }
 

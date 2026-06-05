@@ -30,6 +30,8 @@ import { ApprovalDialog } from "./modules/hermes/ApprovalDialog";
 import { TagManager } from "./modules/hermes/TagManager";
 import { ConversationManager } from "./modules/hermes/ConversationManager";
 import { PreferencesManager } from "./modules/hermes/PreferencesManager";
+import { DebugLogger } from "./utils/DebugLogger";
+import { AuditLog } from "./utils/AuditLog";
 import { getString, getLocaleID, initLocale } from "./utils/locale";
 import { registerPrefsScripts } from "./modules/preferenceScript";
 import { createZToolkit } from "./utils/ztoolkit";
@@ -48,6 +50,14 @@ async function onStartup() {
     // Initialize locale FIRST
     initLocale();
     addon.log("Step 3: Locale initialized");
+
+    // Debug mode can now gate verbose logs below this point
+    const debug = new DebugLogger(addon);
+    debug.info("Debug mode enabled — verbose logging active");
+
+    // Audit log for recording all agent actions
+    const auditLog = new AuditLog(addon);
+    auditLog.record("connection", "Plugin startup", "success");
 
     // Initialize Hermes modules
     addon.log("Step 4: Creating ApprovalDialog...");
@@ -105,6 +115,8 @@ async function onStartup() {
       conversations,
       preferences,
       approvalDialog,
+      debug,
+      auditLog,
     };
     addon.log("Step 24: Hermes modules initialized");
         // Load FTL/Stylesheets for all existing windows

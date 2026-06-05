@@ -9,6 +9,8 @@ export interface AttachedItem {
   tags: string[];
   url?: string;
   doi?: string;
+  storagePath?: string;
+  attachmentKey?: string;
 }
 
 /**
@@ -43,6 +45,22 @@ export class ItemManager {
 
   public extractItemData(item: Zotero.Item): AttachedItem | null {
     try {
+      // Resolve the best attachment's storage path
+      let storagePath: string | undefined;
+      let attachmentKey: string | undefined;
+      try {
+        const bestAttachment = (item as any).getBestAttachment?.() as Zotero.Item | false | undefined;
+        if (bestAttachment) {
+          attachmentKey = bestAttachment.key;
+          const file = (bestAttachment as any).getFilePath?.() as string | undefined;
+          if (file) {
+            storagePath = file;
+          }
+        }
+      } catch {
+        // ignore attachment resolution errors
+      }
+
       return {
         id: item.id,
         key: item.key,
@@ -54,6 +72,8 @@ export class ItemManager {
         tags: item.getTags().map((t: any) => t.tag),
         url: (item.getField("url") as string) || undefined,
         doi: (item.getField("DOI") as string) || undefined,
+        storagePath,
+        attachmentKey,
       };
     } catch {
       return null;

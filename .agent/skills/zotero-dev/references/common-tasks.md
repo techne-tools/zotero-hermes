@@ -1,203 +1,295 @@
+<!--
+Source: Based on the zotero-hermes codebase, windingwind's zotero-plugin-template, and daily development workflows
+-->
+
 # Common Tasks
 
-## Setting Up Development Environment
-
-### Prerequisites
-
-- Node.js 18+
-- npm or pnpm
-- Zotero 9.0.0+ (beta)
-
-### Installation
+## Build & Test Commands
 
 ```bash
-# Clone repository
-git clone https://github.com/NousResearch/zotero-hermes.git
-cd zotero-hermes
-
-# Install dependencies
-npm install
-
-# Start development server
+# Development server with hot reload
 npm start
+
+# Production build
+npm run build
+
+# Run tests (Mocha + Chai)
+npm test
+
+# Lint check only
+npm run lint:check
+
+# Auto-fix linting
+npm run lint:fix
+
+# Update dependencies
+npm run update-deps
 ```
 
-### IDE Setup
+Quick workflow: **code → `npm run build` → install `.xpi` in Zotero → test**.
 
-Recommended VS Code extensions:
+## Add a New Hermes Module
 
-- ESLint
-- Prettier
-- TypeScript Importer
-- Zotero Plugin Dev (if available)
-
-## Creating a New Module
-
-### 1. Create Module File
+### 1. Create the module file
 
 ```typescript
-// src/modules/hermes/NewModule.ts
-export class NewModule {
-  private readonly plugin: typeof Zotero.HermesAgent;
+// src/modules/hermes/MyNewModule.ts
+export class MyNewModule {
+  private readonly addon: any;
 
-  constructor(plugin: typeof Zotero.HermesAgent) {
-    this.plugin = plugin;
+  constructor(addon: any) {
+    this.addon = addon;
   }
 
-  public async doSomething(): Promise<void> {
-    // Implementation
+  public async doSomething(): Promise<string> {
+    try {
+      // Use addon.data.hermes to access other modules
+      const items = this.addon.data.hermes.items.getSelectedItems();
+      this.addon.log("MyNewModule: doSomething called");
+      return "Done";
+    } catch (error) {
+      this.addon.log(`MyNewModule error: ${(error as Error).message}`);
+      throw error;
+    }
   }
 }
 ```
 
-### 2. Register in Addon
+### 2. Register in `src/hooks.ts` onStartup()
 
 ```typescript
-// src/addon.ts
-import { NewModule } from "./modules/hermes/NewModule";
+import { MyNewModule } from "./modules/hermes/MyNewModule";
 
-// In constructor
-this.data = {
-  // ... existing data
-  newModule: new NewModule(this),
+// In onStartup(), after other module initializations:
+addon.log("Step N: Creating MyNewModule...");
+const myModule = new MyNewModule(addon);
+addon.data.hermes.myModule = myModule;
+```
+
+### 3. Add type to `src/addon.ts`
+
+```typescript
+hermes?: {
+  // ... existing modules ...
+  myModule: import("./modules/hermes/MyNewModule").MyNewModule;
 };
 ```
 
-### 3. Initialize in Hooks
+## Work with Zotero Items
 
 ```typescript
-// src/hooks.ts
-import { NewModule } from "./modules/hermes/NewModule";
+// Get selected items from active pane
+const zoteroPane = Zotero.getActiveZoteroPane();
+const items: Zotero.Item[] = zoteroPane?.getSelectedItems() || [];
 
-async function onStartup() {
-  // ... existing initialization
-  addon.data.hermes.newModule = new NewModule(addon);
-}
+// Get item by ID
+const item = await Zotero.Items.getAsync(itemID);
+
+// Get all items in user library
+const allItems = await Zotero.Items.getAll(Zotero.Libraries.userLibraryID);
+
+// Extract metadata (from ItemManager.ts)
+const title = item.getDisplayTitle();
+const creators = item.getCreators().map((c: any) =>
+  c.firstName ? `${c.firstName} ${c.lastName}` : c.name);
+const tags = item.getTags().map((t: any) => t.tag);
+const abstract = item.getField("abstractNote") as string;
+const url = item.getField("url") as string;
+const doi = item.getField("DOI") as string;
+const date = item.getField("date") as string;
 ```
 
-## Adding a UI Component
-
-### 1. Create XUL Element
-
-```xml
-<!-- addon/content/hermes/new-component.xhtml -->
-<vbox id="hermes-new-component">
-  <html:div class="hermes-header">New Component</html:div>
-  <html:div id="hermes-new-content" />
-</vbox>
-```
-
-### 2. Add Styles
-
-```css
-/* addon/content/hermes/new-component.css */
-.hermes-header {
-  font-weight: bold;
-  padding: 8px;
-}
-```
-
-### 3. Register in Hooks
+## Work with Notes
 
 ```typescript
-// src/hooks.ts
-function initializeHermesUI(win: Window): void {
-  // ... existing initialization
-  const newComponent = ztoolkit.UI.createElement(doc, "vbox", {
-    id: "hermes-new-component",
-    // ... properties
-  });
+// Read note content
+const note = await Zotero.Items.getAsync(noteID);
+const content = note.getNote();
+
+// Create a new note
+const newNote = new Zotero.Item("note");
+newNote.libraryID = Zotero.Libraries.userLibraryID;
+newNote.setNote("New content here");
+await newNote.saveTx();
+
+// Get parent item from a note
+const parent = await Zotero.Items.getAsync(note.parentItemID);
+```
+
+## Work with Annotations
+
+```typescript
+// Get annotations for an item
+const item = await Zotero.Items.getAsync(itemID);
+const annotations = await item.getAnnotations();
+
+// Access annotation properties
+for (const ann of annotations) {
+  const text = ann.annotationText;
+  const comment = ann.annotationComment;
+  const color = ann.annotationColor;
+  const type = ann.annotationType; // "highlight" | "underline" | "strikeout"
+  const page = ann.annotationPageLabel;
 }
 ```
 
-## Adding a Slash Command
-
-### 1. Define Command
+## React Component in Zotero
 
 ```typescript
-// src/modules/hermes/SlashCommands.ts
-export interface SlashCommand {
-  name: string;
-  description: string;
-  execute: (args: string) => Promise<string | null>;
-}
+// Mount React 18 in XUL container
+import { createRoot } from "react-dom/client";
 
-const commands: SlashCommand[] = [
-  {
-    name: "newcommand",
-    description: "Description of what it does",
-    execute: async (args) => {
-      // Implementation
-      return "Result";
-    },
+const container = doc.createElement("div");
+container.id = "hermes-react-root";
+container.style.cssText = "width: 100%; height: 100%; display: flex; flex-direction: column;";
+
+const root = createRoot(container);
+root.render(<HermesChatViewComponent addon={addon} />);
+
+// Store unmount for cleanup
+container._unmount = () => root.unmount();
+container.dataset.mounted = "true";
+```
+
+## ACP Communication
+
+```typescript
+// Send JSON-RPC request via stdio
+const request = {
+  jsonrpc: "2.0",
+  id: `msg_${counter}`,
+  method: "session/prompt",
+  params: {
+    sessionId: "...",
+    prompt: [{ type: "text", text: "Hello" }],
   },
-];
-```
+};
+this.writeToStdin(JSON.stringify(request) + "\n");
 
-### 2. Register Handler
-
-```typescript
-// In chat input handler
-function handleSlashCommand(text: string): void {
-  const match = text.match(/^\/(\w+)\s*(.*)$/);
-  if (!match) return;
-
-  const [, command, args] = match;
-  const cmd = commands.find((c) => c.name === command);
-  if (cmd) {
-    cmd.execute(args).then((result) => {
-      if (result) {
-        addMessage(result, "system");
-      }
-    });
-  }
-}
-```
-
-## Testing a Feature
-
-### 1. Write Unit Test
-
-```typescript
-// test/newFeature.test.ts
-import { describe, it, expect, vi } from "vitest";
-import { NewModule } from "../src/modules/hermes/NewModule";
-
-describe("NewModule", () => {
-  it("should do something", async () => {
-    const module = new NewModule(mockAddon);
-    const result = await module.doSomething();
-    expect(result).toBeDefined();
-  });
+// Handle streaming notification
+// {"jsonrpc":"2.0","method":"session/update","params":{"content":"..."}}
+// Subscribe via onUpdate callback:
+client.onUpdate((update) => {
+  if (update.type === "message") console.log(update.content);
 });
 ```
 
-### 2. Run Tests
-
-```bash
-npm test
-```
-
-### 3. Manual Testing
-
-1. Build plugin: `npm run build`
-2. Install in Zotero
-3. Test the feature
-4. Check browser console for errors
-
-## Debugging
-
-### Console Logging
+## API Client Request
 
 ```typescript
-// Debug messages (only in debug builds)
-Zotero.debug("[Hermes] Debug message");
+const response = await fetch(`${apiUrl}/v1/chat/completions`, {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${apiKey}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    model: "hermes-agent",
+    messages: [{ role: "user", content: "Hello" }],
+    stream: true,
+  }),
+});
+```
 
-// Always visible
-console.log("[Hermes] Log message");
+## Add a Slash Command
 
-// Errors
-Zotero.logError(error);
+```typescript
+// In src/modules/hermes/SlashCommands.ts
+const BUILT_IN_COMMANDS: SlashCommand[] = [
+  {
+    name: "mycommand",
+    description: "Description of what it does",
+    execute: async (addon, args) => {
+      const items = addon.data.hermes.items.getSelectedItems();
+      return `Found ${items.length} items`;
+    },
+  },
+  // ... existing commands: clear, context, help, export
+];
+```
+
+## Register Toolbar Button
+
+```typescript
+const btn = doc.createXULElement("toolbarbutton") as any;
+btn.setAttribute("id", "zotero-hermes-tb-chat-toggle");
+btn.setAttribute("tooltiptext", "Toggle Hermes Chat");
+btn.setAttribute("aria-pressed", "false");
+btn.style.listStyleImage =
+  "url('chrome://hermes/content/icons/hermes-sidenav.svg')";
+
+const separator = doc.createElement("div") as any;
+separator.className = "zotero-tb-separator";
+
+// Insert before sync button
+(syncBtn.parentNode as any).insertBefore(btn, syncBtn);
+(syncBtn.parentNode as any).insertBefore(separator, syncBtn);
+
+btn.addEventListener("click", () => toggleHermesSidebar(win));
+```
+
+## Localization
+
+```typescript
+// Initialize locale
+import { initLocale } from "./utils/locale";
+initLocale();
+
+// Get string by FTL key
+import { getString } from "./utils/locale";
+const label = getString("pref-connection-title");
+
+// With dynamic arguments
+const greeting = getString("welcome-message", {
+  args: { name: "Hermes" },
+});
+
+// With branch (variant)
+const branchText = getString("addon-static-example", {
+  branch: "branch-example",
+});
+```
+
+## Debug Logging
+
+```typescript
+// Via addon.log (wraps Zotero.debug)
+addon.log("Step 4: Creating Hermes client...");
+addon.log("Connection failed", error);
+
+// Via console (falls back to Zotero.debug if undefined)
+console.log("[Hermes] Debug message");
+
+// For production, use Zotero.debug directly
+Zotero.debug("[Hermes] startup complete");
+```
+
+## Create XUL Element with ztoolkit
+
+```typescript
+const button = ztoolkit.UI.createElement(doc, "button", {
+  id: "hermes-send-btn",
+  class: "hermes-btn-primary",
+  properties: { label: "Send" },
+  listeners: { command: () => handleSend() },
+});
+```
+
+## Register Notifier
+
+```typescript
+const notifierID = Zotero.Notifier.registerObserver(
+  {
+    notify: async (event, type, ids, extraData) => {
+      if (!addon?.data.alive) return;
+      addon.hooks.onNotify(event, type, ids, extraData);
+    },
+  },
+  ["tab", "item", "file"],
+);
+
+// Cleanup
+Zotero.Notifier.unregisterObserver(notifierID);
 ```
 
 ### Using Debugger

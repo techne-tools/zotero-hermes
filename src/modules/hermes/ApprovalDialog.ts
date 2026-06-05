@@ -1,11 +1,5 @@
 import type Addon from "../../addon";
-
-export interface PendingFileChange {
-  id: string;
-  path: string;
-  content: string;
-  action: "create" | "update" | "delete";
-}
+import type { PendingFileChange } from "./types";
 
 /**
  * Approval dialog for file modifications suggested by Hermes Agent.
@@ -53,14 +47,14 @@ export class ApprovalDialog {
           ? "Create"
           : change.action === "delete"
             ? "Delete"
-            : "Update";
+            : "Modify";
 
       this.dialogElement.innerHTML = `
         <div class="hermes-approval-content">
           <h3>📝 File Change Approval</h3>
           <p><strong>${actionText}:</strong> <code>${change.path}</code></p>
           <div class="hermes-approval-preview">
-            <pre>${change.content?.slice(0, 2000) || "(empty)"}</pre>
+            <pre>${change.newContent?.slice(0, 2000) || "(empty)"}</pre>
           </div>
           <div class="hermes-approval-actions">
             <button class="hermes-btn-approve">Approve</button>
@@ -102,6 +96,39 @@ export class ApprovalDialog {
    */
   public getPendingChange(id: string): PendingFileChange | undefined {
     return this.pendingChanges.get(id);
+  }
+
+  /**
+   * Get all pending changes.
+   */
+  public getPendingChanges(): PendingFileChange[] {
+    return Array.from(this.pendingChanges.values());
+  }
+
+  /**
+   * Approve all pending changes.
+   */
+  public async approveAll(): Promise<number> {
+    const pending = this.getPendingChanges();
+    let approved = 0;
+    for (const change of pending) {
+      if (change.status === "pending") {
+        change.status = "approved";
+        approved++;
+      }
+    }
+    return approved;
+  }
+
+  /**
+   * Get count of pending changes.
+   */
+  public getPendingCount(): number {
+    let count = 0;
+    for (const change of this.pendingChanges.values()) {
+      if (change.status === "pending") count++;
+    }
+    return count;
   }
 
   /**

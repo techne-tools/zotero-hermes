@@ -1,203 +1,219 @@
-# Critical Development Guidelines
+<!--
+Source: Based on Zotero plugin development best practices, windingwind's zotero-plugin-toolkit, and the zotero-hermes codebase
+-->
 
-## DO's ✅
+# Agent Do/Don't
 
-### 1. Use TypeScript
+## Do ✅
 
-Always use TypeScript for type safety:
+### 1. Use TypeScript Strict Mode
+
+Always use TypeScript with strict mode enabled:
 
 ```typescript
-// Good
+// Good — typed properly
 function getItem(id: number): Promise<Zotero.Item> {
   return Zotero.Items.getAsync(id);
 }
 
-// Bad
-function getItem(id) {
+// Bad — avoids type safety
+function getItem(id: any) {
   return Zotero.Items.getAsync(id);
 }
 ```
 
-### 2. Handle Errors Gracefully
+### 2. Guard Against Stale References After Shutdown
 
-Always wrap risky operations:
+Always check `addon.data.alive` in async callbacks:
 
 ```typescript
-try {
-  await saveNote(content);
-} catch (error) {
-  showErrorToUser(error);
-  logError(error);
-}
+// Good — guards against shutdown
+const callback = {
+  notify: async (event, type, ids, extraData) => {
+    if (!addon?.data.alive) return;
+    addon.hooks.onNotify(event, type, ids, extraData);
+  },
+};
+
+// Bad — may fire after shutdown
+const callback = {
+  notify: async (event, type, ids, extraData) => {
+    addon.hooks.onNotify(event, type, ids, extraData);
+  },
+};
 ```
 
-### 3. Clean Up Resources
+### 3. Clean Up on Shutdown
 
-Unregister observers and listeners:
+Unregister all observers, remove UI elements, and clean up React roots:
 
 ```typescript
 // In onShutdown()
-Zotero.Notifier.unregisterObserver(notifierID);
-ztoolkit.unregisterAll();
-```
-
-### 4. Use Async/Await
-
-Prefer async/await over callbacks:
-
-```typescript
-// Good
-const item = await Zotero.Items.getAsync(id);
-
-// Bad
-Zotero.Items.getAsync(id).then((item) => {
-  // ...
-});
-```
-
-### 5. Validate User Input
-
-Always sanitize user input:
-
-```typescript
-function sanitizePath(path: string): string {
-  // Prevent directory traversal
-  return path.replace(/\.\./g, "");
+function onShutdown(): void {
+  const mainWindows = Zotero.getMainWindows();
+  for (const win of mainWindows) {
+    unregisterHermesSidebar(win);
+  }
+  addon.data.ztoolkit?.unregisterAll();
+  addon.data.alive = false;
+  delete Zotero[addon.data.config.addonInstance];
 }
 ```
 
-### 6. Use Zotero's APIs
+### 4. Run Build After Changes
 
-Leverage built-in Zotero functionality:
+Always run `npm run build` after making changes to catch build errors early. Only check for npm installation if the build fails.
+
+### 5. Use .refs for Reference Tracking
+
+- Clone external repos into `.refs/<name>/`
+- Use read-only commands like `git fetch` and `git log` to check for updates
+- **Never automatically pull** — always ask the user first
+
+### 6. Use the Dual-Mode Client Pattern
+
+Both clients share the same public interface so the UI doesn't need to know which is active:
 
 ```typescript
-// Good - Use Zotero's preference system
-Zotero.Prefs.set("extensions.zotero.hermes.setting", value, true);
-
-// Bad - Don't use localStorage or custom files
-localStorage.setItem("hermes-setting", value);
+// Either client works — same sendPrompt, onUpdate, onError interface
+const client = connectionMode === "api"
+  ? new HermesApiClient(addon)
+  : new HermesClient(addon);
 ```
 
-### 7. Test Thoroughly
+### 7. Use rAF-Buffered Streaming for UI Updates
 
-Write tests for all critical paths:
+Don't update React state on every stream chunk — buffer via `useStreamBuffer`:
 
 ```typescript
-describe("ChatManager", () => {
-  it("should save messages", async () => {
-    const chat = new ChatManager();
-    chat.addUserMessage("Hello");
-    expect(chat.getMessages()).toHaveLength(1);
-  });
-});
+// Good — uses rAF buffering from useStreamBuffer.ts
+const { appendContent, flushNow } = useStreamBuffer(setMessages, showReasoning);
+
+// Handle stream chunks
+const handleUpdate = (update: ChatSessionUpdate) => {
+  if (update.type === "message" && update.content) {
+    appendContent(update.content);
+  } else if (update.type === "stop") {
+    flushNow();
+  }
+};
 ```
 
-### 8. Document Public APIs
+### 8. Write Idempotent Code
 
-Add JSDoc comments to public methods:
+Ensure reload/unload doesn't leak listeners or intervals:
 
 ```typescript
-/**
- * Send a message to Hermes and get streaming response.
- * @param text - The message text
- * @param context - Optional context items
- * @returns Async generator yielding response chunks
- */
-public async *sendMessage(text: string, context?: ContextItem[]): AsyncGenerator<string> {
+// Good — checks if already registered
+if (syncBtn && !doc.getElementById("zotero-hermes-tb-chat-toggle")) {
+  // Only create if doesn't exist
+  const btn = doc.createXULElement("toolbarbutton");
   // ...
 }
 ```
 
-## DON'Ts ❌
+### 9. Use Native DOM Events in Zotero Sandbox
 
-### 1. Don't Block the UI
-
-Never run long operations on the main thread:
+React synthetic events are unreliable in Zotero's sandboxed Firefox:
 
 ```typescript
-// Bad - Blocks UI
-const items = await fetchAllItems(); // 10 seconds
-
-// Good - Show progress
-const progress = new Zotero.ProgressWindow("Loading");
-progress.show();
-const items = await fetchAllItems();
-progress.close();
+// Good — uses native DOM input event
+useEffect(() => {
+  const textarea = inputRef.current;
+  if (!textarea) return;
+  const handler = (e: Event) => {
+    setInput((e.target as HTMLTextAreaElement).value);
+  };
+  textarea.addEventListener("input", handler);
+  return () => textarea.removeEventListener("input", handler);
+}, []);
 ```
 
-### 2. Don't Leak Memory
+### 10. Release Preparation Checklist
 
-Always clean up event listeners:
+When user asks "is my plugin ready for release?":
+- [ ] Version bumped in `package.json`
+- [ ] All tests passing
+- [ ] Linting clean (`npm run lint:check`)
+- [ ] Build succeeds (`npm run build`)
+- [ ] XPI file generated in `.scaffold/build/`
+- [ ] `manifest.json` version matches
+- [ ] `update.json` / `update-beta.json` configured
+
+## Don't ❌
+
+### 1. Don't Auto-Commit or Auto-Push
+
+Never automatically commit, push, or perform any git operations. All git operations must be left to the user.
+
+### 2. Don't Pull Without Asking
+
+When checking for updates to repos in `.refs`, use `git fetch` and `git log` to check what's new, but **never automatically pull** — always ask the user first.
+
+### 3. Don't Use innerHTML
+
+Building DOM from AI-generated content using `innerHTML` poses XSS security risks:
 
 ```typescript
-// Bad
-window.addEventListener("click", handler); // Never removed
+// BAD — security risk
+container.innerHTML = aiGeneratedContent;
 
-// Good
-const handler = () => {
-  /* ... */
-};
-window.addEventListener("click", handler);
-// Later:
-window.removeEventListener("click", handler);
+// GOOD — use DOM API
+const div = doc.createElement("div");
+div.textContent = aiGeneratedContent;
+container.appendChild(div);
 ```
 
-### 3. Don't Trust AI Output
+### 4. Don't Add eslint-disable Comments Without Understanding Why
 
-Always validate AI-generated content:
+Read the error message, understand the root cause, and fix it properly.
+
+### 5. Don't Make Network Calls Without Disclosure
+
+Introduce network calls only with an obvious user-facing reason and documentation. Ship features that require cloud services only with clear disclosure and explicit opt-in.
+
+### 6. Don't Store Secrets in Plain Text
+
+- Store API keys in Zotero Preferences (not in files or localStorage)
+- Use `password` input type in preferences XHTML
+- Never log API keys to console or debug output
+
+### 7. Don't Block the UI Thread
+
+Use async/await for all Zotero API calls, and show progress for long operations.
+
+### 8. Don't Hardcode User-Specific Paths
+
+Use Zotero's profile directory and path utilities:
 
 ```typescript
-// Bad
-note.setNote(aiResponse); // Could contain malicious HTML
+// BAD
+const path = "~/.hermes/config.json";
 
-// Good
-const sanitized = sanitizeHtml(aiResponse);
-note.setNote(sanitized);
+// GOOD
+const profileDir = Zotero.getProfileDirectory();
+profileDir.append("zotero-hermes");
 ```
 
-### 4. Don't Hardcode Paths
+## Fixing Linting Errors
 
-Use Zotero's path utilities:
+**DO**:
+1. Read the error message carefully — note the exact line and column
+2. Understand what the error is actually complaining about
+3. Fix the root cause, not the symptom
+4. Test with `npm run lint:check` after each fix
+5. Verify `npm run build` still works
 
-```typescript
-// Bad
-const path = "/Users/name/Documents/file.pdf";
+**DON'T**:
+- Add eslint-disable comments without understanding why
+- Try the same fix multiple times without understanding why it failed
+- Suppress errors as a shortcut
 
-// Good
-const path = Zotero.File.pathToFile("file.pdf");
-```
-
-### 5. Don't Ignore Errors
-
-Always handle errors, even in callbacks:
-
-```typescript
-// Bad
-item.saveTx().catch(() => {}); // Silent failure
-
-// Good
-try {
-  await item.saveTx();
-} catch (error) {
-  Zotero.logError(error);
-  showErrorToUser("Failed to save item");
-}
-```
-
-### 6. Don't Use Global Variables
-
-Avoid polluting the global namespace:
-
-```typescript
-// Bad
-window.myPlugin = {
-  /* ... */
-};
-
-// Good
-const addon = new Addon();
-Zotero[addon.data.config.addonInstance] = addon;
-```
+**When Stuck**:
+1. Read the error message — what line/column is it complaining about?
+2. Understand the type signature — what does the function expect?
+3. Fix the actual type mismatch, not just suppress the warning
+4. If you've tried the same thing 3 times, stop and re-read the error message
 
 ### 7. Don't Break Compatibility
 

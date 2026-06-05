@@ -7,8 +7,19 @@
 declare namespace _ZoteroTypes {
   interface Prefs {
     PluginPrefsMap: {
-      "enable": boolean;
-      "input": string;
+      "binaryPath": string;
+      "connectionMode": string;
+      "apiUrl": string;
+      "apiKey": string;
+      "chatAgentName": string;
+      "autoSave": boolean;
+      "showReasoning": boolean;
+      "showToolUse": boolean;
+      "showTokenCount": boolean;
+      "enableDebugMode": boolean;
+      "enableCitations": boolean;
+      "enableAnnotations": boolean;
+      "enableTags": boolean;
     };
   }
 }

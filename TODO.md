@@ -82,23 +82,67 @@
   - Three detection methods: `matchMedia`, computed `main-window` background, document class/attr
   - File: `src/views/HermesChatView.tsx`
 
+### Bug Fixes (5 June 2026) — Session: UI/UX & Metadata Context
+
+- [x] **Fix stuck "Hermes is thinking" indicator**
+  - Safety timeout was cleared on first update chunk and never restarted
+  - Solution: Restart 60s timeout on every non-terminal event; clear on `stop`/`usage`/`session_info`/`error`
+  - File: `src/views/HermesChatView.tsx`
+
+- [x] **Fix Markdown table rendering**
+  - `MarkdownRenderer` didn't support tables at all
+  - Solution: Added table block parsing (lines starting with `|`) and `<table>`/`<thead>`/`<tbody>` rendering
+  - File: `src/utils/MarkdownRenderer.tsx`
+
+- [x] **Fix missing item metadata in agent context**
+  - Only item key and storage path were passed; agent hallucinated database access
+  - Solution: Pass full metadata (title, authors, abstract, tags, date, DOI, URL, item type) in context
+  - File: `src/modules/hermes/HermesClient.ts`, `src/modules/hermes/ItemManager.ts`
+
+- [x] **Fix storage folder mismatch**
+  - Parent item key ≠ attachment item key; agent looked in wrong folder
+  - Solution: `ItemManager.extractItemData()` resolves `getBestAttachment()` and uses attachment key
+  - File: `src/modules/hermes/ItemManager.ts`
+
+- [x] **Add copy-to-clipboard buttons**
+  - Users couldn't copy text from chat bubbles (especially long reasoning)
+  - Solution: 📋 button on assistant messages and reasoning bubbles using `nsIClipboardHelper`
+  - File: `src/views/HermesChatView.tsx`
+
+- [x] **Remove MCP dependency**
+  - MCP server consistently failed to connect
+  - Solution: Removed `mcpServers` from `createSession()`; agent uses provided metadata directly
+  - File: `src/modules/hermes/HermesClient.ts`
+
+- [x] **Prevent agent hallucinations**
+  - Agent tried to read locked SQLite database and search online despite constraints
+  - Solution: Stronger system instruction explicitly tells agent to answer from provided metadata
+  - File: `src/modules/hermes/HermesClient.ts`
+
+- [x] **Fix build errors**
+  - Duplicate `const` declarations in `sendPrompt()` after MCP removal
+  - Solution: Removed second pair of `zoteroDataDir`/`zoteroStorageDir` declarations
+  - File: `src/modules/hermes/HermesClient.ts`
+
 ---
 
 ## Phase 2: Zotero Integration
 
 ### Item Context
 
-- [ ] Selected Item Attachment
-  - [ ] Add button to attach selected Zotero items to chat
-  - [ ] Extract item metadata (title, authors, abstract, tags)
-  - [ ] Format item context for Hermes prompt
-  - [ ] Show attached items in chat UI
+- [x] Selected Item Attachment
+  - [x] Add button to attach selected Zotero items to chat
+  - [x] Extract item metadata (title, authors, abstract, tags, date, DOI, URL)
+  - [x] Format item context for Hermes prompt
+  - [x] Show attached items in chat UI
+  - [x] **Resolve correct storage folder** — Attachment item key (not parent key) is the real folder name
+  - [x] **Pass full metadata to agent** — Prevents hallucinations by providing all item data in context
 
-- [ ] Item Context Manager
-  - [ ] Create `ItemManager.ts` module
-  - [ ] Implement item metadata extraction
-  - [ ] Support multiple item selection
-  - [ ] Add context preview before sending
+- [x] Item Context Manager
+  - [x] Create `ItemManager.ts` module
+  - [x] Implement item metadata extraction
+  - [x] Support multiple item selection
+  - [x] Add context preview before sending
 
 ### Note Operations
 

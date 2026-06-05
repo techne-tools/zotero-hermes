@@ -10,19 +10,31 @@ import type { ChatMessage } from "./HermesChatView";
  * Custom hook to buffer rapid stream chunks and flush them into React state
  * via requestAnimationFrame to avoid UI stutter.
  *
+ * Mirrors obsidian-hermes/src/Views/useStreamBuffer.ts
+ *
  * PERFORMANCE NOTES:
  * - Buffers content in refs (not state) to avoid re-renders on every chunk.
  * - Flushes via requestAnimationFrame for smooth updates.
+ *
+ * USAGE:
+ *   const { appendContent, appendReasoning, flushNow } = useStreamBuffer(
+ *     setMessages, showReasoning, enableTypingSound, enableHaptic
+ *   );
+ *   appendContent("new chunk"); // queued for next rAF flush
+ *   flushNow(); // force immediate flush (e.g., on stream end)
  */
 export function useStreamBuffer(
   setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>,
   showReasoning: boolean,
+  enableTypingSound = false,
+  enableHaptic = false,
 ) {
   const streamingMessageIdRef = useRef<string | null>(null);
   const reasoningMessageIdRef = useRef<string | null>(null);
   const pendingContentRef = useRef("");
   const pendingReasoningRef = useRef("");
-  const flushAnimationFrameRef = useRef<number | null>(null);
+  const flushAnimationFrameRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSoundTimeRef = useRef<number>(0);
 
   const flushBuffer = useCallback(() => {
     const content = pendingContentRef.current;
@@ -71,15 +83,24 @@ export function useStreamBuffer(
         } else {
           const newId = `reason_${Date.now()}`;
           reasoningMessageIdRef.current = newId;
-          updated = [
-            ...updated,
-            {
-              content: latestReasoning,
-              id: newId,
-              role: "reasoning",
-              timestamp: Date.now(),
-            },
-          ];
+          // Insert reasoning BEFORE the assistant message so it appears first
+          const assistantIndex = updated.findIndex(
+            (m) => m.role === "assistant" && m.id === streamingMessageIdRef.current,
+          );
+          const reasoningMsg = {
+            content: latestReasoning,
+            id: newId,
+            isCollapsed: true,
+            role: "reasoning" as const,
+            timestamp: Date.now(),
+          };
+          if (assistantIndex >= 0) {
+            const newArray = [...updated];
+            newArray.splice(assistantIndex, 0, reasoningMsg);
+            updated = newArray;
+          } else {
+            updated = [...updated, reasoningMsg];
+          }
         }
       }
 
@@ -89,13 +110,14 @@ export function useStreamBuffer(
 
   const scheduleFlush = useCallback(() => {
     if (flushAnimationFrameRef.current === null) {
-      flushAnimationFrameRef.current = requestAnimationFrame(flushBuffer);
+      // Use setTimeout instead of requestAnimationFrame for Zotero sandbox compatibility
+      flushAnimationFrameRef.current = setTimeout(flushBuffer, 50);
     }
   }, [flushBuffer]);
 
   const flushNow = useCallback(() => {
     if (flushAnimationFrameRef.current !== null) {
-      cancelAnimationFrame(flushAnimationFrameRef.current);
+      clearTimeout(flushAnimationFrameRef.current as unknown as ReturnType<typeof setTimeout>);
     }
     flushBuffer();
   }, [flushBuffer]);
@@ -119,7 +141,7 @@ export function useStreamBuffer(
   useEffect(() => {
     return () => {
       if (flushAnimationFrameRef.current !== null) {
-        cancelAnimationFrame(flushAnimationFrameRef.current);
+        clearTimeout(flushAnimationFrameRef.current);
       }
     };
   }, []);

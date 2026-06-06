@@ -1,3 +1,5 @@
+import type Addon from "../../addon";
+
 export interface AttachedItem {
   id: number;
   key: string;
@@ -17,10 +19,10 @@ export interface AttachedItem {
  * Manages Zotero item context extraction for Hermes Agent.
  */
 export class ItemManager {
-  private readonly addon: any;
+  private readonly addon: Addon;
   private attachedItems: AttachedItem[] = [];
 
-  constructor(addon: any) {
+  constructor(addon: Addon) {
     this.addon = addon;
   }
 

@@ -1,3 +1,5 @@
+import type Addon from "../../addon";
+
 export interface AnnotationData {
   id: string;
   page: number;
@@ -12,9 +14,9 @@ export interface AnnotationData {
  * Manages annotation extraction from PDFs and Zotero's native annotation system.
  */
 export class AnnotationManager {
-  private readonly addon: any;
+  private readonly addon: Addon;
 
-  constructor(addon: any) {
+  constructor(addon: Addon) {
     this.addon = addon;
   }
 

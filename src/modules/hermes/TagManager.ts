@@ -1,10 +1,12 @@
+import type Addon from "../../addon";
+
 /**
  * Manages tag operations and suggestions for Hermes Agent.
  */
 export class TagManager {
-  private readonly addon: any;
+  private readonly addon: Addon;
 
-  constructor(addon: any) {
+  constructor(addon: Addon) {
     this.addon = addon;
   }
 

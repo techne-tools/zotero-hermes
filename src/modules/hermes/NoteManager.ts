@@ -1,11 +1,13 @@
+import type Addon from "../../addon";
+
 /**
  * Manages Zotero note operations for Hermes Agent.
  */
 export class NoteManager {
-  private readonly addon: any;
+  private readonly addon: Addon;
   private readonly approvalDialog: any;
 
-  constructor(addon: any, approvalDialog?: any) {
+  constructor(addon: Addon, approvalDialog?: any) {
     this.addon = addon;
     this.approvalDialog = approvalDialog;
   }

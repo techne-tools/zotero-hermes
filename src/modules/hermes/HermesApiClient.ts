@@ -1,5 +1,7 @@
 import { config } from "../../../package.json";
 
+import type Addon from "../../addon";
+
 import type { ChatClient, ChatSessionUpdate, PromptContextItem } from "./types";
 
 /**
@@ -16,7 +18,7 @@ import type { ChatClient, ChatSessionUpdate, PromptContextItem } from "./types";
  */
 export class HermesApiClient implements ChatClient {
   private _isConnected = false;
-  private readonly addon: any;
+  private readonly addon: Addon;
   private activeAbortController: AbortController | null = null;
   private messageCallbacks: ((update: ChatSessionUpdate) => void)[] = [];
   private errorCallbacks: ((error: Error) => void)[] = [];
@@ -29,7 +31,7 @@ export class HermesApiClient implements ChatClient {
   private isConnecting = false;
   private isReconnecting = false;
 
-  constructor(addon: any) {
+  constructor(addon: Addon) {
     this.addon = addon;
   }
 

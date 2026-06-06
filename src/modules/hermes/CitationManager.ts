@@ -1,10 +1,12 @@
+import type Addon from "../../addon";
+
 /**
  * Manages citation generation using Zotero's configured citation style.
  */
 export class CitationManager {
-  private readonly addon: any;
+  private readonly addon: Addon;
 
-  constructor(addon: any) {
+  constructor(addon: Addon) {
     this.addon = addon;
   }
 

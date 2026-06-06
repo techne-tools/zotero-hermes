@@ -1,8 +1,10 @@
-import { config } from "../../../package.json";
+import type Addon from "../../addon";
+
 import pkg from "../../../package.json";
 
+import { buildSystemPrompt, buildItemContext } from "./systemPrompt";
+import { resolveHermesPath, isHermesAvailable, getHomeDir } from "./HermesBinaryFinder";
 import type { ChatClient, ChatSessionUpdate, PromptContextItem } from "./types";
-import type { ChatMessage } from "../../views/HermesChatView";
 
 interface JsonRpcRequest {
   jsonrpc: "2.0";
@@ -26,20 +28,6 @@ interface JsonRpcNotification {
 
 const PROTOCOL_VERSION = 1;
 
-const HERMES_BINARY_CANDIDATES = [
-  "hermes",
-  "hermes-cli",
-];
-
-const HERMES_PATH_CANDIDATES = [
-  "/usr/local/bin",
-  "/usr/bin",
-  "/opt/homebrew/bin",
-  "/opt/local/bin",
-  "~/.local/bin",
-  "~/bin",
-];
-
 /**
  * Hermes Agent Client for ACP (Agent Client Protocol) connection.
  * Spawns `hermes acp` as a subprocess and communicates via JSON-RPC over stdio.
@@ -48,40 +36,46 @@ const HERMES_PATH_CANDIDATES = [
 export class HermesClient implements ChatClient {
   private childProcess: any | null = null;
   private _isConnected = false;
-  private readonly addon: any;
+  private readonly addon: Addon;
   private sessionId: string | null = null;
   private messageIdCounter = 0;
   private pendingResponses = new Map<string, (value: JsonRpcResponse) => void>();
   private pendingErrors = new Map<string, (error: Error) => void>();
   private stdoutBuffer = "";
-  private onUpdateCallback: ((update: ChatSessionUpdate) => void) | null = null;
-  private onErrorCallback: ((error: Error) => void) | null = null;
-  private onToolUpdateCallback:
+  private onUpdateCallbacks: ((update: ChatSessionUpdate) => void)[] = [];
+  private onErrorCallbacks: ((error: Error) => void)[] = [];
+  private onToolUpdateCallbacks:
     | ((
         toolCallId: string,
         title: string,
         status: string,
         payload?: string,
-      ) => void)
-    | null = null;
-  private onAvailableCommandsCallback:
-    | ((commands: Array<{ description: string; name: string }>) => void)
-    | null = null;
+      ) => void)[]
+    = [];
+  private onAvailableCommandsCallbacks:
+    | ((commands: Array<{ description: string; name: string }>) => void)[]
+    = [];
   private reconnectAttempts = 0;
   private readonly MAX_RECONNECT_ATTEMPTS = 5;
   private reconnectTimeout: number | null = null;
   private currentAllowedTools: string[] | null = null;
 
-  constructor(addon: any) {
+  constructor(addon: Addon) {
     this.addon = addon;
   }
 
+  /**
+   * Gate verbose debug logging behind the debug mode pref,
+   * keeping lifecycle-critical messages always visible.
+   */
+  private logDebug(message: string, ...args: unknown[]): void {
+    if (this.addon.data.hermes?.preferences?.get("enableDebugMode", false)) {
+      this.addon.log(`[DEBUG] ${message}`, ...args);
+    }
+  }
+
   public isReady(): boolean {
-    const hermesPath = Zotero.Prefs.get(
-      `${config.prefsPrefix}.binaryPath`,
-      true,
-    ) as string;
-    return Boolean(hermesPath || this.findHermesPath());
+    return isHermesAvailable(pkg.config.prefsPrefix);
   }
 
   public getIsConnected(): boolean {
@@ -102,7 +96,7 @@ export class HermesClient implements ChatClient {
     }
 
     try {
-      const hermesPath = this.resolveHermesPath();
+      const hermesPath = resolveHermesPath(pkg.config.prefsPrefix);
 
       if (!hermesPath) {
         throw new Error(
@@ -115,11 +109,7 @@ export class HermesClient implements ChatClient {
       this.addon.log(`Spawning Hermes ACP via zsh with manual .zshrc sourcing from: ${hermesPath}`);
 
       // Spawn hermes acp subprocess using Firefox Subprocess.sys.mjs via zsh.
-      // We manually construct and export the PATH variable to include Homebrew bin paths, ensuring npx and Node are found instantly for MCP servers
-      // without sourcing ~/.zshrc which pollutes stdout with interactive terminal greetings/banners.
-      const envService = (Components.classes as any)["@mozilla.org/process/environment;1"]
-        .getService((Components.interfaces as any).nsIEnvironment);
-      const homeDir = envService.get("HOME") || "~/";
+      const homeDir = getHomeDir();
       const customPath = `/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${homeDir}/.local/bin`;
 
       const { Subprocess } = ChromeUtils.importESModule(
@@ -195,9 +185,9 @@ export class HermesClient implements ChatClient {
     contextItems: PromptContextItem[] = [],
     options?: { allowedTools?: string[] | null },
   ): Promise<void> {
-    this.addon.log("[HermesClient] sendPrompt called");
+    this.logDebug("[HermesClient] sendPrompt called");
     if (!this._isConnected || !this.sessionId) {
-      this.addon.log("[HermesClient] Not connected, calling connect()...");
+      this.logDebug("[HermesClient] Not connected, calling connect()...");
       await this.connect();
     }
 
@@ -212,87 +202,14 @@ export class HermesClient implements ChatClient {
     const zoteroStorageDir = `${zoteroDataDir}/storage`;
     const zoteroDbPath = `${zoteroDataDir}/zotero.sqlite`;
 
-    const systemInstruction = `You are the Hermes Agent for Zotero. Your primary focus is the user's Zotero research library.
+    promptBlocks.push({
+      type: "text",
+      text: buildSystemPrompt({ zoteroDataDir, zoteroDbPath, zoteroStorageDir, zoteroProfileDir }),
+    });
 
-ZOTERO LIBRARY ACCESS:
-- Zotero data directory: ${zoteroDataDir}
-- Zotero database: ${zoteroDbPath} (NOTE: This SQLite database is locked while Zotero is running. You CANNOT read it directly via fs tools.)
-- Zotero storage (attachments): ${zoteroStorageDir}
-- Zotero profile directory: ${zoteroProfileDir}
-
-CRITICAL CONSTRAINTS:
-1. The Zotero SQLite database at ${zoteroDbPath} is locked while Zotero is running. You cannot read it with fs tools.
-2. MCP tools are NOT available. Do not attempt to use any MCP server or MCP tools.
-3. The ONLY way to access Zotero library data is through the context items the user attaches to the conversation.
-4. If the user asks about items not in context, ask them to attach those Zotero items to the conversation.
-
-HOW TO HELP THE USER:
-- The metadata for attached Zotero items is ALREADY provided in the conversation context (title, authors, abstract, tags, date, DOI, URL, item type, storage path).
-- When the user asks about an attached item, ANSWER DIRECTLY using the provided metadata. Do NOT search online, do NOT try to read the SQLite database, do NOT try to access the filesystem.
-- If the user asks about items not in context, tell them: "Please attach the relevant Zotero items to this conversation so I can access their metadata."
-- For PDF attachments, the storage path is ${zoteroStorageDir}/<item_key>/ — but you can only access files the user explicitly shares.
-
-OBSIDIAN AWARENESS (secondary):
-- If the Obsidian Hermes plugin is also installed, you may be aware of the user's vault path.
-- Only search Obsidian as a FALLBACK when the Zotero library does not contain the requested information.
-- Do not assume Obsidian content is more relevant than Zotero for research queries.
-
-Always cite Zotero items by title and author when providing answers.`;
-    promptBlocks.push({ type: "text", text: systemInstruction });
-
-    // Add context items with Zotero library location info
+    // Add context items with full metadata
     for (const item of contextItems) {
-      let contextText = `[${item.type}]: ${item.text}`;
-      if (item.type === "item" && item.data) {
-        try {
-          const itemData = JSON.parse(item.data) as Record<string, unknown>;
-          const itemKey = itemData.key as string | undefined;
-          const itemId = itemData.id as number | undefined;
-          if (itemKey) {
-            contextText += `\nZotero item key: ${itemKey}`;
-            contextText += `\nZotero item ID: ${itemId || "unknown"}`;
-          }
-        } catch {
-          // ignore JSON parse errors
-        }
-      }
-      // Use extracted attachment info if available (resolves correct storage folder)
-      if (item.type === "item" && (item as any).extracted) {
-        const extracted = (item as any).extracted as Record<string, unknown>;
-        // Pass full metadata so the agent can answer without hallucinating
-        if (extracted.title) {
-          contextText += `\nTitle: ${extracted.title}`;
-        }
-        if (extracted.creators && Array.isArray(extracted.creators) && extracted.creators.length > 0) {
-          contextText += `\nAuthors: ${(extracted.creators as string[]).join(", ")}`;
-        }
-        if (extracted.date) {
-          contextText += `\nDate: ${extracted.date}`;
-        }
-        if (extracted.abstract) {
-          contextText += `\nAbstract: ${extracted.abstract}`;
-        }
-        if (extracted.tags && Array.isArray(extracted.tags) && extracted.tags.length > 0) {
-          contextText += `\nTags: ${(extracted.tags as string[]).join(", ")}`;
-        }
-        if (extracted.doi) {
-          contextText += `\nDOI: ${extracted.doi}`;
-        }
-        if (extracted.url) {
-          contextText += `\nURL: ${extracted.url}`;
-        }
-        if (extracted.itemType) {
-          contextText += `\nItem type: ${extracted.itemType}`;
-        }
-        if (extracted.attachmentKey) {
-          contextText += `\nZotero attachment key: ${extracted.attachmentKey}`;
-          contextText += `\nZotero storage path: ${zoteroStorageDir}/${extracted.attachmentKey}/`;
-        }
-        if (extracted.storagePath) {
-          contextText += `\nZotero file path: ${extracted.storagePath}`;
-        }
-      }
-      promptBlocks.push({ type: "text", text: contextText });
+      promptBlocks.push({ type: "text", text: buildItemContext(item, zoteroStorageDir) });
     }
 
     promptBlocks.push({ type: "text", text });
@@ -307,9 +224,9 @@ Always cite Zotero items by title and author when providing answers.`;
       },
     };
 
-    this.addon.log("[HermesClient] Writing to stdin:", JSON.stringify(request).slice(0, 200));
+    this.logDebug("[HermesClient] Writing to stdin:", JSON.stringify(request).slice(0, 200));
     this.writeToStdin(JSON.stringify(request) + "\n");
-    this.addon.log("[HermesClient] Request sent");
+    this.logDebug("[HermesClient] Request sent");
   }
 
   /**
@@ -330,25 +247,28 @@ Always cite Zotero items by title and author when providing answers.`;
   }
 
   public onUpdate(callback: (update: ChatSessionUpdate) => void): () => void {
-    this.onUpdateCallback = callback;
+    this.onUpdateCallbacks.push(callback);
     return () => {
-      this.onUpdateCallback = null;
+      const idx = this.onUpdateCallbacks.indexOf(callback);
+      if (idx >= 0) this.onUpdateCallbacks.splice(idx, 1);
     };
   }
 
   public onError(callback: (error: Error) => void): () => void {
-    this.onErrorCallback = callback;
+    this.onErrorCallbacks.push(callback);
     return () => {
-      this.onErrorCallback = null;
+      const idx = this.onErrorCallbacks.indexOf(callback);
+      if (idx >= 0) this.onErrorCallbacks.splice(idx, 1);
     };
   }
 
   public onAvailableCommands(
     callback: (commands: Array<{ description: string; name: string }>) => void,
   ): () => void {
-    this.onAvailableCommandsCallback = callback;
+    this.onAvailableCommandsCallbacks.push(callback);
     return () => {
-      this.onAvailableCommandsCallback = null;
+      const idx = this.onAvailableCommandsCallbacks.indexOf(callback);
+      if (idx >= 0) this.onAvailableCommandsCallbacks.splice(idx, 1);
     };
   }
 
@@ -360,79 +280,42 @@ Always cite Zotero items by title and author when providing answers.`;
       payload?: string,
     ) => void,
   ): () => void {
-    this.onToolUpdateCallback = callback;
+    this.onToolUpdateCallbacks.push(callback);
     return () => {
-      this.onToolUpdateCallback = null;
+      const idx = this.onToolUpdateCallbacks.indexOf(callback);
+      if (idx >= 0) this.onToolUpdateCallbacks.splice(idx, 1);
     };
   }
 
+  /** Emit a session update to all registered callbacks */
+  private emitUpdate(update: ChatSessionUpdate): void {
+    for (const cb of this.onUpdateCallbacks) {
+      try { cb(update); } catch { /* swallow */ }
+    }
+  }
+
+  /** Emit an error to all registered callbacks */
+  private emitError(error: Error): void {
+    for (const cb of this.onErrorCallbacks) {
+      try { cb(error); } catch { /* swallow */ }
+    }
+  }
+
+  /** Emit a tool update to all registered callbacks */
+  private emitToolUpdate(toolCallId: string, title: string, status: string, payload?: string): void {
+    for (const cb of this.onToolUpdateCallbacks) {
+      try { cb(toolCallId, title, status, payload); } catch { /* swallow */ }
+    }
+  }
+
+  /** Emit available commands to all registered callbacks */
+  private emitAvailableCommands(commands: Array<{ description: string; name: string }>): void {
+    for (const cb of this.onAvailableCommandsCallbacks) {
+      try { cb(commands); } catch { /* swallow */ }
+    }
+  }
+
   // --- Private helpers ---
-
-  /**
-   * Resolve the Hermes binary path from preferences or auto-discovery.
-   */
-  private resolveHermesPath(): string | null {
-    const configuredPath = Zotero.Prefs.get(
-      `${config.prefsPrefix}.binaryPath`,
-      true,
-    ) as string;
-
-    if (configuredPath) {
-      return configuredPath;
-    }
-
-    return this.findHermesPath();
-  }
-
-  /**
-   * Auto-discover the Hermes binary across $PATH and common install locations.
-   */
-  private findHermesPath(): string | null {
-    // 1. Try $PATH via `which`-like search using nsIEnvironment
-    const env = (Components.classes as any)["@mozilla.org/process/environment;1"]
-      .getService((Components.interfaces as any).nsIEnvironment);
-    const pathEnv = env.get("PATH") || "";
-    const pathDirs = pathEnv.split(":");
-
-    for (const dir of pathDirs) {
-      for (const bin of HERMES_BINARY_CANDIDATES) {
-        const candidate = `${dir}/${bin}`;
-        if (this.fileExists(candidate)) {
-          return candidate;
-        }
-      }
-    }
-
-    // 2. Try common install locations
-    const homeDir = env.get("HOME") || "";
-    for (const dir of HERMES_PATH_CANDIDATES) {
-      const resolvedDir = dir.startsWith("~")
-        ? `${homeDir}${dir.slice(1)}`
-        : dir;
-      for (const bin of HERMES_BINARY_CANDIDATES) {
-        const candidate = `${resolvedDir}/${bin}`;
-        if (this.fileExists(candidate)) {
-          return candidate;
-        }
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Check if a file exists and is executable.
-   */
-  private fileExists(path: string): boolean {
-    try {
-      const file = (Components.classes as any)["@mozilla.org/file/local;1"]
-        .createInstance((Components.interfaces as any).nsIFile);
-      file.initWithPath(path);
-      return file.exists() && file.isExecutable();
-    } catch {
-      return false;
-    }
-  }
 
   /**
    * Set up stdout/stderr handlers for NDJSON communication.
@@ -500,7 +383,7 @@ Always cite Zotero items by title and author when providing answers.`;
       lineEnd = this.stdoutBuffer.indexOf("\n");
     }
     if (processedCount > 0) {
-      this.addon.log(`[HermesClient] processStdoutBuffer: processed ${processedCount} lines`);
+      this.logDebug("[HermesClient] processStdoutBuffer: processed ${processedCount} lines");
     }
   }
 
@@ -567,7 +450,7 @@ Always cite Zotero items by title and author when providing answers.`;
         | undefined;
 
       if (!update) {
-        this.addon.log("[HermesClient] session/update with no update field");
+        this.logDebug("[HermesClient] session/update with no update field");
         return;
       }
 
@@ -576,26 +459,26 @@ Always cite Zotero items by title and author when providing answers.`;
       switch (sessionUpdateType) {
         case "agent_message_chunk": {
           const text = update.content?.text;
-          this.addon.log("[HermesClient] agent_message_chunk, text length:", text?.length || 0);
-          if (text && this.onUpdateCallback) {
-            this.onUpdateCallback({ type: "message", content: text });
+          this.logDebug("[HermesClient] agent_message_chunk, text length:", text?.length || 0);
+          if (text) {
+            this.emitUpdate({ type: "message", content: text });
           }
           break;
         }
 
         case "agent_thought_chunk": {
           const text = update.content?.text;
-          this.addon.log("[HermesClient] agent_thought_chunk, text length:", text?.length || 0);
-          if (text && this.onUpdateCallback) {
-            this.onUpdateCallback({ type: "reasoning", reasoning: text });
+          this.logDebug("[HermesClient] agent_thought_chunk, text length:", text?.length || 0);
+          if (text) {
+            this.emitUpdate({ type: "reasoning", reasoning: text });
           }
           break;
         }
 
         case "usage_update": {
           const usage = update.usage;
-          if (usage && this.onUpdateCallback) {
-            this.onUpdateCallback({
+          if (usage) {
+            this.emitUpdate({
               type: "usage",
               usage: {
                 inputTokens: usage.inputTokens || 0,
@@ -608,24 +491,18 @@ Always cite Zotero items by title and author when providing answers.`;
         }
 
         case "session_info_update": {
-          if (this.onUpdateCallback) {
-            this.onUpdateCallback({ type: "session_info" });
-          }
+          this.emitUpdate({ type: "session_info" });
           break;
         }
 
         case "available_commands": {
           const commands = update.availableCommands;
           if (commands) {
-            if (this.onAvailableCommandsCallback) {
-              this.onAvailableCommandsCallback(commands);
-            }
-            if (this.onUpdateCallback) {
-              this.onUpdateCallback({
-                type: "available_commands",
-                availableCommands: commands,
-              });
-            }
+            this.emitAvailableCommands(commands);
+            this.emitUpdate({
+              type: "available_commands",
+              availableCommands: commands,
+            });
           }
           break;
         }
@@ -634,31 +511,32 @@ Always cite Zotero items by title and author when providing answers.`;
         case "tool_progress":
         case "tool_complete": {
           const toolCall = update.toolCall;
-          if (toolCall && this.onUpdateCallback) {
+          if (toolCall) {
             const updateType = sessionUpdateType as
               | "tool_start"
               | "tool_progress"
               | "tool_complete";
-            this.onUpdateCallback({
+            this.emitUpdate({
               type: updateType,
               toolCall,
             });
           }
-          if (toolCall && this.onToolUpdateCallback) {
-            this.onToolUpdateCallback(
-              toolCall.callId,
-              toolCall.name,
-              toolCall.status,
-              toolCall.result,
-            );
+          if (toolCall) {
+            this.emitToolUpdate(toolCall.callId, toolCall.name, toolCall.status, toolCall.result);
           }
           break;
         }
 
         case "terminal_output": {
           const terminal = update.terminal;
-          if (terminal && this.onUpdateCallback) {
-            this.onUpdateCallback({
+          if (terminal) {
+            // Check allowTerminal preference — block if not enabled
+            const allowTerminal = this.addon.data.hermes?.preferences?.get("allowTerminal", false) ?? false;
+            if (!allowTerminal) {
+              this.addon.log("[HermesClient] Terminal output blocked: allowTerminal pref is false");
+              return;
+            }
+            this.emitUpdate({
               type: "terminal_output",
               terminal,
             });
@@ -669,12 +547,8 @@ Always cite Zotero items by title and author when providing answers.`;
         case "error": {
           const errorMsg = update.message;
           if (errorMsg) {
-            if (this.onUpdateCallback) {
-              this.onUpdateCallback({ type: "error", content: errorMsg });
-            }
-            if (this.onErrorCallback) {
-              this.onErrorCallback(new Error(errorMsg));
-            }
+            this.emitUpdate({ type: "error", content: errorMsg });
+            this.emitError(new Error(errorMsg));
           }
           break;
         }
@@ -682,9 +556,7 @@ Always cite Zotero items by title and author when providing answers.`;
         case "stop":
         case "session_stop": {
           this.addon.log("[HermesClient] session stop notification");
-          if (this.onUpdateCallback) {
-            this.onUpdateCallback({ type: "stop" });
-          }
+          this.emitUpdate({ type: "stop" });
           break;
         }
 
@@ -695,7 +567,7 @@ Always cite Zotero items by title and author when providing answers.`;
             sessionUpdateType !== "mode_update" &&
             sessionUpdateType !== "model_update"
           ) {
-            this.addon.log("[HermesClient] Unhandled session/update type:", sessionUpdateType);
+            this.logDebug("[HermesClient] Unhandled session/update type:", sessionUpdateType);
           }
         }
       }
@@ -707,28 +579,22 @@ Always cite Zotero items by title and author when providing answers.`;
     switch (method) {
       case "session/reasoning": {
         const reasoning = params.reasoning as string | undefined;
-        if (reasoning && this.onUpdateCallback) {
-          this.onUpdateCallback({ type: "reasoning", reasoning });
+        if (reasoning) {
+          this.emitUpdate({ type: "reasoning", reasoning });
         }
         break;
       }
 
       case "session/stop": {
-        if (this.onUpdateCallback) {
-          this.onUpdateCallback({ type: "stop" });
-        }
+        this.emitUpdate({ type: "stop" });
         break;
       }
 
       case "session/error": {
         const errorMsg = params.message as string | undefined;
         if (errorMsg) {
-          if (this.onUpdateCallback) {
-            this.onUpdateCallback({ type: "error", content: errorMsg });
-          }
-          if (this.onErrorCallback) {
-            this.onErrorCallback(new Error(errorMsg));
-          }
+          this.emitUpdate({ type: "error", content: errorMsg });
+          this.emitError(new Error(errorMsg));
         }
         break;
       }
@@ -783,9 +649,8 @@ Always cite Zotero items by title and author when providing answers.`;
       id: messageId,
       method: "session/new",
       params: {
-        cwd: path,
         workdir: path,
-        mcpServers: [],
+        mcpServers: this.getMcpServers(),
       },
     };
 
@@ -845,9 +710,7 @@ Always cite Zotero items by title and author when providing answers.`;
     this._isConnected = false;
     this.sessionId = null;
 
-    if (this.onErrorCallback) {
-      this.onErrorCallback(new Error("Hermes connection closed unexpectedly"));
-    }
+    this.emitError(new Error("Hermes connection closed unexpectedly"));
 
     // Auto-reconnect with exponential backoff
     if (this.reconnectAttempts < this.MAX_RECONNECT_ATTEMPTS) {
@@ -871,5 +734,19 @@ Always cite Zotero items by title and author when providing answers.`;
 
   private generateMessageId(): string {
     return `msg_${++this.messageIdCounter}_${Date.now()}`;
+  }
+
+  /**
+   * Read MCP server config from preferences.
+   * Returns one path per line as an array, or empty array if disabled.
+   */
+  private getMcpServers(): string[] {
+    const enabled = this.addon.data.hermes?.preferences?.get("mcpServersEnabled", false) ?? false;
+    if (!enabled) return [];
+    const list = this.addon.data.hermes?.preferences?.get("mcpServersList", "") ?? "";
+    return list
+      .split("\n")
+      .map((s: string) => s.trim())
+      .filter(Boolean);
   }
 }

@@ -649,6 +649,7 @@ export class HermesClient implements ChatClient {
       id: messageId,
       method: "session/new",
       params: {
+        cwd: path,
         workdir: path,
         mcpServers: this.getMcpServers(),
       },

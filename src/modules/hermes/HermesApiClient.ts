@@ -22,8 +22,15 @@ export class HermesApiClient implements ChatClient {
   private activeAbortController: AbortController | null = null;
   private messageCallbacks: ((update: ChatSessionUpdate) => void)[] = [];
   private errorCallbacks: ((error: Error) => void)[] = [];
-  private commandsCallbacks: ((commands: { description: string; name: string }[]) => void)[] = [];
-  private toolCallbacks: ((toolCallId: string, title: string, status: string, payload?: string) => void)[] = [];
+  private commandsCallbacks: ((
+    commands: { description: string; name: string }[],
+  ) => void)[] = [];
+  private toolCallbacks: ((
+    toolCallId: string,
+    title: string,
+    status: string,
+    payload?: string,
+  ) => void)[] = [];
   private lastAvailableCommands: { description: string; name: string }[] = [];
   private reconnectAttempts = 0;
   private readonly MAX_RECONNECT_ATTEMPTS = 5;
@@ -122,6 +129,25 @@ export class HermesApiClient implements ChatClient {
     const url = `${this.getApiUrl()}/v1/chat/completions`;
     const messages: Record<string, unknown>[] = [];
 
+    // Inject persona as a system message
+    const persona = (this.addon.data.hermes?.preferences?.get(
+      "currentPersona",
+      "default",
+    ) || "default") as string;
+    if (persona === "citation") {
+      messages.push({
+        role: "system",
+        content:
+          "You are acting as a Citation Expert. Your primary focus is styling bibliographies, checking formatting rules (APA, MLA, Chicago, etc.), correcting citation structure, and advising on reference generation. Help the user format their research output perfectly.",
+      });
+    } else if (persona === "analyst") {
+      messages.push({
+        role: "system",
+        content:
+          "You are acting as a Literature Analyst. Your primary focus is analyzing the methodology, research design, core arguments, strengths, and limitations of papers. Help the user critique and synthesize the literature in context.",
+      });
+    }
+
     // Inject tool restrictions as a system message
     if (options?.allowedTools) {
       messages.push({
@@ -136,7 +162,9 @@ export class HermesApiClient implements ChatClient {
       if (item.type === "image" && item.data) {
         userContentParts.push({
           type: "image_url",
-          image_url: { url: `data:${item.mimeType || "image/jpeg"};base64,${item.data}` },
+          image_url: {
+            url: `data:${item.mimeType || "image/jpeg"};base64,${item.data}`,
+          },
         });
       } else {
         userContentParts.push({
@@ -210,7 +238,11 @@ export class HermesApiClient implements ChatClient {
                   delta?: { content?: string; reasoning?: string };
                   finish_reason?: string;
                 }[];
-                usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+                usage?: {
+                  prompt_tokens?: number;
+                  completion_tokens?: number;
+                  total_tokens?: number;
+                };
               };
 
               const delta = parsed.choices?.[0]?.delta;
@@ -298,7 +330,12 @@ export class HermesApiClient implements ChatClient {
   }
 
   public onToolUpdate(
-    callback: (toolCallId: string, title: string, status: string, payload?: string) => void,
+    callback: (
+      toolCallId: string,
+      title: string,
+      status: string,
+      payload?: string,
+    ) => void,
   ): () => void {
     this.toolCallbacks.push(callback);
     return () => {
@@ -318,10 +355,7 @@ export class HermesApiClient implements ChatClient {
   }
 
   private getApiKey(): string {
-    return Zotero.Prefs.get(
-      `${config.prefsPrefix}.apiKey`,
-      true,
-    ) as string;
+    return Zotero.Prefs.get(`${config.prefsPrefix}.apiKey`, true) as string;
   }
 
   private getAuthHeaders(): Record<string, string> {
@@ -391,7 +425,10 @@ export class HermesApiClient implements ChatClient {
     this.isReconnecting = true;
     this.reconnectAttempts++;
 
-    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 30000);
+    const delay = Math.min(
+      1000 * Math.pow(2, this.reconnectAttempts - 1),
+      30000,
+    );
     this.emit({
       type: "message",
       content: `🔌 Reconnecting to Hermes API (attempt ${this.reconnectAttempts}/${this.MAX_RECONNECT_ATTEMPTS})...`,

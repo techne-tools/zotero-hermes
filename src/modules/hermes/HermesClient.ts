@@ -3,7 +3,11 @@ import type Addon from "../../addon";
 import pkg from "../../../package.json";
 
 import { buildSystemPrompt, buildItemContext } from "./systemPrompt";
-import { resolveHermesPath, isHermesAvailable, getHomeDir } from "./HermesBinaryFinder";
+import {
+  resolveHermesPath,
+  isHermesAvailable,
+  getHomeDir,
+} from "./HermesBinaryFinder";
 import type { ChatClient, ChatSessionUpdate, PromptContextItem } from "./types";
 
 interface JsonRpcRequest {
@@ -39,22 +43,23 @@ export class HermesClient implements ChatClient {
   private readonly addon: Addon;
   private sessionId: string | null = null;
   private messageIdCounter = 0;
-  private pendingResponses = new Map<string, (value: JsonRpcResponse) => void>();
+  private pendingResponses = new Map<
+    string,
+    (value: JsonRpcResponse) => void
+  >();
   private pendingErrors = new Map<string, (error: Error) => void>();
   private stdoutBuffer = "";
   private onUpdateCallbacks: ((update: ChatSessionUpdate) => void)[] = [];
   private onErrorCallbacks: ((error: Error) => void)[] = [];
-  private onToolUpdateCallbacks:
-    | ((
-        toolCallId: string,
-        title: string,
-        status: string,
-        payload?: string,
-      ) => void)[]
-    = [];
-  private onAvailableCommandsCallbacks:
-    | ((commands: Array<{ description: string; name: string }>) => void)[]
-    = [];
+  private onToolUpdateCallbacks: ((
+    toolCallId: string,
+    title: string,
+    status: string,
+    payload?: string,
+  ) => void)[] = [];
+  private onAvailableCommandsCallbacks: ((
+    commands: Array<{ description: string; name: string }>,
+  ) => void)[] = [];
   private reconnectAttempts = 0;
   private readonly MAX_RECONNECT_ATTEMPTS = 5;
   private reconnectTimeout: number | null = null;
@@ -106,7 +111,9 @@ export class HermesClient implements ChatClient {
 
       this.addon.log(`Starting Hermes ACP from: ${hermesPath}`);
 
-      this.addon.log(`Spawning Hermes ACP via zsh with manual .zshrc sourcing from: ${hermesPath}`);
+      this.addon.log(
+        `Spawning Hermes ACP via zsh with manual .zshrc sourcing from: ${hermesPath}`,
+      );
 
       // Spawn hermes acp subprocess using Firefox Subprocess.sys.mjs via zsh.
       const homeDir = getHomeDir();
@@ -117,7 +124,10 @@ export class HermesClient implements ChatClient {
       );
       this.childProcess = await Subprocess.call({
         command: "/bin/zsh",
-        arguments: ["-c", `export PATH="${customPath}:$PATH" && "${hermesPath}" acp`],
+        arguments: [
+          "-c",
+          `export PATH="${customPath}:$PATH" && "${hermesPath}" acp`,
+        ],
         stdin: "pipe",
         stdout: "pipe",
         stderr: "pipe",
@@ -197,19 +207,35 @@ export class HermesClient implements ChatClient {
     const promptBlocks: Array<{ type: string; text: string }> = [];
 
     // System instruction: use fs tools to read Zotero SQLite directly
-    const zoteroDataDir = (Zotero as any).getZoteroDirectory?.()?.path || (Zotero as any).DataDirectory?.dir || "/Users/chris/Zotero";
+    const zoteroDataDir =
+      (Zotero as any).getZoteroDirectory?.()?.path ||
+      (Zotero as any).DataDirectory?.dir ||
+      "/Users/chris/Zotero";
     const zoteroProfileDir = Zotero.getProfileDirectory?.()?.path || "";
     const zoteroStorageDir = `${zoteroDataDir}/storage`;
     const zoteroDbPath = `${zoteroDataDir}/zotero.sqlite`;
 
+    const persona =
+      this.addon.data.hermes?.preferences?.get("currentPersona", "default") ||
+      "default";
+
     promptBlocks.push({
       type: "text",
-      text: buildSystemPrompt({ zoteroDataDir, zoteroDbPath, zoteroStorageDir, zoteroProfileDir }),
+      text: buildSystemPrompt({
+        zoteroDataDir,
+        zoteroDbPath,
+        zoteroStorageDir,
+        zoteroProfileDir,
+        persona,
+      }),
     });
 
     // Add context items with full metadata
     for (const item of contextItems) {
-      promptBlocks.push({ type: "text", text: buildItemContext(item, zoteroStorageDir) });
+      promptBlocks.push({
+        type: "text",
+        text: buildItemContext(item, zoteroStorageDir),
+      });
     }
 
     promptBlocks.push({ type: "text", text });
@@ -224,7 +250,10 @@ export class HermesClient implements ChatClient {
       },
     };
 
-    this.logDebug("[HermesClient] Writing to stdin:", JSON.stringify(request).slice(0, 200));
+    this.logDebug(
+      "[HermesClient] Writing to stdin:",
+      JSON.stringify(request).slice(0, 200),
+    );
     this.writeToStdin(JSON.stringify(request) + "\n");
     this.logDebug("[HermesClient] Request sent");
   }
@@ -290,28 +319,51 @@ export class HermesClient implements ChatClient {
   /** Emit a session update to all registered callbacks */
   private emitUpdate(update: ChatSessionUpdate): void {
     for (const cb of this.onUpdateCallbacks) {
-      try { cb(update); } catch { /* swallow */ }
+      try {
+        cb(update);
+      } catch {
+        /* swallow */
+      }
     }
   }
 
   /** Emit an error to all registered callbacks */
   private emitError(error: Error): void {
     for (const cb of this.onErrorCallbacks) {
-      try { cb(error); } catch { /* swallow */ }
+      try {
+        cb(error);
+      } catch {
+        /* swallow */
+      }
     }
   }
 
   /** Emit a tool update to all registered callbacks */
-  private emitToolUpdate(toolCallId: string, title: string, status: string, payload?: string): void {
+  private emitToolUpdate(
+    toolCallId: string,
+    title: string,
+    status: string,
+    payload?: string,
+  ): void {
     for (const cb of this.onToolUpdateCallbacks) {
-      try { cb(toolCallId, title, status, payload); } catch { /* swallow */ }
+      try {
+        cb(toolCallId, title, status, payload);
+      } catch {
+        /* swallow */
+      }
     }
   }
 
   /** Emit available commands to all registered callbacks */
-  private emitAvailableCommands(commands: Array<{ description: string; name: string }>): void {
+  private emitAvailableCommands(
+    commands: Array<{ description: string; name: string }>,
+  ): void {
     for (const cb of this.onAvailableCommandsCallbacks) {
-      try { cb(commands); } catch { /* swallow */ }
+      try {
+        cb(commands);
+      } catch {
+        /* swallow */
+      }
     }
   }
 
@@ -350,12 +402,15 @@ export class HermesClient implements ChatClient {
     };
 
     // 3. Wait for process exit
-    this.childProcess.wait().then(({ exitCode }: { exitCode: number }) => {
-      this.addon.log(`Hermes process exited with code ${exitCode}`);
-      this.handleDisconnect();
-    }).catch((e: any) => {
-      this.addon.log("Error waiting for Hermes exit:", e);
-    });
+    this.childProcess
+      .wait()
+      .then(({ exitCode }: { exitCode: number }) => {
+        this.addon.log(`Hermes process exited with code ${exitCode}`);
+        this.handleDisconnect();
+      })
+      .catch((e: any) => {
+        this.addon.log("Error waiting for Hermes exit:", e);
+      });
   }
 
   /**
@@ -383,16 +438,16 @@ export class HermesClient implements ChatClient {
       lineEnd = this.stdoutBuffer.indexOf("\n");
     }
     if (processedCount > 0) {
-      this.logDebug("[HermesClient] processStdoutBuffer: processed ${processedCount} lines");
+      this.logDebug(
+        "[HermesClient] processStdoutBuffer: processed ${processedCount} lines",
+      );
     }
   }
 
   /**
    * Handle an incoming JSON-RPC message (response or notification).
    */
-  private handleMessage(
-    message: JsonRpcResponse | JsonRpcNotification,
-  ): void {
+  private handleMessage(message: JsonRpcResponse | JsonRpcNotification): void {
     // Response with id -> resolve pending promise
     if ("id" in message && message.id !== undefined) {
       const resolve = this.pendingResponses.get(message.id);
@@ -442,7 +497,11 @@ export class HermesClient implements ChatClient {
               status: "complete" | "error" | "running";
               result?: string;
             };
-            usage?: { inputTokens?: number; outputTokens?: number; totalTokens?: number };
+            usage?: {
+              inputTokens?: number;
+              outputTokens?: number;
+              totalTokens?: number;
+            };
             availableCommands?: Array<{ description: string; name: string }>;
             terminal?: { id: string; output: string; isExited?: boolean };
             message?: string;
@@ -459,7 +518,10 @@ export class HermesClient implements ChatClient {
       switch (sessionUpdateType) {
         case "agent_message_chunk": {
           const text = update.content?.text;
-          this.logDebug("[HermesClient] agent_message_chunk, text length:", text?.length || 0);
+          this.logDebug(
+            "[HermesClient] agent_message_chunk, text length:",
+            text?.length || 0,
+          );
           if (text) {
             this.emitUpdate({ type: "message", content: text });
           }
@@ -468,7 +530,10 @@ export class HermesClient implements ChatClient {
 
         case "agent_thought_chunk": {
           const text = update.content?.text;
-          this.logDebug("[HermesClient] agent_thought_chunk, text length:", text?.length || 0);
+          this.logDebug(
+            "[HermesClient] agent_thought_chunk, text length:",
+            text?.length || 0,
+          );
           if (text) {
             this.emitUpdate({ type: "reasoning", reasoning: text });
           }
@@ -522,7 +587,12 @@ export class HermesClient implements ChatClient {
             });
           }
           if (toolCall) {
-            this.emitToolUpdate(toolCall.callId, toolCall.name, toolCall.status, toolCall.result);
+            this.emitToolUpdate(
+              toolCall.callId,
+              toolCall.name,
+              toolCall.status,
+              toolCall.result,
+            );
           }
           break;
         }
@@ -531,9 +601,15 @@ export class HermesClient implements ChatClient {
           const terminal = update.terminal;
           if (terminal) {
             // Check allowTerminal preference — block if not enabled
-            const allowTerminal = this.addon.data.hermes?.preferences?.get("allowTerminal", false) ?? false;
+            const allowTerminal =
+              this.addon.data.hermes?.preferences?.get(
+                "allowTerminal",
+                false,
+              ) ?? false;
             if (!allowTerminal) {
-              this.addon.log("[HermesClient] Terminal output blocked: allowTerminal pref is false");
+              this.addon.log(
+                "[HermesClient] Terminal output blocked: allowTerminal pref is false",
+              );
               return;
             }
             this.emitUpdate({
@@ -567,7 +643,10 @@ export class HermesClient implements ChatClient {
             sessionUpdateType !== "mode_update" &&
             sessionUpdateType !== "model_update"
           ) {
-            this.logDebug("[HermesClient] Unhandled session/update type:", sessionUpdateType);
+            this.logDebug(
+              "[HermesClient] Unhandled session/update type:",
+              sessionUpdateType,
+            );
           }
         }
       }
@@ -600,7 +679,10 @@ export class HermesClient implements ChatClient {
       }
 
       default:
-        this.addon.log("[HermesClient] Unhandled ACP notification method:", method);
+        this.addon.log(
+          "[HermesClient] Unhandled ACP notification method:",
+          method,
+        );
     }
   }
 
@@ -630,9 +712,7 @@ export class HermesClient implements ChatClient {
     const response = await this.waitForResponse(messageId);
 
     if (response.error) {
-      throw new Error(
-        `ACP initialization failed: ${response.error.message}`,
-      );
+      throw new Error(`ACP initialization failed: ${response.error.message}`);
     }
 
     this.addon.log("ACP initialized");
@@ -742,9 +822,12 @@ export class HermesClient implements ChatClient {
    * Returns one path per line as an array, or empty array if disabled.
    */
   private getMcpServers(): string[] {
-    const enabled = this.addon.data.hermes?.preferences?.get("mcpServersEnabled", false) ?? false;
+    const enabled =
+      this.addon.data.hermes?.preferences?.get("mcpServersEnabled", false) ??
+      false;
     if (!enabled) return [];
-    const list = this.addon.data.hermes?.preferences?.get("mcpServersList", "") ?? "";
+    const list =
+      this.addon.data.hermes?.preferences?.get("mcpServersList", "") ?? "";
     return list
       .split("\n")
       .map((s: string) => s.trim())

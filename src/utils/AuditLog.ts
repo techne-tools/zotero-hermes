@@ -13,7 +13,13 @@
  */
 
 export interface AuditEntry {
-  action: "connection" | "error" | "file_change" | "permission" | "terminal" | "tool_call";
+  action:
+    | "connection"
+    | "error"
+    | "file_change"
+    | "permission"
+    | "terminal"
+    | "tool_call";
   details: string;
   metadata?: Record<string, unknown>;
   status: "blocked" | "failure" | "pending" | "success";
@@ -34,7 +40,10 @@ export class AuditLog {
       const dir = profileDir.clone() as nsIFile;
       dir.append("zotero-hermes");
       if (!dir.exists()) {
-        dir.create(Components.interfaces.nsIFile.DIRECTORY_TYPE as number, 0o755);
+        dir.create(
+          Components.interfaces.nsIFile.DIRECTORY_TYPE as number,
+          0o755,
+        );
       }
       dir.append("audit-log.json");
       return dir.path;
@@ -97,9 +106,10 @@ export class AuditLog {
 
       // Append new entries, trim to max
       const all = [...existing, ...entries];
-      const trimmed = all.length > this.maxEntries
-        ? all.slice(all.length - this.maxEntries)
-        : all;
+      const trimmed =
+        all.length > this.maxEntries
+          ? all.slice(all.length - this.maxEntries)
+          : all;
 
       // Write back
       Zotero.File.putContents(file, JSON.stringify(trimmed, null, 2));

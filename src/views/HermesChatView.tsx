@@ -1,15 +1,8 @@
-import {
-  memo,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 
 import type {
   ChatSessionUpdate,
-  PendingFileChange,
   PromptContextItem,
 } from "../modules/hermes/types";
 import type Addon from "../addon";
@@ -30,13 +23,7 @@ export interface ChatMessage {
   isCollapsed?: boolean;
   isExited?: boolean;
   isRunning?: boolean;
-  role:
-    | "assistant"
-    | "reasoning"
-    | "system"
-    | "terminal"
-    | "tool"
-    | "user";
+  role: "assistant" | "reasoning" | "system" | "terminal" | "tool" | "user";
   terminalId?: string;
   timestamp: number;
   toolCallId?: string;
@@ -81,79 +68,216 @@ function isDarkColor(color: string): boolean {
 // ─── SVG Icons (matching Obsidian plugin) ───
 
 const SearchIcon = () => (
-  <svg fill="none" height="16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="16">
+  <svg
+    fill="none"
+    height="16"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="2"
+    viewBox="0 0 24 24"
+    width="16"
+  >
     <circle cx="11" cy="11" r="8" />
     <path d="m21 21-4.35-4.35" />
   </svg>
 );
 
 const MenuIcon = () => (
-  <svg fill="none" height="16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="16">
+  <svg
+    fill="none"
+    height="16"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="2"
+    viewBox="0 0 24 24"
+    width="16"
+  >
     <path d="M3 12h18M3 6h18M3 18h18" />
   </svg>
 );
 
 const PlusIcon = () => (
-  <svg fill="none" height="16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="16">
+  <svg
+    fill="none"
+    height="16"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="2"
+    viewBox="0 0 24 24"
+    width="16"
+  >
     <path d="M12 5v14M5 12h14" />
   </svg>
 );
 
 const SettingsIcon = () => (
-  <svg fill="none" height="16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="16">
+  <svg
+    fill="none"
+    height="16"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="2"
+    viewBox="0 0 24 24"
+    width="16"
+  >
     <circle cx="12" cy="12" r="3" />
     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l-.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
   </svg>
 );
 
 const CopyIcon = () => (
-  <svg fill="none" height="12" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="12">
+  <svg
+    fill="none"
+    height="12"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="2"
+    viewBox="0 0 24 24"
+    width="12"
+  >
     <rect height="13" rx="2" ry="2" width="13" x="9" y="9" />
     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
   </svg>
 );
 
+const EditIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    width="12"
+    height="12"
+    stroke="currentColor"
+    strokeWidth="2"
+    fill="none"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+    <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z" />
+  </svg>
+);
+
 const CheckIcon = () => (
-  <svg fill="none" height="12" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="12">
+  <svg
+    fill="none"
+    height="12"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="2"
+    viewBox="0 0 24 24"
+    width="12"
+  >
     <polyline points="20 6 9 17 4 12" />
   </svg>
 );
 
 const ChevronDownIcon = () => (
-  <svg fill="none" height="12" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="12">
+  <svg
+    fill="none"
+    height="12"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="2"
+    viewBox="0 0 24 24"
+    width="12"
+  >
     <polyline points="6 9 12 15 18 9" />
   </svg>
 );
 
 const ChevronUpIcon = () => (
-  <svg fill="none" height="12" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="12">
+  <svg
+    fill="none"
+    height="12"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="2"
+    viewBox="0 0 24 24"
+    width="12"
+  >
     <polyline points="18 15 12 9 6 15" />
   </svg>
 );
 
 const StopIcon = () => (
-  <svg fill="none" height="16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="16">
+  <svg
+    fill="none"
+    height="16"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="2"
+    viewBox="0 0 24 24"
+    width="16"
+  >
     <rect height="12" width="12" x="6" y="6" />
   </svg>
 );
 
 const AttachIcon = () => (
-  <svg fill="none" height="16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="16">
+  <svg
+    fill="none"
+    height="16"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="2"
+    viewBox="0 0 24 24"
+    width="16"
+  >
     <circle cx="12" cy="12" r="4" />
     <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.9" />
   </svg>
 );
 
 const CloseIcon = () => (
-  <svg fill="none" height="12" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="12">
+  <svg
+    fill="none"
+    height="12"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="2"
+    viewBox="0 0 24 24"
+    width="12"
+  >
     <line x1="18" x2="6" y1="6" y2="18" />
     <line x1="6" x2="18" y1="6" y2="18" />
   </svg>
 );
 
-const HELIX_FRAMES = ['⢌⣉⢎⣉', '⣉⡱⣉⡱', '⣉⢎⣉⢎', '⡱⣉⡱⣉'];
+const NoteIcon = () => (
+  <svg
+    fill="none"
+    height="12"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="2"
+    viewBox="0 0 24 24"
+    width="12"
+  >
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="16" x2="8" y1="13" y2="13" />
+    <line x1="16" x2="8" y1="17" y2="17" />
+  </svg>
+);
 
-function HelixSpinner({ isRunning }: { isRunning: boolean }): React.ReactElement {
+const HELIX_FRAMES = ["⢌⣉⢎⣉", "⣉⡱⣉⡱", "⣉⢎⣉⢎", "⡱⣉⡱⣉"];
+
+function HelixSpinner({
+  isRunning,
+}: {
+  isRunning: boolean;
+}): React.ReactElement {
   const [frame, setFrame] = useState(0);
 
   useEffect(() => {
@@ -167,9 +291,13 @@ function HelixSpinner({ isRunning }: { isRunning: boolean }): React.ReactElement
   return <span style={{ fontFamily: "monospace" }}>{HELIX_FRAMES[frame]}</span>;
 }
 
-const BRAILLE_SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+const BRAILLE_SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
-function TypingIndicator({ agentName }: { agentName: string }): React.ReactElement {
+function TypingIndicator({
+  agentName,
+}: {
+  agentName: string;
+}): React.ReactElement {
   const [frame, setFrame] = useState(0);
 
   useEffect(() => {
@@ -184,8 +312,10 @@ function TypingIndicator({ agentName }: { agentName: string }): React.ReactEleme
       <div className="hermes-typing-header">
         <span className="hermes-message-role">{agentName}</span>
         <span className="hermes-typing-status">
-          <span className="hermes-typing-spinner">{BRAILLE_SPINNER[frame]}</span>
-          {' Typing'}
+          <span className="hermes-typing-spinner">
+            {BRAILLE_SPINNER[frame]}
+          </span>
+          {" Typing"}
         </span>
       </div>
     </div>
@@ -212,6 +342,12 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
 
   // Session settings state
   const [isSessionSettingsOpen, setIsSessionSettingsOpen] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const [tokenUsage, setTokenUsage] = useState<{
+    input: number;
+    output: number;
+    total: number;
+  } | null>(null);
 
   // Onboarding state — initialised as true, corrected after settings is available
   const [showOnboarding, setShowOnboarding] = useState(true);
@@ -227,6 +363,7 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const sendBtnRef = useRef<HTMLButtonElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const searchInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -262,9 +399,18 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
       error,
     };
   }, [
-    input, messages, contextItems, allowedTools, isTyping,
-    isConversationListOpen, isSearchOpen, searchQuery,
-    searchMatches, currentMatchIndex, conversations, error,
+    input,
+    messages,
+    contextItems,
+    allowedTools,
+    isTyping,
+    isConversationListOpen,
+    isSearchOpen,
+    searchQuery,
+    searchMatches,
+    currentMatchIndex,
+    conversations,
+    error,
   ]);
 
   // Guard: Hermes modules not initialized yet
@@ -306,79 +452,180 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
   }, [messages, isTyping]);
 
   // ─── Send Logic ───
-  const sendToHermes = useCallback(async (text: string) => {
-    addon.log("[ChatView] sendToHermes called with text:", text.slice(0, 60));
-    const st = stateRef.current;
-    const streamingMessageId = generateMessageId();
-    streamingMessageIdRef.current = streamingMessageId;
-    reasoningMessageIdRef.current = null;
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: generateMessageId(),
-        content: text,
-        role: "user",
-        timestamp: Date.now(),
-      },
-      {
-        content: "",
-        id: streamingMessageId,
-        role: "assistant",
-        timestamp: Date.now(),
-      },
-    ]);
-    setInput("");
-    setIsTyping(true);
-
-    // Haptic feedback when agent starts responding
-    if (settings.get("enableHapticFeedback", false) && typeof navigator !== "undefined" && navigator.vibrate) {
-      navigator.vibrate(50);
-    }
-
-    // Safety timeout: clear typing indicator after 60s if no stop/session_info arrives
-    typingTimeoutRef.current = setTimeout(() => {
-      addon.log("[ChatView] Typing timeout reached, clearing indicator");
-      setIsTyping(false);
-      streamingMessageIdRef.current = null;
+  const sendToHermes = useCallback(
+    async (text: string) => {
+      addon.log("[ChatView] sendToHermes called with text:", text.slice(0, 60));
+      const st = stateRef.current;
+      const streamingMessageId = generateMessageId();
+      streamingMessageIdRef.current = streamingMessageId;
       reasoningMessageIdRef.current = null;
-    }, 60000);
 
-    const client = hermes.client;
-    addon.log("[ChatView] client type:", client.constructor.name, "connected:", client.getIsConnected());
-    if (!client.getIsConnected()) {
-      try {
-        addon.log("[ChatView] Connecting client...");
-        await client.connect();
-        addon.log("[ChatView] Client connected successfully");
-      } catch (err) {
-        addon.log("[ChatView] Connection failed:", (err as Error).message);
-        setError(`Connection failed: ${(err as Error).message}`);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: generateMessageId(),
+          content: text,
+          role: "user",
+          timestamp: Date.now(),
+        },
+        {
+          content: "",
+          id: streamingMessageId,
+          role: "assistant",
+          timestamp: Date.now(),
+        },
+      ]);
+      setInput("");
+      setIsTyping(true);
+
+      // Haptic feedback when agent starts responding
+      if (
+        settings.get("enableHapticFeedback", false) &&
+        typeof navigator !== "undefined" &&
+        navigator.vibrate
+      ) {
+        navigator.vibrate(50);
+      }
+
+      // Safety timeout: clear typing indicator after 60s if no stop/session_info arrives
+      typingTimeoutRef.current = setTimeout(() => {
+        addon.log("[ChatView] Typing timeout reached, clearing indicator");
         setIsTyping(false);
         streamingMessageIdRef.current = null;
-        return;
+        reasoningMessageIdRef.current = null;
+      }, 60000);
+
+      const client = hermes.client;
+      addon.log(
+        "[ChatView] client type:",
+        client.constructor.name,
+        "connected:",
+        client.getIsConnected(),
+      );
+      if (!client.getIsConnected()) {
+        try {
+          addon.log("[ChatView] Connecting client...");
+          await client.connect();
+          addon.log("[ChatView] Client connected successfully");
+        } catch (err) {
+          addon.log("[ChatView] Connection failed:", (err as Error).message);
+          setError(`Connection failed: ${(err as Error).message}`);
+          setIsTyping(false);
+          streamingMessageIdRef.current = null;
+          return;
+        }
       }
-    }
 
-    const promptContextItems: PromptContextItem[] = st.contextItems.map((item) => ({
-      id: item.id,
-      type: item.type,
-      text: item.text,
-      data: item.data ? JSON.stringify(item.data.toJSON()) : undefined,
-      extracted: item.extracted ? (item.extracted as unknown as Record<string, unknown>) : undefined,
-    }));
+      const promptContextItems: PromptContextItem[] = st.contextItems.map(
+        (item) => ({
+          id: item.id,
+          type: item.type,
+          text: item.text,
+          data: item.data ? JSON.stringify(item.data.toJSON()) : undefined,
+          extracted: item.extracted
+            ? (item.extracted as unknown as Record<string, unknown>)
+            : undefined,
+        }),
+      );
 
-    try {
-      addon.log("[ChatView] Calling client.sendPrompt...");
-      await client.sendPrompt(text, promptContextItems, { allowedTools: st.allowedTools });
-      addon.log("[ChatView] client.sendPrompt returned");
-    } catch (err) {
-      addon.log("[ChatView] sendPrompt failed:", (err as Error).message);
-      setError(`Send failed: ${(err as Error).message}`);
-      setIsTyping(false);
-      streamingMessageIdRef.current = null;
-    }
-  }, [hermes.client, addon]);
+      try {
+        addon.log("[ChatView] Calling client.sendPrompt...");
+        await client.sendPrompt(text, promptContextItems, {
+          allowedTools: st.allowedTools,
+        });
+        addon.log("[ChatView] client.sendPrompt returned");
+      } catch (err) {
+        addon.log("[ChatView] sendPrompt failed:", (err as Error).message);
+        setError(`Send failed: ${(err as Error).message}`);
+        setIsTyping(false);
+        streamingMessageIdRef.current = null;
+      }
+    },
+    [hermes.client, addon],
+  );
+
+  const resendFromIndex = useCallback(
+    async (index: number, newText: string) => {
+      addon.log("[ChatView] resendFromIndex called at index:", index);
+      const st = stateRef.current;
+
+      const streamingMessageId = generateMessageId();
+      streamingMessageIdRef.current = streamingMessageId;
+      reasoningMessageIdRef.current = null;
+
+      // Truncate messages up to this user message index
+      const nextMessages = st.messages.slice(0, index);
+
+      setMessages([
+        ...nextMessages,
+        {
+          id: generateMessageId(),
+          content: newText,
+          role: "user",
+          timestamp: Date.now(),
+        },
+        {
+          content: "",
+          id: streamingMessageId,
+          role: "assistant",
+          timestamp: Date.now(),
+        },
+      ]);
+
+      setInput("");
+      setIsTyping(true);
+
+      if (
+        settings.get("enableHapticFeedback", false) &&
+        typeof navigator !== "undefined" &&
+        navigator.vibrate
+      ) {
+        navigator.vibrate(50);
+      }
+
+      typingTimeoutRef.current = setTimeout(() => {
+        addon.log("[ChatView] Typing timeout reached, clearing indicator");
+        setIsTyping(false);
+        streamingMessageIdRef.current = null;
+        reasoningMessageIdRef.current = null;
+      }, 60000);
+
+      const client = hermes.client;
+      if (!client.getIsConnected()) {
+        try {
+          await client.connect();
+        } catch (err) {
+          setError(`Connection failed: ${(err as Error).message}`);
+          setIsTyping(false);
+          streamingMessageIdRef.current = null;
+          return;
+        }
+      }
+
+      const promptContextItems: PromptContextItem[] = st.contextItems.map(
+        (item) => ({
+          id: item.id,
+          type: item.type,
+          text: item.text,
+          data: item.data ? JSON.stringify(item.data.toJSON()) : undefined,
+          extracted: item.extracted
+            ? (item.extracted as unknown as Record<string, unknown>)
+            : undefined,
+        }),
+      );
+
+      try {
+        await client.sendPrompt(newText, promptContextItems, {
+          allowedTools: st.allowedTools,
+        });
+      } catch (err) {
+        setError(`Send failed: ${(err as Error).message}`);
+        setIsTyping(false);
+        streamingMessageIdRef.current = null;
+      }
+    },
+    [hermes.client, addon],
+  );
 
   const sendMessage = useCallback(async () => {
     const st = stateRef.current;
@@ -534,17 +781,29 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = null;
       }
-      const isTerminal = update.type === "stop" || update.type === "usage" || update.type === "session_info" || update.type === "error";
+      const isTerminal =
+        update.type === "stop" ||
+        update.type === "usage" ||
+        update.type === "session_info" ||
+        update.type === "error";
       if (!isTerminal) {
         typingTimeoutRef.current = setTimeout(() => {
-          addon.log("[ChatView] Typing timeout reached (no terminal event), clearing indicator");
+          addon.log(
+            "[ChatView] Typing timeout reached (no terminal event), clearing indicator",
+          );
           setIsTyping(false);
           streamingMessageIdRef.current = null;
           reasoningMessageIdRef.current = null;
         }, 60000);
       }
-      // eslint-disable-next-line no-console
-      console.log("[ChatView] handleUpdate fired:", update.type, update.type === "message" ? "content length=" + (update.content?.length || 0) : "");
+
+      console.log(
+        "[ChatView] handleUpdate fired:",
+        update.type,
+        update.type === "message"
+          ? "content length=" + (update.content?.length || 0)
+          : "",
+      );
       if (update.type === "message" && update.content) {
         appendContent(update.content);
         setIsTyping(true);
@@ -556,7 +815,11 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         setMessages((prev) =>
           prev.map((m) => {
             if (m.role === "tool" && m.isRunning) {
-              return { ...m, isRunning: false, toolStatus: "complete" as const };
+              return {
+                ...m,
+                isRunning: false,
+                toolStatus: "complete" as const,
+              };
             }
             return m;
           }),
@@ -573,15 +836,24 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         flushNow();
         if (update.toolCall) {
           const isRunning =
-            update.type !== "tool_complete" && update.toolCall.status === "running";
+            update.type !== "tool_complete" &&
+            update.toolCall.status === "running";
           const callId = update.toolCall.callId;
-          const status = update.toolCall.status === "error" ? "error" : isRunning ? "running" : "complete";
+          const status =
+            update.toolCall.status === "error"
+              ? "error"
+              : isRunning
+                ? "running"
+                : "complete";
           setMessages((prev) => {
             const toolIndex = prev.findIndex(
               (m) => m.role === "tool" && m.toolCallId === callId,
             );
             let toolName = update.toolCall!.name;
-            if (toolIndex >= 0 && (toolName === "other" || toolName === "unknown-tool")) {
+            if (
+              toolIndex >= 0 &&
+              (toolName === "other" || toolName === "unknown-tool")
+            ) {
               toolName = prev[toolIndex]?.toolName || toolName;
             }
             const resultContent = update.toolCall!.result
@@ -589,7 +861,13 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
               : "";
             if (toolIndex >= 0) {
               const updated = [...prev];
-              updated[toolIndex] = { ...updated[toolIndex]!, content: resultContent, isRunning, toolName, toolStatus: status };
+              updated[toolIndex] = {
+                ...updated[toolIndex]!,
+                content: resultContent,
+                isRunning,
+                toolName,
+                toolStatus: status,
+              };
               return updated;
             }
             const newToolMsg: ChatMessage = {
@@ -603,7 +881,9 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
               toolName,
               toolStatus: status,
             };
-            const assistantIndex = prev.findIndex((m) => m.id === streamingMessageIdRef.current);
+            const assistantIndex = prev.findIndex(
+              (m) => m.id === streamingMessageIdRef.current,
+            );
             if (assistantIndex >= 0) {
               const updated = [...prev];
               updated.splice(assistantIndex, 0, newToolMsg);
@@ -615,21 +895,49 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
       } else if (update.type === "terminal_output" && update.terminal) {
         flushNow();
         setMessages((prev) => {
-          const index = prev.findIndex((m) => m.role === "terminal" && m.terminalId === update.terminal!.id);
+          const index = prev.findIndex(
+            (m) =>
+              m.role === "terminal" && m.terminalId === update.terminal!.id,
+          );
           if (index >= 0) {
             const updated = [...prev];
             updated[index] = {
               ...updated[index]!,
               content: updated[index]!.content + update.terminal!.output,
-              isExited: (updated[index]!.isExited ?? false) || (update.terminal!.isExited ?? false),
+              isExited:
+                (updated[index]!.isExited ?? false) ||
+                (update.terminal!.isExited ?? false),
             };
             return updated;
           }
-          return [{ content: update.terminal!.output, id: generateMessageId(), isExited: update.terminal!.isExited ?? false, role: "terminal", terminalId: update.terminal!.id, timestamp: Date.now() }, ...prev];
+          return [
+            {
+              content: update.terminal!.output,
+              id: generateMessageId(),
+              isExited: update.terminal!.isExited ?? false,
+              role: "terminal",
+              terminalId: update.terminal!.id,
+              timestamp: Date.now(),
+            },
+            ...prev,
+          ];
         });
       } else if (update.type === "usage" && update.usage) {
         flushNow();
-        setMessages((prev) => [...prev, { id: generateMessageId(), content: `📊 Tokens: ${update.usage!.inputTokens} in, ${update.usage!.outputTokens} out, ${update.usage!.totalTokens} total`, role: "system", timestamp: Date.now() }]);
+        setTokenUsage({
+          input: update.usage.inputTokens,
+          output: update.usage.outputTokens,
+          total: update.usage.totalTokens,
+        });
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: generateMessageId(),
+            content: `📊 Tokens: ${update.usage!.inputTokens} in, ${update.usage!.outputTokens} out, ${update.usage!.totalTokens} total`,
+            role: "system",
+            timestamp: Date.now(),
+          },
+        ]);
         // usage_update often signals the end of a turn when no stop is sent
         setIsTyping(false);
       } else if (update.type === "session_info") {
@@ -668,6 +976,116 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hermes.client]);
+
+  // 6. Click handler on messages list to intercept add-context: links
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const handler = async (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const link = target.closest("a");
+      if (!link) return;
+
+      const href = link.getAttribute("href");
+      if (href && href.startsWith("add-context:")) {
+        e.preventDefault();
+        const itemIdStr = href.substring("add-context:".length);
+        const itemId = parseInt(itemIdStr, 10);
+        if (isNaN(itemId)) return;
+
+        try {
+          const item = await Zotero.Items.getAsync(itemId);
+          if (item) {
+            if (item.itemType === "note") {
+              const noteText = item.getNote() || "";
+              const title = (item as any).getNoteTitle?.() || "Untitled Note";
+              setContextItems((prev) => {
+                if (prev.some((p) => p.id === `note-${itemId}`)) return prev;
+                return [
+                  ...prev,
+                  {
+                    id: `note-${itemId}`,
+                    type: "note" as const,
+                    text: title,
+                    data: item,
+                    extracted: {
+                      id: item.id,
+                      key: item.key,
+                      title: title,
+                      itemType: "note",
+                      creators: [],
+                      date: "",
+                      abstract: noteText,
+                      tags: item.getTags().map((t: any) => t.tag),
+                    },
+                  },
+                ];
+              });
+            } else {
+              const extracted = await hermes.items.extractItemData(item);
+              setContextItems((prev) => {
+                if (prev.some((p) => p.id === `item-${itemId}`)) return prev;
+                return [
+                  ...prev,
+                  {
+                    id: `item-${itemId}`,
+                    type: "item" as const,
+                    text: item.getDisplayTitle(),
+                    data: item,
+                    extracted,
+                  },
+                ];
+              });
+            }
+          }
+        } catch (err) {
+          setError(`Failed to add item to context: ${(err as Error).message}`);
+        }
+      } else if (href && href.startsWith("apply-tag:")) {
+        e.preventDefault();
+        const tag = href.substring("apply-tag:".length);
+        const attachedItems = hermes.items.getAttachedItems();
+        if (attachedItems.length === 0) {
+          setError("No item attached to apply tag to.");
+          return;
+        }
+        const parentItem = attachedItems[0];
+        try {
+          await hermes.tags.addTags(parentItem.id, [tag]);
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: generateMessageId(),
+              content: `Applied tag **${tag}** to item **${parentItem.title}**!`,
+              role: "system",
+              timestamp: Date.now(),
+            },
+          ]);
+        } catch (err) {
+          setError(`Failed to apply tag: ${(err as Error).message}`);
+        }
+      }
+    };
+
+    container.addEventListener("click", handler);
+    return () => container.removeEventListener("click", handler);
+  }, [hermes.notes, hermes.tags]);
+
+  useEffect(() => {
+    const win = Zotero.getMainWindow();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        setIsSearchOpen(true);
+        win.setTimeout(() => {
+          searchInputRef.current?.focus();
+        }, 50);
+      }
+    };
+    win.addEventListener("keydown", handleKeyDown);
+    return () => win.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const attachSelectedItems = useCallback(() => {
     const items = hermes.items.getSelectedItems();
@@ -801,22 +1219,25 @@ ${messages
     URL.revokeObjectURL(url);
   }, [messages]);
 
-  const performSearch = useCallback((query: string): void => {
-    if (!query.trim()) {
-      setSearchMatches([]);
-      setCurrentMatchIndex(0);
-      return;
-    }
-    const lower = query.toLowerCase();
-    const indices: number[] = [];
-    messages.forEach((msg, idx) => {
-      if (msg.content.toLowerCase().includes(lower)) {
-        indices.push(idx);
+  const performSearch = useCallback(
+    (query: string): void => {
+      if (!query.trim()) {
+        setSearchMatches([]);
+        setCurrentMatchIndex(0);
+        return;
       }
-    });
-    setSearchMatches(indices);
-    setCurrentMatchIndex(indices.length > 0 ? 0 : 0);
-  }, [messages]);
+      const lower = query.toLowerCase();
+      const indices: number[] = [];
+      messages.forEach((msg, idx) => {
+        if (msg.content.toLowerCase().includes(lower)) {
+          indices.push(idx);
+        }
+      });
+      setSearchMatches(indices);
+      setCurrentMatchIndex(indices.length > 0 ? 0 : 0);
+    },
+    [messages],
+  );
 
   const jumpToMatch = useCallback(
     (direction: "next" | "prev"): void => {
@@ -824,7 +1245,8 @@ ${messages
       const newIndex =
         direction === "next"
           ? (currentMatchIndex + 1) % searchMatches.length
-          : (currentMatchIndex - 1 + searchMatches.length) % searchMatches.length;
+          : (currentMatchIndex - 1 + searchMatches.length) %
+            searchMatches.length;
       setCurrentMatchIndex(newIndex);
       const msgIndex = searchMatches[newIndex];
       if (msgIndex !== undefined) {
@@ -852,17 +1274,51 @@ ${messages
   }, [hermes.chat, hermes.conversations]);
 
   return (
-    <div className="hermes-chat-view" style={{ display: "flex", flexDirection: "column", height: "100%", backgroundColor: "var(--hermes-bg, #fff)", color: "var(--hermes-text, #333)", fontFamily: "system-ui, -apple-system, sans-serif", fontSize: "14px" }}>
+    <div
+      className="hermes-chat-view"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        backgroundColor: "var(--hermes-bg, #fff)",
+        color: "var(--hermes-text, #333)",
+        fontFamily: "system-ui, -apple-system, sans-serif",
+        fontSize: "14px",
+      }}
+    >
       {/* Header with SVG icons (matching Obsidian plugin) */}
-      <div className="hermes-chat-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", borderBottom: "1px solid var(--hermes-border, #e0e0e0)", backgroundColor: "var(--hermes-bg-secondary, #fafafa)", minHeight: "40px" }}>
-        <div className="hermes-chat-header-left" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <span className="hermes-chat-agent-name" style={{ fontWeight: 600, fontSize: "0.95em" }}>{settings.get("chatAgentName", "Hermes")}</span>
+      <div
+        className="hermes-chat-header"
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "8px 12px",
+          borderBottom: "1px solid var(--hermes-border, #e0e0e0)",
+          backgroundColor: "var(--hermes-bg-secondary, #fafafa)",
+          minHeight: "40px",
+        }}
+      >
+        <div
+          className="hermes-chat-header-left"
+          style={{ display: "flex", alignItems: "center", gap: "8px" }}
+        >
+          <span
+            className="hermes-chat-agent-name"
+            style={{ fontWeight: 600, fontSize: "0.95em" }}
+          >
+            {settings.get("chatAgentName", "Hermes")}
+          </span>
         </div>
-        <div className="hermes-chat-header-right" style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+        <div
+          className="hermes-chat-header-right"
+          style={{ display: "flex", gap: "4px", alignItems: "center" }}
+        >
           <button
             onClick={() => {
               setIsSearchOpen((prev) => !prev);
-              if (!isSearchOpen) setTimeout(() => searchInputRef.current?.focus(), 0);
+              if (!isSearchOpen)
+                setTimeout(() => searchInputRef.current?.focus(), 0);
             }}
             className="hermes-icon-btn"
             title="Search Messages (Ctrl+F)"
@@ -886,7 +1342,11 @@ ${messages
           >
             <AttachIcon />
           </button>
-          <button onClick={newChat} className="hermes-icon-btn" title="New Chat">
+          <button
+            onClick={newChat}
+            className="hermes-icon-btn"
+            title="New Chat"
+          >
             <PlusIcon />
           </button>
           <button
@@ -896,20 +1356,108 @@ ${messages
           >
             <SettingsIcon />
           </button>
+          <button
+            onClick={() => setIsExportOpen((prev) => !prev)}
+            className="hermes-icon-btn"
+            title="Export Conversation"
+            style={{ fontSize: "1.1em", padding: 0 }}
+          >
+            📥
+          </button>
         </div>
       </div>
+
+      {/* Export Options Dropdown */}
+      {isExportOpen && (
+        <div
+          className="hermes-export-dropdown"
+          style={{
+            position: "absolute",
+            top: "45px",
+            right: "12px",
+            backgroundColor: "var(--hermes-bg-secondary, #fafafa)",
+            border: "1px solid var(--hermes-border, #e0e0e0)",
+            borderRadius: "6px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            zIndex: 1000,
+            display: "flex",
+            flexDirection: "column",
+            padding: "4px 0",
+            minWidth: "120px",
+          }}
+        >
+          <button
+            onClick={() => {
+              exportToHtml();
+              setIsExportOpen(false);
+            }}
+            style={{
+              padding: "6px 12px",
+              border: "none",
+              background: "none",
+              textAlign: "left",
+              cursor: "pointer",
+              fontSize: "0.85em",
+              color: "inherit",
+            }}
+          >
+            HTML format
+          </button>
+          <button
+            onClick={() => {
+              exportToJson();
+              setIsExportOpen(false);
+            }}
+            style={{
+              padding: "6px 12px",
+              border: "none",
+              background: "none",
+              textAlign: "left",
+              cursor: "pointer",
+              fontSize: "0.85em",
+              color: "inherit",
+            }}
+          >
+            JSON format
+          </button>
+          <button
+            onClick={() => {
+              exportToMarkdown();
+              setIsExportOpen(false);
+            }}
+            style={{
+              padding: "6px 12px",
+              border: "none",
+              background: "none",
+              textAlign: "left",
+              cursor: "pointer",
+              fontSize: "0.85em",
+              color: "inherit",
+            }}
+          >
+            Markdown format
+          </button>
+        </div>
+      )}
 
       {/* Conversation List */}
       {isConversationListOpen && (
         <div className="hermes-conversation-list">
           <div className="hermes-conversation-list-header">
-            <span className="hermes-conversation-list-title">Previous Conversations</span>
-            <button onClick={() => setIsConversationListOpen(false)} className="hermes-small-btn">
+            <span className="hermes-conversation-list-title">
+              Previous Conversations
+            </span>
+            <button
+              onClick={() => setIsConversationListOpen(false)}
+              className="hermes-small-btn"
+            >
               <CloseIcon />
             </button>
           </div>
           {conversations.length === 0 ? (
-            <div className="hermes-conversation-empty">No saved conversations</div>
+            <div className="hermes-conversation-empty">
+              No saved conversations
+            </div>
           ) : (
             <ul style={{ margin: 0, padding: "0 0 0 1em" }}>
               {conversations.slice(0, 10).map((conv) => (
@@ -941,20 +1489,53 @@ ${messages
           <input
             ref={searchInputRef}
             value={searchQuery}
-            onChange={(e) => { setSearchQuery(e.target.value); performSearch(e.target.value); }}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              performSearch(e.target.value);
+            }}
             onKeyDown={(e) => {
-              if (e.key === "Enter") { e.preventDefault(); jumpToMatch("next"); }
-              else if (e.key === "Escape") { setIsSearchOpen(false); setSearchQuery(""); setSearchMatches([]); }
+              if (e.key === "Enter") {
+                e.preventDefault();
+                jumpToMatch("next");
+              } else if (e.key === "Escape") {
+                setIsSearchOpen(false);
+                setSearchQuery("");
+                setSearchMatches([]);
+              }
             }}
             placeholder="Search messages..."
             className="hermes-search-input"
           />
           {searchMatches.length > 0 && (
-            <span className="hermes-search-count">{currentMatchIndex + 1} / {searchMatches.length}</span>
+            <span className="hermes-search-count">
+              {currentMatchIndex + 1} / {searchMatches.length}
+            </span>
           )}
-          <button onClick={() => jumpToMatch("prev")} className="hermes-small-btn" title="Previous">↑</button>
-          <button onClick={() => jumpToMatch("next")} className="hermes-small-btn" title="Next">↓</button>
-          <button onClick={() => { setIsSearchOpen(false); setSearchQuery(""); setSearchMatches([]); }} className="hermes-small-btn" title="Close"><CloseIcon /></button>
+          <button
+            onClick={() => jumpToMatch("prev")}
+            className="hermes-small-btn"
+            title="Previous"
+          >
+            ↑
+          </button>
+          <button
+            onClick={() => jumpToMatch("next")}
+            className="hermes-small-btn"
+            title="Next"
+          >
+            ↓
+          </button>
+          <button
+            onClick={() => {
+              setIsSearchOpen(false);
+              setSearchQuery("");
+              setSearchMatches([]);
+            }}
+            className="hermes-small-btn"
+            title="Close"
+          >
+            <CloseIcon />
+          </button>
         </div>
       )}
 
@@ -962,13 +1543,19 @@ ${messages
       {isSessionSettingsOpen && (
         <div className="hermes-session-settings">
           <div className="hermes-session-settings-header">
-            <span className="hermes-session-settings-title">Session Settings</span>
-            <button onClick={() => setIsSessionSettingsOpen(false)} className="hermes-small-btn">
+            <span className="hermes-session-settings-title">
+              Session Settings
+            </span>
+            <button
+              onClick={() => setIsSessionSettingsOpen(false)}
+              className="hermes-small-btn"
+            >
               <CloseIcon />
             </button>
           </div>
           <p className="hermes-session-settings-desc">
-            Configure tool permissions for this conversation. Disabled tools will not be available to the agent.
+            Configure tool permissions for this conversation. Disabled tools
+            will not be available to the agent.
           </p>
           <div className="hermes-session-settings-actions">
             <button
@@ -991,7 +1578,11 @@ ${messages
                   type="checkbox"
                   checked={allowedTools === null || allowedTools.includes(tool)}
                   onChange={(e) => {
-                    const current = allowedTools ?? ["read_file", "write_file", "terminal"];
+                    const current = allowedTools ?? [
+                      "read_file",
+                      "write_file",
+                      "terminal",
+                    ];
                     if (e.target.checked) {
                       setAllowedTools([...current, tool]);
                     } else {
@@ -1013,19 +1604,43 @@ ${messages
         <div className="hermes-onboarding">
           <div className="hermes-onboarding-header">
             <span>Welcome to Hermes</span>
-            <button onClick={() => { setShowOnboarding(false); settings.set("hasSeenOnboarding", true); }} className="hermes-small-btn">
+            <button
+              onClick={() => {
+                setShowOnboarding(false);
+                settings.set("hasSeenOnboarding", true);
+              }}
+              className="hermes-small-btn"
+            >
               <CloseIcon />
             </button>
           </div>
           <div className="hermes-onboarding-content">
-            <p>Hermes is an AI assistant that helps you work with your Zotero library.</p>
+            <p>
+              Hermes is an AI assistant that helps you work with your Zotero
+              library.
+            </p>
             <ul>
-              <li><strong>Attach items</strong> — Select Zotero items and click the paperclip icon to provide context</li>
-              <li><strong>Ask questions</strong> — Chat with Hermes about your research, annotations, and metadata</li>
-              <li><strong>Slash commands</strong> — Type <code>/help</code> to see available commands</li>
-              <li><strong>Session settings</strong> — Control which tools the agent can use</li>
+              <li>
+                <strong>Attach items</strong> — Select Zotero items and click
+                the paperclip icon to provide context
+              </li>
+              <li>
+                <strong>Ask questions</strong> — Chat with Hermes about your
+                research, annotations, and metadata
+              </li>
+              <li>
+                <strong>Slash commands</strong> — Type <code>/help</code> to see
+                available commands
+              </li>
+              <li>
+                <strong>Session settings</strong> — Control which tools the
+                agent can use
+              </li>
             </ul>
-            <p>Your conversations are saved locally and can be searched or exported.</p>
+            <p>
+              Your conversations are saved locally and can be searched or
+              exported.
+            </p>
           </div>
           <div className="hermes-onboarding-security">
             🔒 Hermes runs locally. Your data stays on your machine.
@@ -1034,17 +1649,49 @@ ${messages
       )}
 
       {/* Messages */}
-      <div className="hermes-messages" style={{ flex: 1, overflowY: "auto", padding: "8px 12px", display: "flex", flexDirection: "column", gap: "8px", minWidth: 0 }}>
-        {messages.map((msg) => {
+      <div
+        ref={messagesContainerRef}
+        className="hermes-messages"
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: "8px 12px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px",
+          minWidth: 0,
+        }}
+      >
+        {messages.map((msg, idx) => {
           if (isTyping && msg.role === "assistant" && !msg.content) return null;
-          return <ChatMessageItem key={msg.id} message={msg} />;
+          return (
+            <ChatMessageItem
+              key={msg.id}
+              message={msg}
+              addon={addon}
+              onEditMessage={
+                msg.role === "user"
+                  ? (newText) => resendFromIndex(idx, newText)
+                  : undefined
+              }
+            />
+          );
         })}
-        {isTyping && <TypingIndicator agentName={settings.get("chatAgentName", "Hermes")} />}
+        {isTyping && (
+          <TypingIndicator
+            agentName={settings.get("chatAgentName", "Hermes")}
+          />
+        )}
         {error && (
           <div className="hermes-error-bar">
             <span>⚠️</span>
             <span style={{ flex: 1 }}>{error}</span>
-            <button onClick={() => setError(null)} className="hermes-error-bar-close">✕</button>
+            <button
+              onClick={() => setError(null)}
+              className="hermes-error-bar-close"
+            >
+              ✕
+            </button>
           </div>
         )}
         <div ref={messagesEndRef} />
@@ -1052,12 +1699,29 @@ ${messages
 
       {/* Context items chips */}
       {contextItems.length > 0 && (
-        <div className="hermes-context-bar" style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 12px", borderTop: "1px solid var(--hermes-border, #e0e0e0)", backgroundColor: "var(--hermes-bg-secondary, #fafafa)" }}>
+        <div
+          className="hermes-context-bar"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "6px 12px",
+            borderTop: "1px solid var(--hermes-border, #e0e0e0)",
+            backgroundColor: "var(--hermes-bg-secondary, #fafafa)",
+          }}
+        >
           <div className="hermes-context-chips">
             {contextItems.map((item) => (
               <div key={item.id} className="hermes-context-chip">
                 <span style={{ fontSize: "0.8em" }}>{item.text}</span>
-                <button onClick={() => setContextItems((prev) => prev.filter((c) => c.id !== item.id))} className="hermes-context-chip-remove">
+                <button
+                  onClick={() =>
+                    setContextItems((prev) =>
+                      prev.filter((c) => c.id !== item.id),
+                    )
+                  }
+                  className="hermes-context-chip-remove"
+                >
                   ✕
                 </button>
               </div>
@@ -1069,8 +1733,33 @@ ${messages
         </div>
       )}
 
+      {/* Token Dashboard */}
+      {tokenUsage && (
+        <div
+          className="hermes-token-dashboard"
+          style={{
+            fontSize: "0.75em",
+            color: "var(--hermes-text-muted, #666)",
+            padding: "6px 12px",
+            borderTop: "1px solid var(--hermes-border, #e0e0e0)",
+            backgroundColor: "var(--hermes-bg-secondary, #fafafa)",
+            textAlign: "right",
+          }}
+        >
+          📊 Tokens: <strong>{tokenUsage.input}</strong> in,{" "}
+          <strong>{tokenUsage.output}</strong> out (Total: {tokenUsage.total})
+        </div>
+      )}
+
       {/* Input area */}
-      <div className="hermes-input-area" style={{ padding: "8px", borderTop: "1px solid var(--hermes-border, #e0e0e0)", backgroundColor: "var(--hermes-bg-secondary, #fafafa)" }}>
+      <div
+        className="hermes-input-area"
+        style={{
+          padding: "8px",
+          borderTop: "1px solid var(--hermes-border, #e0e0e0)",
+          backgroundColor: "var(--hermes-bg-secondary, #fafafa)",
+        }}
+      >
         {/* Slash command dropdown */}
         {isSlashOpen && slashSuggestions.length > 0 && (
           <div className="hermes-slash-dropdown" ref={slashDropdownRef}>
@@ -1084,25 +1773,60 @@ ${messages
                 }}
               >
                 <span className="hermes-slash-item-name">/{cmd.name}</span>
-                <span className="hermes-slash-item-desc">{cmd.description}</span>
+                <span className="hermes-slash-item-desc">
+                  {cmd.description}
+                </span>
               </button>
             ))}
           </div>
         )}
-        <div className="hermes-input-row" style={{ display: "flex", gap: "6px", alignItems: "center", padding: "0 8px" }}>
+        <div
+          className="hermes-input-row"
+          style={{
+            display: "flex",
+            gap: "6px",
+            alignItems: "center",
+            padding: "0 8px",
+          }}
+        >
           <textarea
             ref={inputRef}
             defaultValue={input}
             placeholder="Message Hermes..."
             rows={1}
             className="hermes-textarea"
-            style={{ flex: 1, border: "none", outline: "none", resize: "none", padding: "8px 0", backgroundColor: "transparent", color: "inherit", fontFamily: "inherit", fontSize: "0.9em", lineHeight: 1.5 }}
+            style={{
+              flex: 1,
+              border: "none",
+              outline: "none",
+              resize: "none",
+              padding: "8px 0",
+              backgroundColor: "transparent",
+              color: "inherit",
+              fontFamily: "inherit",
+              fontSize: "0.9em",
+              lineHeight: 1.5,
+            }}
           />
           <button
             ref={sendBtnRef}
             disabled={!input.trim() || isTyping}
             className="hermes-send-btn"
-            style={{ padding: "6px 16px", border: "none", borderRadius: "6px", backgroundColor: "var(--hermes-accent, #4a90d9)", color: "white", cursor: "pointer", fontWeight: 600, fontSize: "0.85em", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: "4px", opacity: !input.trim() || isTyping ? 0.5 : 1 }}
+            style={{
+              padding: "6px 16px",
+              border: "none",
+              borderRadius: "6px",
+              backgroundColor: "var(--hermes-accent, #4a90d9)",
+              color: "white",
+              cursor: "pointer",
+              fontWeight: 600,
+              fontSize: "0.85em",
+              whiteSpace: "nowrap",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+              opacity: !input.trim() || isTyping ? 0.5 : 1,
+            }}
           >
             {isTyping ? <StopIcon /> : "Send"}
           </button>
@@ -1117,22 +1841,25 @@ ${messages
  */
 const ChatMessageItem = memo(function ChatMessageItem({
   message,
+  addon,
+  onEditMessage,
 }: {
   message: ChatMessage;
+  addon: Addon;
+  onEditMessage?: (newContent: string) => void;
 }) {
-  const [collapsed, setCollapsed] = useState(message.isCollapsed ?? false);
   const [isCopied, setIsCopied] = useState(false);
-
-  const toggleCollapse = useCallback(() => {
-    setCollapsed((prev) => !prev);
-  }, []);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(message.content);
 
   const content = stripAnsi(message.content);
 
   const handleCopy = useCallback(() => {
     try {
-      const clipboard = (Components as any).classes["@mozilla.org/widget/clipboardhelper;1"]
-        .getService((Components as any).interfaces.nsIClipboardHelper);
+      const clipboard = (Components as any).classes[
+        "@mozilla.org/widget/clipboardhelper;1"
+      ].getService((Components as any).interfaces.nsIClipboardHelper);
       clipboard.copyString(content);
       setIsCopied(true);
       const win = Zotero.getMainWindow();
@@ -1141,6 +1868,64 @@ const ChatMessageItem = memo(function ChatMessageItem({
       // ignore
     }
   }, [content]);
+
+  const handleSaveNote = useCallback(async () => {
+    try {
+      const hermes = addon.data.hermes;
+      if (!hermes) return;
+      const attachedItems = hermes.items.getAttachedItems();
+      const parentItemID =
+        attachedItems.length > 0 ? attachedItems[0].id : undefined;
+
+      // Simple Markdown to HTML converter
+      const lines = content.split("\n");
+      let inList = false;
+      const htmlParts = [];
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+          if (!inList) {
+            inList = true;
+            htmlParts.push("<ul>");
+          }
+          htmlParts.push(
+            `<li>${trimmed.substring(2).replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")}</li>`,
+          );
+        } else {
+          if (inList) {
+            inList = false;
+            htmlParts.push("</ul>");
+          }
+          if (trimmed.startsWith("# ")) {
+            htmlParts.push(`<h1>${trimmed.substring(2)}</h1>`);
+          } else if (trimmed.startsWith("## ")) {
+            htmlParts.push(`<h2>${trimmed.substring(3)}</h2>`);
+          } else if (trimmed.startsWith("### ")) {
+            htmlParts.push(`<h3>${trimmed.substring(4)}</h3>`);
+          } else if (trimmed.length > 0) {
+            htmlParts.push(
+              `<p>${trimmed.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")}</p>`,
+            );
+          }
+        }
+      }
+      if (inList) {
+        htmlParts.push("</ul>");
+      }
+
+      const contentHtml = htmlParts.join("\n");
+      const dateStr = new Date().toLocaleDateString();
+      const title = `Hermes Note - ${dateStr}`;
+
+      await hermes.notes.writeNote(null, contentHtml, title, parentItemID);
+      setIsSaved(true);
+      const win = Zotero.getMainWindow();
+      win.setTimeout(() => setIsSaved(false), 2000);
+    } catch (err) {
+      addon.log(`Failed to save note: ${(err as Error).message}`);
+    }
+  }, [addon, content]);
 
   let roleLabel: React.ReactNode = {
     assistant: "Hermes",
@@ -1156,28 +1941,49 @@ const ChatMessageItem = memo(function ChatMessageItem({
     const isError = message.toolStatus === "error";
     const isRunning = message.isRunning || message.toolStatus === "running";
     const statusIcon = isError ? "❌ " : <HelixSpinner isRunning={isRunning} />;
-    roleLabel = <>{statusIcon}Tool: {message.toolName}</>;
+    roleLabel = (
+      <>
+        {statusIcon}Tool: {message.toolName}
+      </>
+    );
   }
 
   // Collapsible reasoning and tool messages
   if (message.role === "reasoning" || message.role === "tool") {
     const [isExpanded, setIsExpanded] = useState(!message.isCollapsed);
-    const toggleExpand = useCallback(() => { setIsExpanded((prev) => !prev); }, []);
-    const isToolRunning = message.role === "tool" && (message.isRunning || message.toolStatus === "running");
-    const isToolError = message.role === "tool" && message.toolStatus === "error";
+    const toggleExpand = useCallback(() => {
+      setIsExpanded((prev) => !prev);
+    }, []);
+    const isToolRunning =
+      message.role === "tool" &&
+      (message.isRunning || message.toolStatus === "running");
+    const isToolError =
+      message.role === "tool" && message.toolStatus === "error";
 
     return (
-      <div className={`hermes-message hermes-message-${message.role}${isToolRunning ? " hermes-message-tool-running" : ""}${isToolError ? " hermes-message-tool-error" : ""}`}>
+      <div
+        className={`hermes-message hermes-message-${message.role}${isToolRunning ? " hermes-message-tool-running" : ""}${isToolError ? " hermes-message-tool-error" : ""}`}
+      >
         <div className="hermes-message-header">
           <span className="hermes-message-role">{roleLabel}</span>
           <span className="hermes-message-meta">
-            <button onClick={handleCopy} className="hermes-message-action-btn" title={isCopied ? "Copied!" : "Copy"}>
+            <button
+              onClick={handleCopy}
+              className="hermes-message-action-btn"
+              title={isCopied ? "Copied!" : "Copy"}
+            >
               {isCopied ? <CheckIcon /> : <CopyIcon />}
             </button>
-            <button onClick={toggleExpand} className="hermes-message-action-btn" title={isExpanded ? "Collapse" : "Expand"}>
+            <button
+              onClick={toggleExpand}
+              className="hermes-message-action-btn"
+              title={isExpanded ? "Collapse" : "Expand"}
+            >
               {isExpanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
             </button>
-            <span className="hermes-message-timestamp">{new Date(message.timestamp).toLocaleTimeString()}</span>
+            <span className="hermes-message-timestamp">
+              {new Date(message.timestamp).toLocaleTimeString()}
+            </span>
           </span>
         </div>
         {isExpanded && (
@@ -1200,15 +2006,28 @@ const ChatMessageItem = memo(function ChatMessageItem({
         <div className="hermes-message-header">
           <span className="hermes-message-role">{roleLabel}</span>
           <span className="hermes-message-meta">
-            <button onClick={handleCopy} className="hermes-message-action-btn" title="Copy">
+            <button
+              onClick={handleCopy}
+              className="hermes-message-action-btn"
+              title="Copy"
+            >
               {isCopied ? <CheckIcon /> : <CopyIcon />}
             </button>
-            <span className="hermes-message-timestamp">{new Date(message.timestamp).toLocaleTimeString()}</span>
+            <span className="hermes-message-timestamp">
+              {new Date(message.timestamp).toLocaleTimeString()}
+            </span>
           </span>
         </div>
         <pre className="hermes-terminal-content">{content}</pre>
         {!message.isExited && (
-          <button onClick={() => { /* TODO: abort terminal */ }} className="hermes-abort-btn">🛑 Abort</button>
+          <button
+            onClick={() => {
+              /* TODO: abort terminal */
+            }}
+            className="hermes-abort-btn"
+          >
+            🛑 Abort
+          </button>
         )}
       </div>
     );
@@ -1216,22 +2035,114 @@ const ChatMessageItem = memo(function ChatMessageItem({
 
   // System messages
   if (message.role === "system") {
-    return <div className="hermes-message hermes-message-system">{content}</div>;
+    return (
+      <div className="hermes-message hermes-message-system">{content}</div>
+    );
   }
 
   // User and assistant messages
   const isUser = message.role === "user";
+
+  const handleEditSubmit = () => {
+    if (editText.trim() && onEditMessage) {
+      onEditMessage(editText);
+      setIsEditing(false);
+    }
+  };
+
+  if (isUser && isEditing) {
+    return (
+      <div className="hermes-message hermes-message-user hermes-message-editing">
+        <div className="hermes-message-header">
+          <span className="hermes-message-role">{roleLabel}</span>
+        </div>
+        <div
+          className="hermes-message-content"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+            width: "100%",
+          }}
+        >
+          <textarea
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            style={{
+              width: "100%",
+              minHeight: "60px",
+              padding: "6px",
+              borderRadius: "4px",
+              border: "1px solid var(--hermes-border, #ccc)",
+              backgroundColor: "var(--hermes-bg-secondary, #fafafa)",
+              color: "inherit",
+              fontFamily: "inherit",
+              fontSize: "inherit",
+              resize: "vertical",
+            }}
+          />
+          <div
+            style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}
+          >
+            <button
+              onClick={() => setIsEditing(false)}
+              className="hermes-small-btn"
+              style={{ padding: "4px 8px" }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleEditSubmit}
+              className="hermes-small-btn"
+              style={{
+                padding: "4px 8px",
+                backgroundColor: "var(--hermes-accent, #4a90d9)",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+              }}
+            >
+              Save & Send
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`hermes-message hermes-message-${message.role}`}>
       <div className="hermes-message-header">
         <span className="hermes-message-role">{roleLabel}</span>
         <span className="hermes-message-meta">
-          {message.role === "user" && (
-            <button onClick={handleCopy} className="hermes-message-action-btn" title="Copy">
-              {isCopied ? <CheckIcon /> : <CopyIcon />}
+          {isUser && onEditMessage && (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="hermes-message-action-btn"
+              title="Edit Message"
+            >
+              <EditIcon />
             </button>
           )}
-          <span className="hermes-message-timestamp">{new Date(message.timestamp).toLocaleTimeString()}</span>
+          <button
+            onClick={handleCopy}
+            className="hermes-message-action-btn"
+            title={isCopied ? "Copied!" : "Copy"}
+          >
+            {isCopied ? <CheckIcon /> : <CopyIcon />}
+          </button>
+          {!isUser && (
+            <button
+              onClick={handleSaveNote}
+              className="hermes-message-action-btn"
+              title={isSaved ? "Saved as Note!" : "Save to Note"}
+            >
+              {isSaved ? <CheckIcon /> : <NoteIcon />}
+            </button>
+          )}
+          <span className="hermes-message-timestamp">
+            {new Date(message.timestamp).toLocaleTimeString()}
+          </span>
         </span>
       </div>
       <div className="hermes-message-content">
@@ -1521,9 +2432,15 @@ export function mountHermesChat(
     if (!isDark && doc?.documentElement) {
       const htmlClass = doc.documentElement.className || "";
       const htmlAttr = doc.documentElement.getAttribute("data-theme") || "";
-      if (htmlClass.includes("dark") || htmlClass.includes("theme-dark") || htmlAttr.includes("dark")) {
+      if (
+        htmlClass.includes("dark") ||
+        htmlClass.includes("theme-dark") ||
+        htmlAttr.includes("dark")
+      ) {
         isDark = true;
-        addonInstance.log("Hermes theme: detected dark via document class/attr");
+        addonInstance.log(
+          "Hermes theme: detected dark via document class/attr",
+        );
       }
     }
   } catch (e) {
@@ -1571,7 +2488,9 @@ export function mountHermesChat(
     const parent = doc.documentElement || doc.head || doc.body;
     if (parent) {
       parent.appendChild(styleEl);
-      addonInstance.log("Hermes theme: style tag appended to " + parent.nodeName);
+      addonInstance.log(
+        "Hermes theme: style tag appended to " + parent.nodeName,
+      );
       // Use CSSOM to insert the rule — works in XUL where innerHTML doesn't
       const sheet = (styleEl as any).sheet;
       if (sheet && sheet.insertRule) {
@@ -1591,12 +2510,19 @@ export function mountHermesChat(
           }
         `;
         sheet.insertRule(rule, 0);
-        addonInstance.log("Hermes theme: CSSOM insertRule succeeded, rules=" + sheet.cssRules.length);
+        addonInstance.log(
+          "Hermes theme: CSSOM insertRule succeeded, rules=" +
+            sheet.cssRules.length,
+        );
       } else {
-        addonInstance.log("Hermes theme: WARNING — sheet or insertRule not available");
+        addonInstance.log(
+          "Hermes theme: WARNING — sheet or insertRule not available",
+        );
       }
     } else {
-      addonInstance.log("Hermes theme: WARNING — no parent element found for style tag");
+      addonInstance.log(
+        "Hermes theme: WARNING — no parent element found for style tag",
+      );
     }
   }
 
@@ -1620,11 +2546,15 @@ export function mountHermesChat(
             cssParent.appendChild(cssStyleEl);
             // textContent works for <style> in Firefox — much more reliable than insertRule
             cssStyleEl.textContent = cssText;
-            addonInstance.log(`Hermes theme: injected hermes-chat.css (${cssText.length} chars)`);
+            addonInstance.log(
+              `Hermes theme: injected hermes-chat.css (${cssText.length} chars)`,
+            );
           }
         }
       } else if (xhr.readyState === 4) {
-        addonInstance.log(`Hermes theme: WARNING — failed to load CSS: ${xhr.status}`);
+        addonInstance.log(
+          `Hermes theme: WARNING — failed to load CSS: ${xhr.status}`,
+        );
       }
     };
     xhr.send();
@@ -1637,7 +2567,9 @@ export function mountHermesChat(
     const mq = win?.matchMedia?.("(prefers-color-scheme: dark)");
     if (mq) {
       const onThemeChange = (e: MediaQueryListEvent) => {
-        addonInstance.log(`Hermes theme: OS theme changed to ${e.matches ? "dark" : "light"}`);
+        addonInstance.log(
+          `Hermes theme: OS theme changed to ${e.matches ? "dark" : "light"}`,
+        );
         const newIsDark = e.matches;
         const newTheme = {
           bg: newIsDark ? "#1e1e1e" : "#ffffff",
@@ -1652,8 +2584,14 @@ export function mountHermesChat(
         container.style.setProperty("--hermes-bg", newTheme.bg);
         container.style.setProperty("--hermes-text", newTheme.text);
         container.style.setProperty("--hermes-border", newTheme.border);
-        container.style.setProperty("--hermes-bg-secondary", newTheme.bgSecondary);
-        container.style.setProperty("--hermes-bg-tertiary", newTheme.bgTertiary);
+        container.style.setProperty(
+          "--hermes-bg-secondary",
+          newTheme.bgSecondary,
+        );
+        container.style.setProperty(
+          "--hermes-bg-tertiary",
+          newTheme.bgTertiary,
+        );
         container.style.setProperty("--hermes-input-bg", newTheme.inputBg);
         container.style.backgroundColor = newTheme.bg;
         container.style.color = newTheme.text;
@@ -1665,14 +2603,18 @@ export function mountHermesChat(
     // ignore
   }
 
-  addonInstance.log(`Hermes theme: container innerHTML before render = "${(container.innerHTML as string).slice(0, 80)}..."`);
+  addonInstance.log(
+    `Hermes theme: container innerHTML before render = "${(container.innerHTML as string).slice(0, 80)}..."`,
+  );
 
   let root: ReturnType<typeof createRoot> | null = null;
   try {
     root = createRoot(container);
     addonInstance.log("Hermes theme: createRoot succeeded");
   } catch (err) {
-    addonInstance.log(`Hermes theme: createRoot FAILED: ${(err as Error).message}`);
+    addonInstance.log(
+      `Hermes theme: createRoot FAILED: ${(err as Error).message}`,
+    );
     container.innerHTML = `<div style="padding:16px;color:red">createRoot error: ${(err as Error).message}</div>`;
     return () => {};
   }
@@ -1681,7 +2623,9 @@ export function mountHermesChat(
     root.render(<HermesChatViewComponent addon={addonInstance} />);
     addonInstance.log("Hermes theme: root.render() called successfully");
   } catch (err) {
-    addonInstance.log(`Hermes theme: root.render() FAILED: ${(err as Error).message}`);
+    addonInstance.log(
+      `Hermes theme: root.render() FAILED: ${(err as Error).message}`,
+    );
     container.innerHTML = `<div style="padding:16px;color:red">Render error: ${(err as Error).message}</div>`;
   }
 

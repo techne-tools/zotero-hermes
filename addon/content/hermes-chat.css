@@ -7,7 +7,10 @@
   height: 100%;
   background-color: var(--hermes-bg, #fff);
   color: var(--hermes-text, #333);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
   font-size: 14px;
 }
 
@@ -312,7 +315,7 @@
 }
 
 .hermes-abort-btn {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
   border: none;
   cursor: pointer;
   color: #cdd6f4;
@@ -323,7 +326,7 @@
 }
 
 .hermes-abort-btn:hover {
-  background: rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 /* ─── Error Bar ─── */
@@ -672,8 +675,12 @@
 }
 
 @keyframes hermes-search-flash {
-  0% { background-color: rgba(74, 144, 217, 0.3); }
-  100% { background-color: transparent; }
+  0% {
+    background-color: rgba(74, 144, 217, 0.3);
+  }
+  100% {
+    background-color: transparent;
+  }
 }
 
 /* ─── Scrollbar ─── */

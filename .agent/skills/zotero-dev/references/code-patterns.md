@@ -96,14 +96,15 @@ async function onStartup() {
   const approvalDialog = new ApprovalDialog(addon);
   const preferences = new PreferencesManager(addon);
   const connectionMode = preferences.getConnectionMode();
-  const client = connectionMode === "api"
-    ? new HermesApiClient(addon)
-    : new HermesClient(addon);
+  const client =
+    connectionMode === "api"
+      ? new HermesApiClient(addon)
+      : new HermesClient(addon);
   const chat = new ChatManager(addon);
   const notes = new NoteManager(addon, approvalDialog);
   // ... remaining modules ...
 
-  addon.data.hermes = { client, chat, notes, /* ... */ };
+  addon.data.hermes = { client, chat, notes /* ... */ };
 
   // Load for existing windows
   const mainWindows = Zotero.getMainWindows();
@@ -193,10 +194,7 @@ const { Subprocess } = ChromeUtils.importESModule(
 // Spawn via zsh with custom PATH for Homebrew
 this.childProcess = await Subprocess.call({
   command: "/bin/zsh",
-  arguments: [
-    "-c",
-    `export PATH="${customPath}:$PATH" && "${hermesPath}" acp`,
-  ],
+  arguments: ["-c", `export PATH="${customPath}:$PATH" && "${hermesPath}" acp`],
   stdin: "pipe",
   stdout: "pipe",
   stderr: "pipe",
@@ -254,27 +252,30 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
   useEffect(() => {
     const textarea = inputRef.current;
     if (!textarea) return;
-    const handler = (e: Event) => setInput((e.target as HTMLTextAreaElement).value);
+    const handler = (e: Event) =>
+      setInput((e.target as HTMLTextAreaElement).value);
     textarea.addEventListener("input", handler);
     return () => textarea.removeEventListener("input", handler);
   }, []);
 
-  const {
-    appendContent,
-    appendReasoning,
-    flushNow,
-  } = useStreamBuffer(setMessages, settings.get("showReasoning", true));
+  const { appendContent, appendReasoning, flushNow } = useStreamBuffer(
+    setMessages,
+    settings.get("showReasoning", true),
+  );
 
   // Subscribe to client updates
   useEffect(() => {
     const client = hermes.client;
     const handleUpdate = (update: ChatSessionUpdate) => {
-      if (update.type === "message" && update.content) appendContent(update.content);
+      if (update.type === "message" && update.content)
+        appendContent(update.content);
       else if (update.type === "stop") flushNow();
       // ... handle reasoning, tools, terminal, usage, errors
     };
     client.onUpdate(handleUpdate);
-    return () => { client.onUpdate(() => {}); };
+    return () => {
+      client.onUpdate(() => {});
+    };
   }, [hermes.client]);
 }
 ```
@@ -290,22 +291,25 @@ export function useStreamBuffer(
   const pendingContentRef = useRef("");
   let flushQueued = false;
 
-  const appendContent = useCallback((chunk: string) => {
-    pendingContentRef.current += chunk;
-    if (!flushQueued) {
-      flushQueued = true;
-      requestAnimationFrame(() => {
-        setMessages((prev) => {
-          const content = pendingContentRef.current;
-          pendingContentRef.current = "";
-          flushQueued = false;
-          // Merge into existing assistant message or create new
-          // ...
-          return updated;
+  const appendContent = useCallback(
+    (chunk: string) => {
+      pendingContentRef.current += chunk;
+      if (!flushQueued) {
+        flushQueued = true;
+        requestAnimationFrame(() => {
+          setMessages((prev) => {
+            const content = pendingContentRef.current;
+            pendingContentRef.current = "";
+            flushQueued = false;
+            // Merge into existing assistant message or create new
+            // ...
+            return updated;
+          });
         });
-      });
-    }
-  }, [setMessages]);
+      }
+    },
+    [setMessages],
+  );
 }
 ```
 
@@ -386,12 +390,14 @@ export class ApprovalDialog {
 ## Configuration
 
 ### Build Config (`zotero-plugin.config.ts`)
+
 - esbuild target: `firefox115`
 - Entry: `src/index.ts`
 - Output: `.scaffold/build/addon/content/scripts/hermes.js`
 - Pre-build assets from `addon/`
 
 ### Preferences XHTML (`addon/content/preferences.xhtml`)
+
 - Connection mode dropdown (ACP vs API)
 - Binary path, API URL, API key fields with conditional visibility
 - Feature toggles: auto-save, show reasoning, citations, annotations, tags

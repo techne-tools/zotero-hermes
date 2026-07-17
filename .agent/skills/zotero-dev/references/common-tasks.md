@@ -90,8 +90,9 @@ const allItems = await Zotero.Items.getAll(Zotero.Libraries.userLibraryID);
 
 // Extract metadata (from ItemManager.ts)
 const title = item.getDisplayTitle();
-const creators = item.getCreators().map((c: any) =>
-  c.firstName ? `${c.firstName} ${c.lastName}` : c.name);
+const creators = item
+  .getCreators()
+  .map((c: any) => (c.firstName ? `${c.firstName} ${c.lastName}` : c.name));
 const tags = item.getTags().map((t: any) => t.tag);
 const abstract = item.getField("abstractNote") as string;
 const url = item.getField("url") as string;

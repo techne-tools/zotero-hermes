@@ -26,7 +26,8 @@ export class ChatManager {
     if (this.saveTimer) clearTimeout(this.saveTimer);
     this.saveTimer = setTimeout(() => {
       this.saveTimer = null;
-      const conv = this.addon.data.hermes?.conversations.getCurrentConversation();
+      const conv =
+        this.addon.data.hermes?.conversations.getCurrentConversation();
       if (conv) {
         conv.messages = [...this.messages];
         this.addon.data.hermes?.conversations.saveConversation(conv);

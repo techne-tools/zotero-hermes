@@ -42,8 +42,57 @@ export class TagManager {
     await item.saveTx();
   }
 
-  public async suggestTags(_itemID: number): Promise<string[]> {
-    // TODO: Implement AI-powered tag suggestions
-    return [];
+  public async suggestTags(
+    itemID: number,
+  ): Promise<Array<{ tag: string; confidence: number }>> {
+    const item = await Zotero.Items.getAsync(itemID);
+    if (!item) return [];
+
+    const title = (item.getField("title") as string) || "";
+    const abstract = (item.getField("abstractNote") as string) || "";
+    const contentText = `${title} ${abstract}`.toLowerCase();
+
+    const allTags = await this.getAllTags();
+    const existingTags = this.getItemTags(itemID);
+
+    const suggestions: Array<{ tag: string; confidence: number }> = [];
+
+    for (const tagObj of allTags) {
+      const tag = tagObj.tag;
+      if (existingTags.includes(tag)) continue;
+
+      const tagLower = tag.toLowerCase();
+      let score = 0;
+
+      if (contentText.includes(tagLower)) {
+        const escaped = this.escapeRegExp(tagLower);
+        const regex = new RegExp(`\\b${escaped}\\b`, "g");
+        const matches = contentText.match(regex);
+        if (matches) {
+          score += matches.length * 0.4;
+        } else {
+          score += 0.1;
+        }
+
+        const popularityBonus = Math.min(
+          Math.log10(tagObj.count + 1) * 0.2,
+          0.4,
+        );
+        score += popularityBonus;
+      }
+
+      if (score > 0) {
+        suggestions.push({
+          tag,
+          confidence: Math.min(Math.round(score * 100) / 100, 1.0),
+        });
+      }
+    }
+
+    return suggestions.sort((a, b) => b.confidence - a.confidence);
+  }
+
+  private escapeRegExp(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
 }

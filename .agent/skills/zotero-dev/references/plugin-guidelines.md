@@ -7,6 +7,7 @@ Source: Based on Zotero plugin development guidelines, windingwind's zotero-plug
 ## Architecture Overview
 
 Zotero plugins use:
+
 - **XUL/XHTML**: Native UI framework (Firefox-based)
 - **TypeScript**: Core logic (bundled via esbuild)
 - **React 18**: For complex interactive components (chat UI)

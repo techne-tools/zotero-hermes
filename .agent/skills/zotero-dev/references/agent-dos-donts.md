@@ -76,9 +76,10 @@ Both clients share the same public interface so the UI doesn't need to know whic
 
 ```typescript
 // Either client works — same sendPrompt, onUpdate, onError interface
-const client = connectionMode === "api"
-  ? new HermesApiClient(addon)
-  : new HermesClient(addon);
+const client =
+  connectionMode === "api"
+    ? new HermesApiClient(addon)
+    : new HermesClient(addon);
 ```
 
 ### 7. Use rAF-Buffered Streaming for UI Updates
@@ -132,6 +133,7 @@ useEffect(() => {
 ### 10. Release Preparation Checklist
 
 When user asks "is my plugin ready for release?":
+
 - [ ] Version bumped in `package.json`
 - [ ] All tests passing
 - [ ] Linting clean (`npm run lint:check`)
@@ -198,6 +200,7 @@ profileDir.append("zotero-hermes");
 ## Fixing Linting Errors
 
 **DO**:
+
 1. Read the error message carefully — note the exact line and column
 2. Understand what the error is actually complaining about
 3. Fix the root cause, not the symptom
@@ -205,11 +208,13 @@ profileDir.append("zotero-hermes");
 5. Verify `npm run build` still works
 
 **DON'T**:
+
 - Add eslint-disable comments without understanding why
 - Try the same fix multiple times without understanding why it failed
 - Suppress errors as a shortcut
 
 **When Stuck**:
+
 1. Read the error message — what line/column is it complaining about?
 2. Understand the type signature — what does the function expect?
 3. Fix the actual type mismatch, not just suppress the warning

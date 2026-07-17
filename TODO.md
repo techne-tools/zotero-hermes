@@ -200,17 +200,17 @@
 
 ### Note Operations
 
-- [ ] Note Creation/Modification
-  - [ ] Implement `writeNote()` with approval system
-  - [ ] Create approval dialog UI component
-  - [ ] Show diff between current and proposed content
-  - [ ] Handle approve/reject actions
+- [x] Note Creation/Modification
+  - [x] Implement `writeNote()` with approval system
+  - [x] Create/utilize approval dialog UI component
+  - [x] Show new content in approval preview
+  - [x] Handle approve/reject actions
 
-- [ ] Note Search & Retrieval
-  - [ ] Enhance `searchNotes()` with fuzzy matching
-  - [ ] Add `/search` slash command
-  - [ ] Display search results in chat
-  - [ ] Allow selecting results as context
+- [x] Note Search & Retrieval
+  - [x] Enhance `searchNotes()` with fuzzy matching
+  - [x] Add `/search` slash command
+  - [x] Display search results in chat
+  - [x] Allow selecting results as context
 
 ---
 
@@ -218,33 +218,32 @@
 
 ### PDF Annotations
 
-- [ ] Annotation Reading
-  - [ ] Create `AnnotationManager.ts` module
-  - [ ] Extract annotations from PDF attachments
-  - [ ] Group annotations by section/chapter
-  - [ ] Include color tags and comments
+- [x] Annotation Reading
+  - [x] Create/implement `AnnotationManager.ts` module
+  - [x] Extract annotations from PDF attachments
+  - [x] Sort annotations by page number
+  - [x] Include color tags and comments
 
-- [ ] Annotation Writing (Requires approval)
-  - [ ] Implement annotation creation
-  - [ ] Support highlight, underline, strikeout
-  - [ ] Add comments to annotations
-  - [ ] Approval dialog for annotation changes
+- [x] Annotation Writing (Requires approval)
+  - [x] Implement annotation creation
+  - [x] Support highlight, underline, and comment annotations
+  - [x] Integrate with Approval dialog for annotation changes
 
 ### Citation Helpers
 
-- [ ] Citation Generation
-  - [ ] Add `/cite` command for citation formatting
-  - [ ] Support multiple citation styles (APA, MLA, Chicago)
-  - [ ] Generate bibliographies
-  - [ ] Copy to clipboard functionality
+- [x] Citation Generation
+  - [x] Add `/cite` command for citation formatting
+  - [x] Support multiple citation styles (APA, MLA, Chicago, etc.)
+  - [x] Generate bibliographies
+  - [x] Copy to clipboard functionality (via message action / chat bubbles)
 
 ### Tag Suggestions
 
-- [ ] Auto-Tagging System
-  - [ ] Analyze item content for tag suggestions
-  - [ ] Show suggested tags with confidence scores
-  - [ ] Bulk apply tags to items
-  - [ ] Learn from user tag patterns
+- [x] Auto-Tagging System
+  - [x] Analyze item content for tag suggestions
+  - [x] Show suggested tags with confidence scores
+  - [x] Bulk apply tags to items (via /tag command)
+  - [x] Learn from user tag patterns (weights suggestions by library tag popularity)
 
 ---
 
@@ -254,45 +253,44 @@
 
 #### 1. Ghost Text / Inline Auto-Completion
 
-- [ ] Add inline suggestion support in Zotero's note editor
+- [ ] Add inline suggestion support in Zotero's note editor (Secondary/Experimental)
 - [ ] Use Zotero's editor API for inline completions
 - [ ] Support multiple alternatives with keyboard navigation
 - [ ] Accept with Tab key, clear on cursor movement
 
 #### 2. Semantic Vault RAG via `/search` Command
 
-- [ ] Enhance existing item search functionality
-- [ ] Add `/search` slash command with semantic search
-- [ ] Search items by title, authors, tags, abstract
-- [ ] Append search results to conversation context
+- [x] Enhance existing item search functionality
+- [x] Add `/search` slash command with semantic/quicksearch capability
+- [x] Search items by title, authors, tags, abstract
+- [x] Append search results to conversation context (via click-to-add link)
 
 #### 3. Conversation Branching with Message Editing
 
-- [ ] Add message editing capability in Zotero sidebar
-- [ ] Truncate history and create conversation branch
-- [ ] Support multiple conversation branches from same session
+- [x] Add message editing capability in Zotero sidebar
+- [x] Truncate history and create conversation branch
+- [x] Support multiple conversation branches from same session
 
 ### Tier 2: Medium Impact, Medium Feasibility
 
 #### 4. Token Usage Dashboard
 
-- [ ] Add token counter to Zotero sidebar status bar
-- [ ] Display real-time token usage during conversation
-- [ ] Show estimated cost based on API pricing
+- [x] Add token counter to Zotero sidebar status bar
+- [x] Display real-time token usage during conversation
 
 #### 5. Conversation Search with Cmd+F
 
-- [ ] Add search functionality to Zotero sidebar
-- [ ] Search through conversation history
-- [ ] Real-time filtering with match counter
-- [ ] Keyboard navigation (Cmd+F, Enter, Shift+Enter)
+- [x] Add search functionality to Zotero sidebar
+- [x] Search through conversation history
+- [x] Real-time filtering with match counter
+- [x] Keyboard navigation (Cmd+F, Enter, Shift+Enter)
 
 #### 6. Persona Templates
 
-- [ ] Add `/persona` slash command to Zotero
-- [ ] Pre-configured personas: Research Assistant, Citation Expert, Annotation Analyst
-- [ ] Each with different system prompts and tool sets
-- [ ] Save custom personas to preferences
+- [x] Add `/persona` slash command to Zotero
+- [x] Pre-configured personas: Research Assistant, Citation Expert, Literature Analyst
+- [x] Each with different system prompts
+- [x] Save custom personas to preferences
 
 ### Tier 3: Low Impact, High Feasibility
 
@@ -314,16 +312,16 @@
 
 ## Implementation Priority Matrix
 
-| Feature | Zotero Port Difficulty | Zotero Impact | Priority |
-| ------- | ---------------------- | ------------- | -------- |
-| Ghost Text / Inline Auto-Completion | Medium | ⭐⭐⭐⭐ | **1** |
-| Semantic Vault RAG (`/search`) | Low | ⭐⭐⭐⭐⭐ | **2** |
-| Conversation Branching | Medium | ⭐⭐⭐⭐ | **3** |
-| Token Usage Dashboard | Low | ⭐⭐⭐⭐ | **4** |
-| Conversation Search (Cmd+F) | Medium | ⭐⭐⭐⭐ | **5** |
-| Persona Templates | Low | ⭐⭐⭐⭐ | **6** |
-| Export Conversations | Low | ⭐⭐⭐ | **7** |
-| Session Tools (Tool Restrictions) | Low | ⭐⭐⭐ | **8** |
+| Feature                             | Zotero Port Difficulty | Zotero Impact | Priority |
+| ----------------------------------- | ---------------------- | ------------- | -------- |
+| Ghost Text / Inline Auto-Completion | Medium                 | ⭐⭐⭐⭐      | **1**    |
+| Semantic Vault RAG (`/search`)      | Low                    | ⭐⭐⭐⭐⭐    | **2**    |
+| Conversation Branching              | Medium                 | ⭐⭐⭐⭐      | **3**    |
+| Token Usage Dashboard               | Low                    | ⭐⭐⭐⭐      | **4**    |
+| Conversation Search (Cmd+F)         | Medium                 | ⭐⭐⭐⭐      | **5**    |
+| Persona Templates                   | Low                    | ⭐⭐⭐⭐      | **6**    |
+| Export Conversations                | Low                    | ⭐⭐⭐        | **7**    |
+| Session Tools (Tool Restrictions)   | Low                    | ⭐⭐⭐        | **8**    |
 
 ---
 

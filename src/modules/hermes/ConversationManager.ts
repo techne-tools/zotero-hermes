@@ -32,11 +32,16 @@ export class ConversationManager {
       return "/tmp/zotero-hermes-conversations";
     }
     const baseDir = profileDir.clone() as nsIFile;
-    const folderName = this.addon.data.hermes?.preferences?.get("chatSaveFolder", "hermes") || "hermes";
+    const folderName =
+      this.addon.data.hermes?.preferences?.get("chatSaveFolder", "hermes") ||
+      "hermes";
     baseDir.append("zotero-hermes");
     baseDir.append(folderName);
     if (!baseDir.exists()) {
-      baseDir.create(Components.interfaces.nsIFile.DIRECTORY_TYPE as number, 0o755);
+      baseDir.create(
+        Components.interfaces.nsIFile.DIRECTORY_TYPE as number,
+        0o755,
+      );
     }
     return baseDir.path;
   }
@@ -46,7 +51,11 @@ export class ConversationManager {
    */
   private getConversationsDir(): string {
     const baseDir = this.getBaseDir();
-    const organization = this.addon.data.hermes?.preferences?.get<string>("conversationOrganization", "flat") || "flat";
+    const organization =
+      this.addon.data.hermes?.preferences?.get<string>(
+        "conversationOrganization",
+        "flat",
+      ) || "flat";
 
     if (organization === "by-date") {
       const now = new Date();
@@ -55,7 +64,10 @@ export class ConversationManager {
       const subDir = dir.clone() as nsIFile;
       subDir.append(monthDir);
       if (!subDir.exists()) {
-        subDir.create(Components.interfaces.nsIFile.DIRECTORY_TYPE as number, 0o755);
+        subDir.create(
+          Components.interfaces.nsIFile.DIRECTORY_TYPE as number,
+          0o755,
+        );
       }
       return subDir.path;
     }
@@ -95,10 +107,10 @@ export class ConversationManager {
   public saveConversation(conversation: Conversation): void {
     conversation.updatedAt = Date.now();
     this.conversations.set(conversation.id, conversation);
-    
+
     const filePath = this.getConversationFile(conversation.id);
     const json = JSON.stringify(conversation, null, 2);
-    
+
     try {
       const file = Zotero.File.pathToFile(filePath);
       Zotero.File.putContents(file, json);
@@ -112,16 +124,16 @@ export class ConversationManager {
    */
   public loadConversation(id: string): Conversation | null {
     const filePath = this.getConversationFile(id);
-    
+
     try {
       const file = Zotero.File.pathToFile(filePath);
       if (!file.exists()) {
         return null;
       }
-      
+
       const json = Zotero.File.getContents(file) as string;
       const conversation = JSON.parse(json) as Conversation;
-      
+
       this.conversations.set(id, conversation);
       this.currentConversation = conversation;
       return conversation;
@@ -137,7 +149,7 @@ export class ConversationManager {
   public loadAllConversations(): Conversation[] {
     const dir = this.getConversationsDir();
     const dirFile = Zotero.File.pathToFile(dir);
-    
+
     if (!dirFile.exists() || !dirFile.isDirectory()) {
       return [];
     }
@@ -163,7 +175,7 @@ export class ConversationManager {
    */
   public deleteConversation(id: string): boolean {
     const filePath = this.getConversationFile(id);
-    
+
     try {
       const file = Zotero.File.pathToFile(filePath);
       if (file.exists()) {
@@ -175,7 +187,9 @@ export class ConversationManager {
       }
       return true;
     } catch (err) {
-      this.addon.log(`Failed to delete conversation: ${(err as Error).message}`);
+      this.addon.log(
+        `Failed to delete conversation: ${(err as Error).message}`,
+      );
       return false;
     }
   }
@@ -185,7 +199,8 @@ export class ConversationManager {
   }
 
   public setCurrentConversation(id: string): void {
-    const conversation = this.conversations.get(id) || this.loadConversation(id);
+    const conversation =
+      this.conversations.get(id) || this.loadConversation(id);
     if (conversation) {
       this.currentConversation = conversation;
     }

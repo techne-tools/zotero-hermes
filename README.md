@@ -12,13 +12,22 @@ A Zotero plugin that integrates the [Hermes Agent](https://github.com/nousresear
 - **Dual Connection Modes**
   - **ACP (stdio)** — Spawns `hermes acp` as a subprocess, communicates via JSON-RPC over stdio/NDJSON
   - **API (HTTP)** — Connects to `hermes gateway` via OpenAI-compatible `/v1/chat/completions` with SSE streaming
+- **Note Operations** — Save specific assistant responses as child notes via a `📝` bubble button, or use `/savechat` to save the whole conversation history to a child note
+- **PDF Annotation Integration** — Read PDF highlights/comments with the `/annotations` command, and write back annotations to Zotero with `ApprovalDialog` safety prompts
+- **Citation Helpers** — Compile in-text citations and standard bibliographies in any matched CSL style with `/cite [style]` (e.g. `/cite mla` or `/cite chicago`)
+- **Auto-Tagging System** — Generate tag recommendations with confidence scores for attached items based on local text analysis, and click-to-apply them to Zotero references
+- **Conversation Branching** — Edit previous user messages via a pencil icon to spawn a new conversation branch, automatically truncating subsequent message history
+- **Keyboard Search (Cmd+F)** — Intercepts `Cmd+F` / `Ctrl+F` to toggle and focus the chat messages search panel, supporting navigation and match counters
+- **Token Dashboard** — Displays real-time input and output token counts for the last turn at the bottom of the chat view
+- **Persona Switcher** — Switch system prompt orientations (Research Assistant, Citation Expert, Literature Analyst) dynamically using the `/persona [name]` command
+- **Export Formats** — Export conversation history directly to HTML, JSON, or Markdown from a header dropdown menu
 - **Streaming Responses** — Real-time message streaming with typing indicator
 - **Reasoning Display** — Collapsible reasoning/thought process bubbles
 - **Tool Call Visualization** — Expandable tool call panels with status indicators
 - **Copy to Clipboard** — 📋 buttons on all message bubbles for easy text extraction
 - **Markdown Rendering** — Custom sandbox-safe markdown renderer supporting headers, bold, italic, code, links, lists, blockquotes, tables, and horizontal rules
 - **Dark/Light Theme** — Automatic theme detection and CSS variable-based styling
-- **Slash Commands** — Built-in commands: `/clear`, `/search`, and extensible command registry
+- **Slash Commands** — Built-in commands: `/clear`, `/search`, `/annotations`, `/cite`, `/tag`, `/persona`, `/savechat`, and extensible command registry
 - **Preferences Panel** — Connection settings, chat toggles, and feature flags
 
 ## Architecture
@@ -53,18 +62,18 @@ A Zotero plugin that integrates the [Hermes Agent](https://github.com/nousresear
 
 ### Key Files
 
-| File | Purpose |
-|------|---------|
-| `src/views/HermesChatView.tsx` | Main React chat UI — messages, input, context items, stream subscription |
-| `src/modules/hermes/HermesClient.ts` | ACP client — JSON-RPC over stdio, auto-discovery, notification handling |
-| `src/modules/hermes/HermesApiClient.ts` | API client — REST + SSE streaming, OpenAI-compatible |
-| `src/modules/hermes/ChatManager.ts` | Conversation state persistence |
-| `src/modules/hermes/ItemManager.ts` | Zotero item metadata extraction and attachment resolution |
-| `src/modules/hermes/NoteManager.ts` | Note read/write operations |
-| `src/modules/hermes/SlashCommands.ts` | Built-in slash command registry |
-| `src/utils/MarkdownRenderer.tsx` | Sandbox-safe markdown-to-React renderer (no `dangerouslySetInnerHTML`) |
-| `src/views/useStreamBuffer.ts` | Buffered streaming hook with `setTimeout` flush |
-| `addon/content/preferences.xhtml` | Settings panel UI |
+| File                                    | Purpose                                                                  |
+| --------------------------------------- | ------------------------------------------------------------------------ |
+| `src/views/HermesChatView.tsx`          | Main React chat UI — messages, input, context items, stream subscription |
+| `src/modules/hermes/HermesClient.ts`    | ACP client — JSON-RPC over stdio, auto-discovery, notification handling  |
+| `src/modules/hermes/HermesApiClient.ts` | API client — REST + SSE streaming, OpenAI-compatible                     |
+| `src/modules/hermes/ChatManager.ts`     | Conversation state persistence                                           |
+| `src/modules/hermes/ItemManager.ts`     | Zotero item metadata extraction and attachment resolution                |
+| `src/modules/hermes/NoteManager.ts`     | Note read/write operations                                               |
+| `src/modules/hermes/SlashCommands.ts`   | Built-in slash command registry                                          |
+| `src/utils/MarkdownRenderer.tsx`        | Sandbox-safe markdown-to-React renderer (no `dangerouslySetInnerHTML`)   |
+| `src/views/useStreamBuffer.ts`          | Buffered streaming hook with `setTimeout` flush                          |
+| `addon/content/preferences.xhtml`       | Settings panel UI                                                        |
 
 ## Zotero Sandbox Constraints
 
@@ -137,9 +146,24 @@ Open **Zotero → Edit → Settings → Hermes Agent** to configure:
 - "Compare these two articles" (with multiple items attached)
 - "/clear" — Clear the conversation
 
+## Recent Changes (17 July 2026)
+
+### Added
+- **Note Creation and Saving** — Expose a save-to-note `📝` icon on messages to save them as child notes. Added `/savechat` command to output conversation as child note.
+- **Note Relevance Search** — Added relevance-scoring and text-cleaning for local note search via `/search [query]`, with click-to-add context chips in chat sidebar.
+- **PDF Annotation Integration** — Added `/annotations` to extract highlights and notes on attached references, and implemented programmatic annotation creation safely routed through `ApprovalDialog`.
+- **CSL Citation Helper** — Added `/cite [style]` command to format in-text citations and bibliographies in APA, MLA, Chicago, and other styles.
+- **Local Tag Suggester** — Added `/tag` to recommend library tags using term frequency matching and user pattern count weights.
+- **Conversation Branching** — Edit previous user messages via pencil button to spawn edited dialog paths.
+- **Cmd+F Search Shortcut** — Window keydown interceptor opens and focuses message search panel.
+- **Token Dashboard** — Displays real-time API turn tokens dynamically.
+- **Export Options Dropdown** — Exposes HTML, JSON, and Markdown export actions directly from the chat header.
+- **Persona Switcher** — Added `/persona` command to switch between system prompts (Research Assistant, Citation Expert, Literature Analyst).
+
 ## Recent Changes (5 June 2026)
 
 ### Fixed
+
 - **Preferences pane not appearing** — Added `Zotero.PreferencePanes.register()` call during startup so the Hermes Agent settings pane appears in Zotero Settings
 - **Metadata context** — Full item metadata (title, authors, abstract, tags, date, DOI, URL) now passed to agent, preventing hallucinations
 - **Storage folder resolution** — Attachment item key (not parent key) used for correct storage path
@@ -148,6 +172,7 @@ Open **Zotero → Edit → Settings → Hermes Agent** to configure:
 - **Build errors** — Duplicate variable declarations in `HermesClient.ts`
 
 ### Added
+
 - **Proper preferences pane** — Full 8-section settings UI aligned with obsidian-hermes: Agent Personality, Chat Display, Connection (local/remote with test buttons), Automatic Context, Saving Conversations, Sound & Feel, Security, Troubleshooting
 - **Conversation organisation** — Flat or by-date monthly subfolders for saved conversations
 - **Typing sounds** — Soft click sound via Web Audio API while agent writes (toggleable)
@@ -159,6 +184,7 @@ Open **Zotero → Edit → Settings → Hermes Agent** to configure:
 - **MCP removal** — Removed flaky MCP dependency; uses direct fs-based access
 
 ### Changed
+
 - **System instruction** — Clarified that SQLite is locked and MCP is unavailable
 
 ## Known Issues

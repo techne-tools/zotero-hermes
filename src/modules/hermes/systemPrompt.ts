@@ -10,8 +10,23 @@ export function buildSystemPrompt(opts: {
   zoteroDbPath: string;
   zoteroStorageDir: string;
   zoteroProfileDir: string;
+  persona?: string;
 }): string {
-  return `You are the Hermes Agent for Zotero. Your primary focus is the user's Zotero research library.
+  let personaPrompt: string;
+  const persona = opts.persona || "default";
+
+  if (persona === "citation") {
+    personaPrompt =
+      "You are acting as a Citation Expert. Your primary focus is styling bibliographies, checking formatting rules (APA, MLA, Chicago, etc.), correcting citation structure, and advising on reference generation. Help the user format their research output perfectly.\n\n";
+  } else if (persona === "analyst") {
+    personaPrompt =
+      "You are acting as a Literature Analyst. Your primary focus is analyzing the methodology, research design, core arguments, strengths, and limitations of papers. Help the user critique and synthesize the literature in context.\n\n";
+  } else {
+    personaPrompt =
+      "You are acting as a Research Assistant. Your primary focus is summarizing and explaining attached research papers, notes, and collections, helping the user understand and synthesize their library.\n\n";
+  }
+
+  return `${personaPrompt}You are the Hermes Agent for Zotero. Your primary focus is the user's Zotero research library.
 
 ZOTERO LIBRARY ACCESS:
 - Zotero data directory: ${opts.zoteroDataDir}
@@ -44,7 +59,12 @@ Always cite Zotero items by title and author when providing answers.`;
  * so the agent can answer without hallucinating fs access.
  */
 export function buildItemContext(
-  item: { type: string; text: string; data?: string; extracted?: Record<string, unknown> },
+  item: {
+    type: string;
+    text: string;
+    data?: string;
+    extracted?: Record<string, unknown>;
+  },
   zoteroStorageDir: string,
 ): string {
   let contextText = `[${item.type}]: ${item.text}`;
@@ -64,12 +84,20 @@ export function buildItemContext(
   if (item.type === "item" && item.extracted) {
     const extracted = item.extracted;
     if (extracted.title) contextText += `\nTitle: ${extracted.title}`;
-    if (extracted.creators && Array.isArray(extracted.creators) && extracted.creators.length > 0) {
+    if (
+      extracted.creators &&
+      Array.isArray(extracted.creators) &&
+      extracted.creators.length > 0
+    ) {
       contextText += `\nAuthors: ${(extracted.creators as string[]).join(", ")}`;
     }
     if (extracted.date) contextText += `\nDate: ${extracted.date}`;
     if (extracted.abstract) contextText += `\nAbstract: ${extracted.abstract}`;
-    if (extracted.tags && Array.isArray(extracted.tags) && extracted.tags.length > 0) {
+    if (
+      extracted.tags &&
+      Array.isArray(extracted.tags) &&
+      extracted.tags.length > 0
+    ) {
       contextText += `\nTags: ${(extracted.tags as string[]).join(", ")}`;
     }
     if (extracted.doi) contextText += `\nDOI: ${extracted.doi}`;
@@ -79,7 +107,8 @@ export function buildItemContext(
       contextText += `\nZotero attachment key: ${extracted.attachmentKey}`;
       contextText += `\nZotero storage path: ${zoteroStorageDir}/${extracted.attachmentKey}/`;
     }
-    if (extracted.storagePath) contextText += `\nZotero file path: ${extracted.storagePath}`;
+    if (extracted.storagePath)
+      contextText += `\nZotero file path: ${extracted.storagePath}`;
   }
   return contextText;
 }

@@ -3,41 +3,64 @@
 </linkset>
 <vbox
   onload="Zotero.__addonInstance__.hooks.onPrefsEvent('load', { window })"
-  style="padding: 12px; gap: 16px;"
+  style="padding: 12px; gap: 16px"
 >
   <!-- 🤖 Agent Personality -->
-  <groupbox style="margin-bottom: 12px;">
-    <label><html:h2 style="font-size: 1.15em; margin: 0 0 8px 0; border-bottom: 1px solid var(--hermes-border, #ccc); padding-bottom: 4px;">🤖 Agent Personality</html:h2></label>
+  <groupbox style="margin-bottom: 12px">
+    <label
+      ><html:h2
+        style="
+          font-size: 1.15em;
+          margin: 0 0 8px 0;
+          border-bottom: 1px solid var(--hermes-border, #ccc);
+          padding-bottom: 4px;
+        "
+        >🤖 Agent Personality</html:h2
+      ></label
+    >
 
-    <hbox align="center" style="margin-bottom: 6px;">
+    <hbox align="center" style="margin-bottom: 6px">
       <html:label
         for="zotero-prefpane-__addonRef__-chat-agent-name"
-        style="min-width: 180px;"
-      >What you call your assistant in the chat</html:label>
+        style="min-width: 180px"
+        >What you call your assistant in the chat</html:label
+      >
       <html:input
         type="text"
         id="zotero-prefpane-__addonRef__-chat-agent-name"
         preference="extensions.zotero.hermes.chatAgentName"
         placeholder="Hermes"
-        style="flex: 1;"
+        style="flex: 1"
       ></html:input>
     </hbox>
-    <html:p style="font-size: 0.85em; opacity: 0.7; margin: 0 0 8px 180px;">
-      Change it to whatever feels right — "Claude", "Friday", "Research Buddy", etc.
+    <html:p style="font-size: 0.85em; opacity: 0.7; margin: 0 0 8px 180px">
+      Change it to whatever feels right — "Claude", "Friday", "Research Buddy",
+      etc.
     </html:p>
   </groupbox>
 
   <!-- 💬 Chat Display -->
-  <groupbox style="margin-bottom: 12px;">
-    <label><html:h2 style="font-size: 1.15em; margin: 0 0 8px 0; border-bottom: 1px solid var(--hermes-border, #ccc); padding-bottom: 4px;">💬 What You See in Chat</html:h2></label>
+  <groupbox style="margin-bottom: 12px">
+    <label
+      ><html:h2
+        style="
+          font-size: 1.15em;
+          margin: 0 0 8px 0;
+          border-bottom: 1px solid var(--hermes-border, #ccc);
+          padding-bottom: 4px;
+        "
+        >💬 What You See in Chat</html:h2
+      ></label
+    >
 
     <checkbox
       id="zotero-prefpane-__addonRef__-show-reasoning"
       preference="extensions.zotero.hermes.showReasoning"
       label="Show Reasoning Steps — display the agent's chain-of-thought"
     />
-    <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 6px 24px;">
-      When the agent "thinks out loud" before answering, show those thoughts in the chat.
+    <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 6px 24px">
+      When the agent "thinks out loud" before answering, show those thoughts in
+      the chat.
     </html:p>
 
     <checkbox
@@ -45,7 +68,7 @@
       preference="extensions.zotero.hermes.showToolUse"
       label="Show Tool Use — display a notice when the agent reads files or runs commands"
     />
-    <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 6px 24px;">
+    <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 6px 24px">
       Helpful for understanding what it is doing behind the scenes.
     </html:p>
 
@@ -54,7 +77,7 @@
       preference="extensions.zotero.hermes.showTokenCount"
       label="Show Token Count — display real-time token usage in chat"
     />
-    <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 6px 24px;">
+    <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 6px 24px">
       Shows input/output tokens and estimated cost per conversation.
     </html:p>
 
@@ -66,14 +89,25 @@
   </groupbox>
 
   <!-- 🔌 Connection -->
-  <groupbox style="margin-bottom: 12px;">
-    <label><html:h2 style="font-size: 1.15em; margin: 0 0 8px 0; border-bottom: 1px solid var(--hermes-border, #ccc); padding-bottom: 4px;">🔌 How Hermes Connects</html:h2></label>
+  <groupbox style="margin-bottom: 12px">
+    <label
+      ><html:h2
+        style="
+          font-size: 1.15em;
+          margin: 0 0 8px 0;
+          border-bottom: 1px solid var(--hermes-border, #ccc);
+          padding-bottom: 4px;
+        "
+        >🔌 How Hermes Connects</html:h2
+      ></label
+    >
 
-    <hbox align="center" style="margin-bottom: 8px;">
+    <hbox align="center" style="margin-bottom: 8px">
       <html:label
         for="zotero-prefpane-__addonRef__-connection-mode"
-        style="min-width: 180px;"
-      >Connection Mode</html:label>
+        style="min-width: 180px"
+        >Connection Mode</html:label
+      >
       <menulist
         id="zotero-prefpane-__addonRef__-connection-mode"
         preference="extensions.zotero.hermes.connectionMode"
@@ -84,35 +118,39 @@
         </menupopup>
       </menulist>
     </hbox>
-    <html:p style="font-size: 0.85em; opacity: 0.7; margin: 0 0 8px 180px;">
-      "Local" runs on your computer (fastest, private). "Remote" connects to a server (good for teams or powerful GPUs).
+    <html:p style="font-size: 0.85em; opacity: 0.7; margin: 0 0 8px 180px">
+      "Local" runs on your computer (fastest, private). "Remote" connects to a
+      server (good for teams or powerful GPUs).
     </html:p>
 
     <!-- Local mode settings -->
-    <vbox id="__addonRef__-local-settings" style="margin-top: 8px;">
-      <hbox align="center" style="margin-bottom: 6px;">
+    <vbox id="__addonRef__-local-settings" style="margin-top: 8px">
+      <hbox align="center" style="margin-bottom: 6px">
         <html:label
           for="zotero-prefpane-__addonRef__-binary-path"
-          style="min-width: 180px;"
-        >Hermes Program Location</html:label>
+          style="min-width: 180px"
+          >Hermes Program Location</html:label
+        >
         <html:input
           type="text"
           id="zotero-prefpane-__addonRef__-binary-path"
           preference="extensions.zotero.hermes.binaryPath"
           placeholder="/opt/homebrew/bin/hermes"
-          style="flex: 1;"
+          style="flex: 1"
         ></html:input>
       </hbox>
-      <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 8px 180px;">
-        If Hermes is not in your system PATH, paste the full file path here. Leave blank to let the plugin find it automatically.
+      <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 8px 180px">
+        If Hermes is not in your system PATH, paste the full file path here.
+        Leave blank to let the plugin find it automatically.
       </html:p>
 
-      <hbox align="center" style="margin-bottom: 8px;">
-        <html:label style="min-width: 180px;">Test Local Connection</html:label>
+      <hbox align="center" style="margin-bottom: 8px">
+        <html:label style="min-width: 180px">Test Local Connection</html:label>
         <html:button
           id="zotero-prefpane-__addonRef__-test-local"
           class="hermes-pref-btn"
-        >Test Connection</html:button>
+          >Test Connection</html:button
+        >
       </hbox>
 
       <checkbox
@@ -120,95 +158,126 @@
         preference="extensions.zotero.hermes.mcpServersEnabled"
         label="⚠️ Enable External Tool Servers (MCP)"
       />
-      <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 6px 24px; color: #c53030;">
-        MCP servers are external programs that Hermes can call. They bypass file-approval and permission checks, and can execute arbitrary code with your user privileges. Only enable if you fully trust every server you add below.
+      <html:p
+        style="
+          font-size: 0.8em;
+          opacity: 0.6;
+          margin: 0 0 6px 24px;
+          color: #c53030;
+        "
+      >
+        MCP servers are external programs that Hermes can call. They bypass
+        file-approval and permission checks, and can execute arbitrary code with
+        your user privileges. Only enable if you fully trust every server you
+        add below.
       </html:p>
 
-      <vbox id="__addonRef__-mcp-servers-row" style="margin: 4px 0 8px 24px;">
-        <html:label for="zotero-prefpane-__addonRef__-mcp-servers">External Tool Server Paths</html:label>
+      <vbox id="__addonRef__-mcp-servers-row" style="margin: 4px 0 8px 24px">
+        <html:label for="zotero-prefpane-__addonRef__-mcp-servers"
+          >External Tool Server Paths</html:label
+        >
         <html:textarea
           id="zotero-prefpane-__addonRef__-mcp-servers"
           preference="extensions.zotero.hermes.mcpServersList"
           rows="3"
           placeholder="/Users/you/.local/bin/mcp-web-search&#10;/opt/mcp-database"
-          style="width: 100%; font-family: monospace;"
+          style="width: 100%; font-family: monospace"
         ></html:textarea>
-        <html:p style="font-size: 0.8em; opacity: 0.6; margin: 4px 0 0 0;">
-          One absolute path per line. These executables run with your user privileges and are not sandboxed. Restart the connection after changing.
+        <html:p style="font-size: 0.8em; opacity: 0.6; margin: 4px 0 0 0">
+          One absolute path per line. These executables run with your user
+          privileges and are not sandboxed. Restart the connection after
+          changing.
         </html:p>
       </vbox>
     </vbox>
 
     <!-- Remote mode settings -->
-    <vbox id="__addonRef__-remote-settings" style="margin-top: 8px;">
-      <hbox align="center" style="margin-bottom: 6px;">
+    <vbox id="__addonRef__-remote-settings" style="margin-top: 8px">
+      <hbox align="center" style="margin-bottom: 6px">
         <html:label
           for="zotero-prefpane-__addonRef__-api-url"
-          style="min-width: 180px;"
-        >Server Address</html:label>
+          style="min-width: 180px"
+          >Server Address</html:label
+        >
         <html:input
           type="text"
           id="zotero-prefpane-__addonRef__-api-url"
           preference="extensions.zotero.hermes.apiUrl"
           placeholder="http://localhost:8642"
-          style="flex: 1;"
+          style="flex: 1"
         ></html:input>
       </hbox>
 
-      <hbox align="center" style="margin-bottom: 6px;">
+      <hbox align="center" style="margin-bottom: 6px">
         <html:label
           for="zotero-prefpane-__addonRef__-api-key"
-          style="min-width: 180px;"
-        >API Key</html:label>
+          style="min-width: 180px"
+          >API Key</html:label
+        >
         <html:input
           type="password"
           id="zotero-prefpane-__addonRef__-api-key"
           preference="extensions.zotero.hermes.apiKey"
-          style="flex: 1;"
+          style="flex: 1"
         ></html:input>
       </hbox>
-      <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 8px 180px;">
-        Your secret key for the server. This is stored securely and never shown again after saving.
+      <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 8px 180px">
+        Your secret key for the server. This is stored securely and never shown
+        again after saving.
       </html:p>
 
-      <hbox align="center" style="margin-bottom: 6px;">
+      <hbox align="center" style="margin-bottom: 6px">
         <html:label
           for="zotero-prefpane-__addonRef__-agent-name"
-          style="min-width: 180px;"
-        >Agent Name on Server</html:label>
+          style="min-width: 180px"
+          >Agent Name on Server</html:label
+        >
         <html:input
           type="text"
           id="zotero-prefpane-__addonRef__-agent-name"
           preference="extensions.zotero.hermes.hermesAgentName"
           placeholder="hermes-agent"
-          style="flex: 1;"
+          style="flex: 1"
         ></html:input>
       </hbox>
-      <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 8px 180px;">
-        The name your server knows this agent by. Usually "hermes-agent" unless your admin changed it.
+      <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 8px 180px">
+        The name your server knows this agent by. Usually "hermes-agent" unless
+        your admin changed it.
       </html:p>
 
-      <hbox align="center" style="margin-bottom: 8px;">
-        <html:label style="min-width: 180px;">Test Remote Connection</html:label>
+      <hbox align="center" style="margin-bottom: 8px">
+        <html:label style="min-width: 180px">Test Remote Connection</html:label>
         <html:button
           id="zotero-prefpane-__addonRef__-test-remote"
           class="hermes-pref-btn"
-        >Test Connection</html:button>
+          >Test Connection</html:button
+        >
       </hbox>
     </vbox>
   </groupbox>
 
   <!-- 📎 Automatic Context -->
-  <groupbox style="margin-bottom: 12px;">
-    <label><html:h2 style="font-size: 1.15em; margin: 0 0 8px 0; border-bottom: 1px solid var(--hermes-border, #ccc); padding-bottom: 4px;">📎 Automatic Context</html:h2></label>
+  <groupbox style="margin-bottom: 12px">
+    <label
+      ><html:h2
+        style="
+          font-size: 1.15em;
+          margin: 0 0 8px 0;
+          border-bottom: 1px solid var(--hermes-border, #ccc);
+          padding-bottom: 4px;
+        "
+        >📎 Automatic Context</html:h2
+      ></label
+    >
 
     <checkbox
       id="zotero-prefpane-__addonRef__-enable-citations"
       preference="extensions.zotero.hermes.enableCitations"
       label="Enable Citation Generation — automatically include selected items in context"
     />
-    <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 6px 24px;">
-      When you have items selected in Zotero, automatically include them in the conversation context.
+    <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 6px 24px">
+      When you have items selected in Zotero, automatically include them in the
+      conversation context.
     </html:p>
 
     <checkbox
@@ -216,7 +285,7 @@
       preference="extensions.zotero.hermes.enableAnnotations"
       label="Enable Annotation Reading — include PDF annotations in context"
     />
-    <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 6px 24px;">
+    <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 6px 24px">
       Read highlights and notes from attached PDFs when discussing a paper.
     </html:p>
 
@@ -225,37 +294,50 @@
       preference="extensions.zotero.hermes.enableTags"
       label="Enable Tag Management — allow the agent to read and modify tags"
     />
-    <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 6px 24px;">
+    <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 6px 24px">
       The agent can suggest, add, and remove tags on your Zotero items.
     </html:p>
   </groupbox>
 
   <!-- 🗂️ Saving Conversations -->
-  <groupbox style="margin-bottom: 12px;">
-    <label><html:h2 style="font-size: 1.15em; margin: 0 0 8px 0; border-bottom: 1px solid var(--hermes-border, #ccc); padding-bottom: 4px;">🗂️ Saving Conversations</html:h2></label>
+  <groupbox style="margin-bottom: 12px">
+    <label
+      ><html:h2
+        style="
+          font-size: 1.15em;
+          margin: 0 0 8px 0;
+          border-bottom: 1px solid var(--hermes-border, #ccc);
+          padding-bottom: 4px;
+        "
+        >🗂️ Saving Conversations</html:h2
+      ></label
+    >
 
-    <hbox align="center" style="margin-bottom: 6px;">
+    <hbox align="center" style="margin-bottom: 6px">
       <html:label
         for="zotero-prefpane-__addonRef__-save-folder"
-        style="min-width: 180px;"
-      >Save Folder</html:label>
+        style="min-width: 180px"
+        >Save Folder</html:label
+      >
       <html:input
         type="text"
         id="zotero-prefpane-__addonRef__-save-folder"
         preference="extensions.zotero.hermes.chatSaveFolder"
         placeholder="hermes"
-        style="flex: 1;"
+        style="flex: 1"
       ></html:input>
     </hbox>
-    <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 8px 180px;">
-      Where conversation files are stored. Default is a folder called "hermes" in your Zotero data directory.
+    <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 8px 180px">
+      Where conversation files are stored. Default is a folder called "hermes"
+      in your Zotero data directory.
     </html:p>
 
-    <hbox align="center" style="margin-bottom: 8px;">
+    <hbox align="center" style="margin-bottom: 8px">
       <html:label
         for="zotero-prefpane-__addonRef__-organization"
-        style="min-width: 180px;"
-      >Folder Organization</html:label>
+        style="min-width: 180px"
+        >Folder Organization</html:label
+      >
       <menulist
         id="zotero-prefpane-__addonRef__-organization"
         preference="extensions.zotero.hermes.conversationOrganization"
@@ -263,25 +345,39 @@
         <menupopup>
           <menuitem label="Flat — all in one folder" value="flat" />
           <menuitem label="By Date — monthly subfolders" value="by-date" />
-          <menuitem label="By Project — tag-based (coming soon)" value="by-project" />
+          <menuitem
+            label="By Project — tag-based (coming soon)"
+            value="by-project"
+          />
         </menupopup>
       </menulist>
     </hbox>
-    <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 8px 180px;">
-      How to organize saved conversations. "Flat" puts everything in one folder. "By Date" groups them into monthly folders like 2026-05.
+    <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 8px 180px">
+      How to organize saved conversations. "Flat" puts everything in one folder.
+      "By Date" groups them into monthly folders like 2026-05.
     </html:p>
   </groupbox>
 
   <!-- 🔊 Sound & Feel -->
-  <groupbox style="margin-bottom: 12px;">
-    <label><html:h2 style="font-size: 1.15em; margin: 0 0 8px 0; border-bottom: 1px solid var(--hermes-border, #ccc); padding-bottom: 4px;">🔊 Sound &amp; Feel</html:h2></label>
+  <groupbox style="margin-bottom: 12px">
+    <label
+      ><html:h2
+        style="
+          font-size: 1.15em;
+          margin: 0 0 8px 0;
+          border-bottom: 1px solid var(--hermes-border, #ccc);
+          padding-bottom: 4px;
+        "
+        >🔊 Sound &amp; Feel</html:h2
+      ></label
+    >
 
     <checkbox
       id="zotero-prefpane-__addonRef__-typing-sound"
       preference="extensions.zotero.hermes.enableTypingSound"
       label="Typing Sounds — play a soft click sound while the agent is writing"
     />
-    <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 6px 24px;">
+    <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 6px 24px">
       Makes it feel more like a real conversation.
     </html:p>
 
@@ -290,52 +386,79 @@
       preference="extensions.zotero.hermes.enableHapticFeedback"
       label="Haptic Feedback — vibrate briefly when the agent starts responding"
     />
-    <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 6px 24px;">
-      Only works on devices with vibration support (most phones and some laptops).
+    <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 6px 24px">
+      Only works on devices with vibration support (most phones and some
+      laptops).
     </html:p>
   </groupbox>
 
   <!-- 🛡️ Security -->
-  <groupbox style="margin-bottom: 12px;">
-    <label><html:h2 style="font-size: 1.15em; margin: 0 0 8px 0; border-bottom: 1px solid var(--hermes-border, #ccc); padding-bottom: 4px;">🛡️ Security</html:h2></label>
+  <groupbox style="margin-bottom: 12px">
+    <label
+      ><html:h2
+        style="
+          font-size: 1.15em;
+          margin: 0 0 8px 0;
+          border-bottom: 1px solid var(--hermes-border, #ccc);
+          padding-bottom: 4px;
+        "
+        >🛡️ Security</html:h2
+      ></label
+    >
 
     <checkbox
       id="zotero-prefpane-__addonRef__-allow-terminal"
       preference="extensions.zotero.hermes.allowTerminal"
       label="⚠️ Allow Terminal Commands — let the agent run shell commands on your computer"
     />
-    <html:p style="font-size: 0.8em; color: #c53030; margin: 0 0 8px 24px;">
-      DANGER: This lets the agent run shell commands — things like deleting files, installing software, or accessing the internet. These commands bypass the file-change approval system. ONLY enable this if you completely trust the agent and understand the risks.
+    <html:p style="font-size: 0.8em; color: #c53030; margin: 0 0 8px 24px">
+      DANGER: This lets the agent run shell commands — things like deleting
+      files, installing software, or accessing the internet. These commands
+      bypass the file-change approval system. ONLY enable this if you completely
+      trust the agent and understand the risks.
     </html:p>
   </groupbox>
 
   <!-- 🐛 Troubleshooting -->
-  <groupbox style="margin-bottom: 12px;">
-    <label><html:h2 style="font-size: 1.15em; margin: 0 0 8px 0; border-bottom: 1px solid var(--hermes-border, #ccc); padding-bottom: 4px;">🐛 Troubleshooting</html:h2></label>
+  <groupbox style="margin-bottom: 12px">
+    <label
+      ><html:h2
+        style="
+          font-size: 1.15em;
+          margin: 0 0 8px 0;
+          border-bottom: 1px solid var(--hermes-border, #ccc);
+          padding-bottom: 4px;
+        "
+        >🐛 Troubleshooting</html:h2
+      ></label
+    >
 
     <checkbox
       id="zotero-prefpane-__addonRef__-enable-debug-mode"
       preference="extensions.zotero.hermes.enableDebugMode"
       label="Debug Mode — write detailed logs to the browser console"
     />
-    <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 8px 24px;">
-      Turn this on when something is broken and you need to report a bug. You can view the console with Cmd+Option+I (Mac) or Ctrl+Shift+I (Windows/Linux).
+    <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 8px 24px">
+      Turn this on when something is broken and you need to report a bug. You
+      can view the console with Cmd+Option+I (Mac) or Ctrl+Shift+I
+      (Windows/Linux).
     </html:p>
 
-    <hbox align="center" style="margin-bottom: 8px;">
-      <html:label style="min-width: 180px;">Reset Onboarding</html:label>
+    <hbox align="center" style="margin-bottom: 8px">
+      <html:label style="min-width: 180px">Reset Onboarding</html:label>
       <html:button
         id="zotero-prefpane-__addonRef__-reset-onboarding"
         class="hermes-pref-btn"
-      >Reset</html:button>
+        >Reset</html:button
+      >
     </hbox>
-    <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 8px 180px;">
+    <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 8px 180px">
       Show the welcome message again the next time you open the chat.
     </html:p>
   </groupbox>
 
   <!-- ℹ️ About -->
-  <vbox style="margin-top: 8px; opacity: 0.7; font-size: 0.9em;">
+  <vbox style="margin-top: 8px; opacity: 0.7; font-size: 0.9em">
     <html:label
       data-l10n-id="pref-help"
       data-l10n-args='{"time": "__buildTime__","name": "__addonName__","version":"__buildVersion__"}'

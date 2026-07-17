@@ -6,10 +6,16 @@ export interface ChatClient {
   connect(): Promise<void>;
   disconnect(): void;
   isReady(): boolean;
-  onAvailableCommands(callback: (commands: { description: string; name: string }[]) => void): () => void;
+  onAvailableCommands(
+    callback: (commands: { description: string; name: string }[]) => void,
+  ): () => void;
   onError(callback: (error: Error) => void): () => void;
   onUpdate(callback: (update: ChatSessionUpdate) => void): () => void;
-  sendPrompt(text: string, contextItems?: PromptContextItem[], options?: { allowedTools?: string[] | null }): Promise<void>;
+  sendPrompt(
+    text: string,
+    contextItems?: PromptContextItem[],
+    options?: { allowedTools?: string[] | null },
+  ): Promise<void>;
 }
 
 // ─── ChatSessionUpdate ───

@@ -107,14 +107,16 @@ export class PreferencesManager {
 
   public get<T>(key: string, defaultValue?: T): T {
     const fullKey = key.startsWith("extensions.zotero.hermes.")
-      ? key : `extensions.zotero.hermes.${key}`;
+      ? key
+      : `extensions.zotero.hermes.${key}`;
     const value = Zotero.Prefs.get(fullKey);
     return value !== undefined ? (value as T) : (defaultValue as T);
   }
 
   public set<T extends string | number | boolean>(key: string, value: T): void {
     const fullKey = key.startsWith("extensions.zotero.hermes.")
-      ? key : `extensions.zotero.hermes.${key}`;
+      ? key
+      : `extensions.zotero.hermes.${key}`;
     Zotero.Prefs.set(fullKey, value);
   }
 
@@ -133,8 +135,8 @@ export class PreferencesManager {
 ```typescript
 // Via PreferencesManager
 const prefs = new PreferencesManager(addon);
-const mode = prefs.getConnectionMode();   // "stdio" | "api"
-const path = prefs.getHermesPath();       // e.g. "/usr/local/bin/hermes"
+const mode = prefs.getConnectionMode(); // "stdio" | "api"
+const path = prefs.getHermesPath(); // e.g. "/usr/local/bin/hermes"
 const showReasoning = prefs.get("showReasoning", true);
 
 // Direct Zotero API
@@ -151,13 +153,16 @@ Zotero.Prefs.set("extensions.zotero.hermes.connectionMode", "api", true);
 - Pattern: `extensions.zotero.<addonRef>.<key>` — from `config.prefsPrefix` in `package.json`
 - Migrate old preference keys with backwards-compatible fallbacks
 - Boolean defaults should match the XHTML `<checkbox>` default state
-</groupbox>
+  </groupbox>
+
 ```
 
 ### Localization
 
 ```
+
 # addon/locale/en-US/hermes-preferences.ftl
+
 pref-title = Hermes Agent Settings
 pref-connection-title = Connection
 pref-connection-local = Local (ACP)
@@ -171,7 +176,8 @@ pref-show-tool-use = Show tool usage
 pref-typing-sound = Enable typing sound
 pref-security-title = Security
 pref-require-approval = Require approval for all changes
-```
+
+````
 
 ### Preferences Event Handler
 
@@ -200,7 +206,7 @@ function initializePreferences(win: Window): void {
     showConnectionResult(win, result);
   });
 }
-```
+````
 
 ## Dynamic Commands
 

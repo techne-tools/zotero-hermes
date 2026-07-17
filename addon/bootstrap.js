@@ -6,7 +6,9 @@
  */
 
 var chromeHandle;
-var console = ChromeUtils.importESModule("resource://gre/modules/Console.sys.mjs").console;
+var console = ChromeUtils.importESModule(
+  "resource://gre/modules/Console.sys.mjs",
+).console;
 
 function install(data, reason) {}
 
@@ -36,10 +38,14 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
     ctx.navigator = mainWindow.navigator;
   }
   const consoleMock = {
-    log: (msg, ...args) => Zotero.debug(`[Hermes-log] ${msg} ${args.join(" ")}`),
-    warn: (msg, ...args) => Zotero.debug(`[Hermes-warn] ${msg} ${args.join(" ")}`),
-    error: (msg, ...args) => Zotero.debug(`[Hermes-error] ${msg} ${args.join(" ")}`),
-    info: (msg, ...args) => Zotero.debug(`[Hermes-info] ${msg} ${args.join(" ")}`),
+    log: (msg, ...args) =>
+      Zotero.debug(`[Hermes-log] ${msg} ${args.join(" ")}`),
+    warn: (msg, ...args) =>
+      Zotero.debug(`[Hermes-warn] ${msg} ${args.join(" ")}`),
+    error: (msg, ...args) =>
+      Zotero.debug(`[Hermes-error] ${msg} ${args.join(" ")}`),
+    info: (msg, ...args) =>
+      Zotero.debug(`[Hermes-info] ${msg} ${args.join(" ")}`),
     group: () => {},
     groupCollapsed: () => {},
     groupEnd: () => {},

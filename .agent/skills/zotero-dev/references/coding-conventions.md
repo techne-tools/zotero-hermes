@@ -16,14 +16,14 @@ Source: Based on TypeScript best practices, Zotero plugin conventions, and the z
 
 ## Naming Conventions
 
-| Element | Convention | Example |
-|---------|-----------|---------|
-| **Classes** | PascalCase | `HermesClient`, `ChatManager`, `ApprovalDialog` |
-| **Methods** | camelCase | `sendPrompt()`, `getSelectedItems()`, `writeToStdin()` |
-| **Constants** | UPPER_SNAKE_CASE | `MAX_RECONNECT_ATTEMPTS`, `PROTOCOL_VERSION` |
-| **Files (classes)** | PascalCase | `HermesClient.ts`, `ChatManager.ts` |
-| **Files (utils)** | camelCase | `locale.ts`, `ztoolkit.ts` |
-| **Interfaces** | PascalCase | `ChatSessionUpdate`, `PromptContextItem`, `AttachedItem` |
+| Element             | Convention       | Example                                                  |
+| ------------------- | ---------------- | -------------------------------------------------------- |
+| **Classes**         | PascalCase       | `HermesClient`, `ChatManager`, `ApprovalDialog`          |
+| **Methods**         | camelCase        | `sendPrompt()`, `getSelectedItems()`, `writeToStdin()`   |
+| **Constants**       | UPPER_SNAKE_CASE | `MAX_RECONNECT_ATTEMPTS`, `PROTOCOL_VERSION`             |
+| **Files (classes)** | PascalCase       | `HermesClient.ts`, `ChatManager.ts`                      |
+| **Files (utils)**   | camelCase        | `locale.ts`, `ztoolkit.ts`                               |
+| **Interfaces**      | PascalCase       | `ChatSessionUpdate`, `PromptContextItem`, `AttachedItem` |
 
 ## Module Organization
 
@@ -64,21 +64,21 @@ src/
 
 Each module has a single, well-defined responsibility:
 
-| Module | Responsible For | Does NOT Handle |
-|--------|----------------|-----------------|
-| `HermesClient` | ACP protocol stdio (implements `ChatClient`) | Conversation state, UI |
-| `HermesApiClient` | REST API with SSE (implements `ChatClient`) | Conversation state, UI |
-| `ChatManager` | Bridging messages ↔ ConversationManager | Protocol, file I/O |
-| `ConversationManager` | JSON file persistence | UI, protocol |
-| `NoteManager` | Note read/write/search | Approval UI, prompts |
-| `ItemManager` | Item metadata extraction | Note CRUD, annotations |
-| `AnnotationManager` | Annotation extraction from items | Item metadata, citations |
-| `CitationManager` | CSL citation/bibliography gen | Annotations, tags |
-| `TagManager` | Tag CRUD | Annotations, topics |
-| `ApprovalDialog` | Pending file change approval | File I/O, protocol |
-| `PreferencesManager` | Preference get/set with defaults | UI, protocol |
-| `DebugLogger` | Gated debug logging (toggle via `enableDebugMode`) | Audit history |
-| `AuditLog` | Persistent action log (JSON file) | Live debugging |
+| Module                | Responsible For                                    | Does NOT Handle          |
+| --------------------- | -------------------------------------------------- | ------------------------ |
+| `HermesClient`        | ACP protocol stdio (implements `ChatClient`)       | Conversation state, UI   |
+| `HermesApiClient`     | REST API with SSE (implements `ChatClient`)        | Conversation state, UI   |
+| `ChatManager`         | Bridging messages ↔ ConversationManager            | Protocol, file I/O       |
+| `ConversationManager` | JSON file persistence                              | UI, protocol             |
+| `NoteManager`         | Note read/write/search                             | Approval UI, prompts     |
+| `ItemManager`         | Item metadata extraction                           | Note CRUD, annotations   |
+| `AnnotationManager`   | Annotation extraction from items                   | Item metadata, citations |
+| `CitationManager`     | CSL citation/bibliography gen                      | Annotations, tags        |
+| `TagManager`          | Tag CRUD                                           | Annotations, topics      |
+| `ApprovalDialog`      | Pending file change approval                       | File I/O, protocol       |
+| `PreferencesManager`  | Preference get/set with defaults                   | UI, protocol             |
+| `DebugLogger`         | Gated debug logging (toggle via `enableDebugMode`) | Audit history            |
+| `AuditLog`            | Persistent action log (JSON file)                  | Live debugging           |
 
 ## React Conventions
 
@@ -117,13 +117,15 @@ import { getString, initLocale } from "../utils/locale";
 import { config } from "../../package.json";
 import pkg from "../../package.json";
 ```
+
 public async sendMessage(
-  text: string,
-  context?: ContextItem[],
+text: string,
+context?: ContextItem[],
 ): Promise<void> {
-  // Implementation
+// Implementation
 }
-```
+
+````
 
 #### Inline Comments
 
@@ -134,7 +136,7 @@ Explain complex logic:
 // This prevents thundering herd on reconnection
 const delay =
   Math.min(baseDelay * Math.pow(2, attempt), maxDelay) + Math.random() * 1000;
-```
+````
 
 ### Testing Conventions
 

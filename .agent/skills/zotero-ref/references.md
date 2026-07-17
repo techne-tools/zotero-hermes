@@ -66,9 +66,9 @@ const button = ztoolkit.UI.createElement(doc, "button", {
 
 ## Build Commands
 
-| Command           | Purpose                    |
-| ----------------- | -------------------------- |
-| `npm start`       | Dev server with hot reload |
-| `npm run build`   | Production build           |
-| `npm test`        | Run test suite             |
-| `npm run lint:fix` | Fix linting issues        |
+| Command            | Purpose                    |
+| ------------------ | -------------------------- |
+| `npm start`        | Dev server with hot reload |
+| `npm run build`    | Production build           |
+| `npm test`         | Run test suite             |
+| `npm run lint:fix` | Fix linting issues         |

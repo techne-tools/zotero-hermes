@@ -39,7 +39,13 @@ function parseInline(text: string): InlineSegment[] {
   ];
 
   while (remaining.length > 0) {
-    let earliestMatch: { index: number; length: number; type: string; content: string; url?: string } | null = null;
+    let earliestMatch: {
+      index: number;
+      length: number;
+      type: string;
+      content: string;
+      url?: string;
+    } | null = null;
 
     for (const pattern of patterns) {
       pattern.regex.lastIndex = 0;
@@ -59,7 +65,10 @@ function parseInline(text: string): InlineSegment[] {
 
     if (earliestMatch) {
       if (earliestMatch.index > 0) {
-        segments.push({ type: "text", content: remaining.slice(0, earliestMatch.index) });
+        segments.push({
+          type: "text",
+          content: remaining.slice(0, earliestMatch.index),
+        });
       }
       segments.push({
         type: earliestMatch.type as InlineSegment["type"],
@@ -122,7 +131,14 @@ function renderInline(segments: InlineSegment[]): ReactNode[] {
 }
 
 interface Block {
-  type: "paragraph" | "header" | "list" | "blockquote" | "code" | "hr" | "table";
+  type:
+    | "paragraph"
+    | "header"
+    | "list"
+    | "blockquote"
+    | "code"
+    | "hr"
+    | "table";
   content: string | string[];
   level?: number;
   ordered?: boolean;
@@ -175,7 +191,7 @@ function parseBlocks(text: string): Block[] {
           row
             .slice(1, -1)
             .split("|")
-            .map((cell) => cell.trim())
+            .map((cell) => cell.trim()),
         );
         blocks.push({
           type: "table",
@@ -189,9 +205,17 @@ function parseBlocks(text: string): Block[] {
     }
 
     // Horizontal rule
-    if (line.trim() === "---" || line.trim() === "***" || line.trim() === "___") {
+    if (
+      line.trim() === "---" ||
+      line.trim() === "***" ||
+      line.trim() === "___"
+    ) {
       if (currentList) {
-        blocks.push({ type: "list", content: currentList.items, ordered: currentList.ordered });
+        blocks.push({
+          type: "list",
+          content: currentList.items,
+          ordered: currentList.ordered,
+        });
         currentList = null;
       }
       blocks.push({ type: "hr", content: "" });
@@ -202,7 +226,11 @@ function parseBlocks(text: string): Block[] {
     const headerMatch = line.match(/^(#{1,6})\s+(.*)$/);
     if (headerMatch) {
       if (currentList) {
-        blocks.push({ type: "list", content: currentList.items, ordered: currentList.ordered });
+        blocks.push({
+          type: "list",
+          content: currentList.items,
+          ordered: currentList.ordered,
+        });
         currentList = null;
       }
       blocks.push({
@@ -217,7 +245,11 @@ function parseBlocks(text: string): Block[] {
     const quoteMatch = line.match(/^>\s?(.*)$/);
     if (quoteMatch) {
       if (currentList) {
-        blocks.push({ type: "list", content: currentList.items, ordered: currentList.ordered });
+        blocks.push({
+          type: "list",
+          content: currentList.items,
+          ordered: currentList.ordered,
+        });
         currentList = null;
       }
       blocks.push({ type: "blockquote", content: quoteMatch[1] });
@@ -234,7 +266,11 @@ function parseBlocks(text: string): Block[] {
 
       if (!currentList || currentList.ordered !== isOrdered) {
         if (currentList) {
-          blocks.push({ type: "list", content: currentList.items, ordered: currentList.ordered });
+          blocks.push({
+            type: "list",
+            content: currentList.items,
+            ordered: currentList.ordered,
+          });
         }
         currentList = { items: [item], ordered: isOrdered };
       } else {
@@ -245,7 +281,11 @@ function parseBlocks(text: string): Block[] {
 
     // Empty line ends lists
     if (line.trim() === "" && currentList) {
-      blocks.push({ type: "list", content: currentList.items, ordered: currentList.ordered });
+      blocks.push({
+        type: "list",
+        content: currentList.items,
+        ordered: currentList.ordered,
+      });
       currentList = null;
       continue;
     }
@@ -253,7 +293,11 @@ function parseBlocks(text: string): Block[] {
     // Regular paragraph
     if (line.trim() !== "") {
       if (currentList) {
-        blocks.push({ type: "list", content: currentList.items, ordered: currentList.ordered });
+        blocks.push({
+          type: "list",
+          content: currentList.items,
+          ordered: currentList.ordered,
+        });
         currentList = null;
       }
       blocks.push({ type: "paragraph", content: line });
@@ -261,7 +305,11 @@ function parseBlocks(text: string): Block[] {
   }
 
   if (currentList) {
-    blocks.push({ type: "list", content: currentList.items, ordered: currentList.ordered });
+    blocks.push({
+      type: "list",
+      content: currentList.items,
+      ordered: currentList.ordered,
+    });
   }
   if (currentCode) {
     blocks.push({ type: "code", content: currentCode.join("\n") });
@@ -272,14 +320,29 @@ function parseBlocks(text: string): Block[] {
 
 const headerSizes: Record<number, React.CSSProperties> = {
   1: { fontSize: "1.4em", fontWeight: 700, margin: "16px 0 8px" },
-  2: { fontSize: "1.2em", fontWeight: 600, margin: "14px 0 6px", borderBottom: "1px solid var(--hermes-border, #e0e0e0)", paddingBottom: "4px" },
+  2: {
+    fontSize: "1.2em",
+    fontWeight: 600,
+    margin: "14px 0 6px",
+    borderBottom: "1px solid var(--hermes-border, #e0e0e0)",
+    paddingBottom: "4px",
+  },
   3: { fontSize: "1.1em", fontWeight: 600, margin: "12px 0 6px" },
   4: { fontSize: "1em", fontWeight: 600, margin: "10px 0 4px", opacity: 0.9 },
-  5: { fontSize: "0.95em", fontWeight: 600, margin: "8px 0 4px", opacity: 0.85 },
+  5: {
+    fontSize: "0.95em",
+    fontWeight: 600,
+    margin: "8px 0 4px",
+    opacity: 0.85,
+  },
   6: { fontSize: "0.9em", fontWeight: 600, margin: "8px 0 4px", opacity: 0.8 },
 };
 
-export const MarkdownRenderer = memo(function MarkdownRenderer({ text }: { text: string }) {
+export const MarkdownRenderer = memo(function MarkdownRenderer({
+  text,
+}: {
+  text: string;
+}) {
   const blocks = parseBlocks(text);
 
   return (

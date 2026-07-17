@@ -26,6 +26,7 @@ export class PreferencesManager {
     "extensions.zotero.hermes.mcpServersList": "",
     "extensions.zotero.hermes.conversationOrganization": "flat",
     "extensions.zotero.hermes.chatSaveFolder": "hermes",
+    "extensions.zotero.hermes.currentPersona": "default",
   };
 
   constructor(addon: any) {

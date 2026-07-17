@@ -1,8 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-} from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 import type { ChatMessage } from "./HermesChatView";
 
@@ -33,7 +29,9 @@ export function useStreamBuffer(
   const reasoningMessageIdRef = useRef<string | null>(null);
   const pendingContentRef = useRef("");
   const pendingReasoningRef = useRef("");
-  const flushAnimationFrameRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flushAnimationFrameRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const lastSoundTimeRef = useRef<number>(0);
 
   const flushBuffer = useCallback(() => {
@@ -46,7 +44,12 @@ export function useStreamBuffer(
     }
 
     // Typing sound: soft click when new content arrives
-    if (enableTypingSound && content && typeof globalThis !== "undefined" && (globalThis as any).AudioContext) {
+    if (
+      enableTypingSound &&
+      content &&
+      typeof globalThis !== "undefined" &&
+      (globalThis as any).AudioContext
+    ) {
       const now = Date.now();
       if (now - lastSoundTimeRef.current > 80) {
         lastSoundTimeRef.current = now;
@@ -60,7 +63,10 @@ export function useStreamBuffer(
           osc.type = "sine";
           osc.frequency.setValueAtTime(800, audioCtx.currentTime);
           gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+          gain.gain.exponentialRampToValueAtTime(
+            0.001,
+            audioCtx.currentTime + 0.05,
+          );
           osc.start(audioCtx.currentTime);
           osc.stop(audioCtx.currentTime + 0.05);
         } catch {
@@ -81,7 +87,8 @@ export function useStreamBuffer(
 
       if (latestContent) {
         const assistantIndex = updated.findIndex(
-          (m) => m.role === "assistant" && m.id === streamingMessageIdRef.current,
+          (m) =>
+            m.role === "assistant" && m.id === streamingMessageIdRef.current,
         );
         if (assistantIndex >= 0) {
           const newArray = [...updated];
@@ -95,7 +102,8 @@ export function useStreamBuffer(
 
       if (latestReasoning && showReasoning) {
         const reasoningIndex = updated.findIndex(
-          (m) => m.role === "reasoning" && m.id === reasoningMessageIdRef.current,
+          (m) =>
+            m.role === "reasoning" && m.id === reasoningMessageIdRef.current,
         );
         if (reasoningIndex >= 0) {
           const newArray = [...updated];
@@ -109,7 +117,8 @@ export function useStreamBuffer(
           reasoningMessageIdRef.current = newId;
           // Insert reasoning BEFORE the assistant message so it appears first
           const assistantIndex = updated.findIndex(
-            (m) => m.role === "assistant" && m.id === streamingMessageIdRef.current,
+            (m) =>
+              m.role === "assistant" && m.id === streamingMessageIdRef.current,
           );
           const reasoningMsg = {
             content: latestReasoning,
@@ -141,7 +150,11 @@ export function useStreamBuffer(
 
   const flushNow = useCallback(() => {
     if (flushAnimationFrameRef.current !== null) {
-      clearTimeout(flushAnimationFrameRef.current as unknown as ReturnType<typeof setTimeout>);
+      clearTimeout(
+        flushAnimationFrameRef.current as unknown as ReturnType<
+          typeof setTimeout
+        >,
+      );
     }
     flushBuffer();
   }, [flushBuffer]);

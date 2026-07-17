@@ -51,10 +51,15 @@ export class ItemManager {
       let storagePath: string | undefined;
       let attachmentKey: string | undefined;
       try {
-        const bestAttachment = (item as any).getBestAttachment?.() as Zotero.Item | false | undefined;
+        const bestAttachment = (item as any).getBestAttachment?.() as
+          | Zotero.Item
+          | false
+          | undefined;
         if (bestAttachment) {
           attachmentKey = bestAttachment.key;
-          const file = (bestAttachment as any).getFilePath?.() as string | undefined;
+          const file = (bestAttachment as any).getFilePath?.() as
+            | string
+            | undefined;
           if (file) {
             storagePath = file;
           }

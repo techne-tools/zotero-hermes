@@ -17,9 +17,7 @@ export class ApprovalDialog {
   /**
    * Add a pending file change and show approval dialog.
    */
-  public async addPendingChange(
-    change: PendingFileChange,
-  ): Promise<boolean> {
+  public async addPendingChange(change: PendingFileChange): Promise<boolean> {
     this.pendingChanges.set(change.id, change);
     const approved = await this.showDialog(change);
     if (!approved) {
@@ -30,90 +28,90 @@ export class ApprovalDialog {
 
   /**
    * Show approval dialog for a file change.
- * Uses createElement (not innerHTML) to avoid XUL sandbox crashes.
- */
-private async showDialog(change: PendingFileChange): Promise<boolean> {
-  return new Promise((resolve) => {
-    const doc = Zotero.getMainWindow().document;
+   * Uses createElement (not innerHTML) to avoid XUL sandbox crashes.
+   */
+  private async showDialog(change: PendingFileChange): Promise<boolean> {
+    return new Promise((resolve) => {
+      const doc = Zotero.getMainWindow().document;
 
-    // Create dialog if it doesn't exist
-    if (!this.dialogElement) {
-      this.dialogElement = doc.createElement("dialog");
-      this.dialogElement.className = "hermes-approval-dialog";
-      doc.documentElement?.appendChild(this.dialogElement);
-    }
-
-    const actionText =
-      change.action === "create"
-        ? "Create"
-        : change.action === "delete"
-          ? "Delete"
-          : "Modify";
-
-    // Clear previous content and build with createElement
-    while (this.dialogElement.firstChild) {
-      this.dialogElement.removeChild(this.dialogElement.firstChild);
-    }
-
-    const contentDiv = doc.createElement("div");
-    contentDiv.className = "hermes-approval-content";
-
-    const heading = doc.createElement("h3");
-    heading.textContent = "📝 File Change Approval";
-    contentDiv.appendChild(heading);
-
-    const para = doc.createElement("p");
-    const strong = doc.createElement("strong");
-    strong.textContent = `${actionText}: `;
-    para.appendChild(strong);
-    const code = doc.createElement("code");
-    code.textContent = change.path;
-    para.appendChild(code);
-    contentDiv.appendChild(para);
-
-    const previewDiv = doc.createElement("div");
-    previewDiv.className = "hermes-approval-preview";
-    const pre = doc.createElement("pre");
-    pre.textContent = change.newContent?.slice(0, 2000) || "(empty)";
-    previewDiv.appendChild(pre);
-    contentDiv.appendChild(previewDiv);
-
-    const actionsDiv = doc.createElement("div");
-    actionsDiv.className = "hermes-approval-actions";
-
-    const approveBtn = doc.createElement("button");
-    approveBtn.className = "hermes-btn-approve";
-    approveBtn.textContent = "Approve";
-    actionsDiv.appendChild(approveBtn);
-
-    const denyBtn = doc.createElement("button");
-    denyBtn.className = "hermes-btn-deny";
-    denyBtn.textContent = "Deny";
-    actionsDiv.appendChild(denyBtn);
-
-    contentDiv.appendChild(actionsDiv);
-    this.dialogElement.appendChild(contentDiv);
-
-    const cleanup = () => {
-      if (this.dialogElement) {
-        this.dialogElement.remove();
-        this.dialogElement = null;
+      // Create dialog if it doesn't exist
+      if (!this.dialogElement) {
+        this.dialogElement = doc.createElement("dialog");
+        this.dialogElement.className = "hermes-approval-dialog";
+        doc.documentElement?.appendChild(this.dialogElement);
       }
-    };
 
-    approveBtn.addEventListener("click", () => {
-      cleanup();
-      resolve(true);
+      const actionText =
+        change.action === "create"
+          ? "Create"
+          : change.action === "delete"
+            ? "Delete"
+            : "Modify";
+
+      // Clear previous content and build with createElement
+      while (this.dialogElement.firstChild) {
+        this.dialogElement.removeChild(this.dialogElement.firstChild);
+      }
+
+      const contentDiv = doc.createElement("div");
+      contentDiv.className = "hermes-approval-content";
+
+      const heading = doc.createElement("h3");
+      heading.textContent = "📝 File Change Approval";
+      contentDiv.appendChild(heading);
+
+      const para = doc.createElement("p");
+      const strong = doc.createElement("strong");
+      strong.textContent = `${actionText}: `;
+      para.appendChild(strong);
+      const code = doc.createElement("code");
+      code.textContent = change.path;
+      para.appendChild(code);
+      contentDiv.appendChild(para);
+
+      const previewDiv = doc.createElement("div");
+      previewDiv.className = "hermes-approval-preview";
+      const pre = doc.createElement("pre");
+      pre.textContent = change.newContent?.slice(0, 2000) || "(empty)";
+      previewDiv.appendChild(pre);
+      contentDiv.appendChild(previewDiv);
+
+      const actionsDiv = doc.createElement("div");
+      actionsDiv.className = "hermes-approval-actions";
+
+      const approveBtn = doc.createElement("button");
+      approveBtn.className = "hermes-btn-approve";
+      approveBtn.textContent = "Approve";
+      actionsDiv.appendChild(approveBtn);
+
+      const denyBtn = doc.createElement("button");
+      denyBtn.className = "hermes-btn-deny";
+      denyBtn.textContent = "Deny";
+      actionsDiv.appendChild(denyBtn);
+
+      contentDiv.appendChild(actionsDiv);
+      this.dialogElement.appendChild(contentDiv);
+
+      const cleanup = () => {
+        if (this.dialogElement) {
+          this.dialogElement.remove();
+          this.dialogElement = null;
+        }
+      };
+
+      approveBtn.addEventListener("click", () => {
+        cleanup();
+        resolve(true);
+      });
+
+      denyBtn.addEventListener("click", () => {
+        cleanup();
+        resolve(false);
+      });
+
+      this.dialogElement.showModal();
     });
-
-    denyBtn.addEventListener("click", () => {
-      cleanup();
-      resolve(false);
-    });
-
-    this.dialogElement.showModal();
-  });
-}
+  }
   /**
    * Get a pending file change by ID.
    */

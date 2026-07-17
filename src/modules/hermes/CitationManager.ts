@@ -54,14 +54,84 @@ export class CitationManager {
     if (items.length === 0) return null;
     try {
       const styleID = this.getCurrentStyle();
+      return this.generateBibliographyWithStyle(items, styleID);
+    } catch (error) {
+      this.addon.log("Bibliography generation failed:", error);
+      return null;
+    }
+  }
+
+  public getStyleByIDOrName(name: string): string | null {
+    const query = name.toLowerCase().trim();
+    if (!query) return null;
+
+    if (Zotero.Styles.get(query)) {
+      return query;
+    }
+
+    const styles = Zotero.Styles.getVisible();
+    for (const style of styles) {
+      if (
+        style.title.toLowerCase() === query ||
+        (style.shortTitle && style.shortTitle.toLowerCase() === query)
+      ) {
+        return style.styleID;
+      }
+    }
+
+    for (const style of styles) {
+      if (
+        style.title.toLowerCase().includes(query) ||
+        (style.shortTitle && style.shortTitle.toLowerCase().includes(query))
+      ) {
+        return style.styleID;
+      }
+    }
+
+    return null;
+  }
+
+  public generateCitationWithStyle(
+    itemID: number,
+    styleID: string,
+  ): string | null {
+    try {
+      const item = Zotero.Items.get(itemID);
+      if (!item) return null;
       const style = Zotero.Styles.get(styleID);
-      if (!style) return null;
+      if (!style) {
+        throw new Error(`Style not found: ${styleID}`);
+      }
+      const cslEngine = style.getCiteProc();
+      cslEngine.updateItems([item.id]);
+      const citation = { citationItems: [{ id: item.id }] };
+      const result = cslEngine.appendCitationCluster(citation, true);
+      return result.length > 0 ? result[0][1] : null;
+    } catch (error) {
+      this.addon.log(`Citation generation failed for style ${styleID}:`, error);
+      return null;
+    }
+  }
+
+  public generateBibliographyWithStyle(
+    items: Zotero.Item[],
+    styleID: string,
+  ): string | null {
+    if (items.length === 0) return null;
+    try {
+      const style = Zotero.Styles.get(styleID);
+      if (!style) {
+        throw new Error(`Style not found: ${styleID}`);
+      }
       const cslEngine = style.getCiteProc();
       cslEngine.updateItems(items.map((item) => item.id));
       const bib = cslEngine.makeBibliography();
       return bib?.[1]?.join("\n") || null;
     } catch (error) {
-      this.addon.log("Bibliography generation failed:", error);
+      this.addon.log(
+        `Bibliography generation failed for style ${styleID}:`,
+        error,
+      );
       return null;
     }
   }

@@ -26,12 +26,121 @@ export class NoteManager {
     title?: string,
     parentItemID?: number,
   ): Promise<number> {
-    // TODO: Implement with approval system
-    return noteID || 0;
+    const isNew = !noteID;
+
+    // Resolve details for the approval dialog
+    let parentTitle = "Standalone Note";
+    if (parentItemID) {
+      try {
+        const parentItem = await Zotero.Items.getAsync(parentItemID);
+        if (parentItem) {
+          parentTitle = parentItem.getDisplayTitle();
+        }
+      } catch (err) {
+        this.addon.log(
+          `NoteManager: failed to get parent item ${parentItemID}`,
+          err,
+        );
+      }
+    }
+    const displayName = title
+      ? `"${title}" under "${parentTitle}"`
+      : `Note under "${parentTitle}"`;
+
+    if (this.approvalDialog) {
+      const changeId = `note-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      const approved = await this.approvalDialog.addPendingChange({
+        action: isNew ? "create" : "modify",
+        id: changeId,
+        newContent: content,
+        path: displayName,
+        status: "pending",
+        timestamp: Date.now(),
+      });
+      if (!approved) {
+        throw new Error("Note creation cancelled by user.");
+      }
+    }
+
+    let note: Zotero.Item;
+    if (noteID) {
+      note = await Zotero.Items.getAsync(noteID);
+      if (!note || note.itemType !== "note") {
+        throw new Error(`Note with ID ${noteID} not found`);
+      }
+    } else {
+      note = new Zotero.Item("note");
+      let libraryID = Zotero.Libraries.userLibraryID;
+      if (parentItemID) {
+        try {
+          const parentItem = await Zotero.Items.getAsync(parentItemID);
+          if (parentItem) {
+            libraryID = parentItem.libraryID;
+            note.parentItemID = parentItemID;
+          }
+        } catch (err) {
+          this.addon.log(
+            `NoteManager: failed to resolve parent item library ${parentItemID}`,
+            err,
+          );
+        }
+      }
+      note.libraryID = libraryID;
+    }
+
+    // Format content: Zotero notes are HTML/rich text. We can prefix with a title header if specified.
+    let noteContent = content;
+    if (
+      title &&
+      !content.includes(`<h1>${title}</h1>`) &&
+      !content.includes(`<h2>${title}</h2>`)
+    ) {
+      noteContent = `<h1>${title}</h1>\n${content}`;
+    }
+
+    note.setNote(noteContent);
+    await note.saveTx();
+    return note.id;
   }
 
   public async searchNotes(query: string): Promise<Zotero.Item[]> {
-    // TODO: Implement fuzzy search
-    return [];
+    const s = new Zotero.Search();
+    s.addCondition("itemType", "is", "note");
+    const ids = await s.search();
+    if (!ids || ids.length === 0) return [];
+    const notes = await Zotero.Items.getAsync(ids);
+
+    if (!query) return notes;
+
+    const queryLower = query.toLowerCase();
+    const scoredNotes = notes.map((note) => {
+      const noteText = (note.getNote() || "").toLowerCase();
+      let score = 0;
+
+      // Substring match
+      if (noteText.includes(queryLower)) {
+        score += 100;
+      }
+
+      // Word match scoring
+      const queryWords = queryLower.split(/\s+/).filter(Boolean);
+      let matchCount = 0;
+      for (const word of queryWords) {
+        if (noteText.includes(word)) {
+          score += 10;
+          matchCount++;
+        }
+      }
+      if (matchCount === queryWords.length) {
+        score += 20;
+      }
+
+      return { note, score };
+    });
+
+    return scoredNotes
+      .filter((item) => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map((item) => item.note);
   }
 }

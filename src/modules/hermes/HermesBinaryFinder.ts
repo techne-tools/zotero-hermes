@@ -18,14 +18,16 @@ const HERMES_PATH_CANDIDATES = [
 
 /** Cached nsIEnvironment service */
 function getEnv(): any {
-  return (Components.classes as any)["@mozilla.org/process/environment;1"]
-    .getService((Components.interfaces as any).nsIEnvironment);
+  return (Components.classes as any)[
+    "@mozilla.org/process/environment;1"
+  ].getService((Components.interfaces as any).nsIEnvironment);
 }
 
 function fileExists(path: string): boolean {
   try {
-    const file = (Components.classes as any)["@mozilla.org/file/local;1"]
-      .createInstance((Components.interfaces as any).nsIFile);
+    const file = (Components.classes as any)[
+      "@mozilla.org/file/local;1"
+    ].createInstance((Components.interfaces as any).nsIFile);
     file.initWithPath(path);
     return file.exists() && file.isExecutable();
   } catch {
@@ -38,7 +40,10 @@ function fileExists(path: string): boolean {
  * Prefers configured path from preferences, falls back to auto-discovery.
  */
 export function resolveHermesPath(prefsPrefix: string): string | null {
-  const configuredPath = Zotero.Prefs.get(`${prefsPrefix}.binaryPath`, true) as string;
+  const configuredPath = Zotero.Prefs.get(
+    `${prefsPrefix}.binaryPath`,
+    true,
+  ) as string;
   if (configuredPath) return configuredPath;
   return findHermesPath();
 }
@@ -75,7 +80,10 @@ export function findHermesPath(): string | null {
  * Check if a Hermes binary is available (configured or discoverable).
  */
 export function isHermesAvailable(prefsPrefix: string): boolean {
-  const configuredPath = Zotero.Prefs.get(`${prefsPrefix}.binaryPath`, true) as string;
+  const configuredPath = Zotero.Prefs.get(
+    `${prefsPrefix}.binaryPath`,
+    true,
+  ) as string;
   return Boolean(configuredPath || findHermesPath());
 }
 

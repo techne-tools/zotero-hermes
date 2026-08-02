@@ -12,6 +12,7 @@ declare namespace _ZoteroTypes {
       "apiUrl": string;
       "apiKey": string;
       "chatAgentName": string;
+      "hermesAgentName": string;
       "autoSave": boolean;
       "showReasoning": boolean;
       "showToolUse": boolean;
@@ -20,6 +21,15 @@ declare namespace _ZoteroTypes {
       "enableCitations": boolean;
       "enableAnnotations": boolean;
       "enableTags": boolean;
+      "hasSeenOnboarding": boolean;
+      "enableTypingSound": boolean;
+      "enableHapticFeedback": boolean;
+      "allowTerminal": boolean;
+      "mcpServersEnabled": boolean;
+      "mcpServersList": string;
+      "conversationOrganization": string;
+      "chatSaveFolder": string;
+      "currentPersona": string;
     };
   }
 }

@@ -5,6 +5,7 @@ export interface ChatClient {
   cancel(): Promise<void>;
   connect(): Promise<void>;
   disconnect(): void;
+  getIsConnected(): boolean;
   isReady(): boolean;
   onAvailableCommands(
     callback: (commands: { description: string; name: string }[]) => void,

@@ -9,7 +9,7 @@ import { ChatMessage } from "../../views/types";
  * Saves are debounced (500ms) to avoid excessive I/O during streaming.
  */
 export class ChatManager {
-  private messages: UIMessage[] = [];
+  private messages: ChatMessage[] = [];
   private readonly addon: Addon;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly SAVE_DEBOUNCE_MS = 500;
@@ -35,16 +35,16 @@ export class ChatManager {
     }, this.SAVE_DEBOUNCE_MS);
   }
 
-  public addMessage(message: UIMessage): void {
+  public addMessage(message: ChatMessage): void {
     this.messages.push(message);
     this.scheduleSave();
   }
 
-  public getMessages(): UIMessage[] {
+  public getMessages(): ChatMessage[] {
     return [...this.messages];
   }
 
-  public setMessages(newMessages: UIMessage[]): void {
+  public setMessages(newMessages: ChatMessage[]): void {
     this.messages = newMessages;
     this.scheduleSave();
   }

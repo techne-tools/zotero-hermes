@@ -3,6 +3,11 @@
  *
  * Searches $PATH and common install locations for the `hermes` executable.
  * Cached nsIEnvironment service to avoid repeated component instantiation.
+ *
+ * NOTE: Callers are responsible for resolving the configured binary path from
+ * preferences (via PreferencesManager.getHermesPath()) and passing it here.
+ * This module does NOT read Zotero.Prefs directly — that responsibility belongs
+ * to PreferencesManager, keeping pref access in one place.
  */
 
 const HERMES_BINARY_CANDIDATES = ["hermes", "hermes-cli"];
@@ -37,13 +42,12 @@ function fileExists(path: string): boolean {
 
 /**
  * Resolve the Hermes binary path.
- * Prefers configured path from preferences, falls back to auto-discovery.
+ *
+ * @param configuredPath - The path from preferences (may be empty string).
+ *   Callers should obtain this via `PreferencesManager.getHermesPath()`.
+ * @returns The resolved binary path, or null if not found.
  */
-export function resolveHermesPath(prefsPrefix: string): string | null {
-  const configuredPath = Zotero.Prefs.get(
-    `${prefsPrefix}.binaryPath`,
-    true,
-  ) as string;
+export function resolveHermesPath(configuredPath: string): string | null {
   if (configuredPath) return configuredPath;
   return findHermesPath();
 }
@@ -78,12 +82,11 @@ export function findHermesPath(): string | null {
 
 /**
  * Check if a Hermes binary is available (configured or discoverable).
+ *
+ * @param configuredPath - The path from preferences (may be empty string).
+ *   Callers should obtain this via `PreferencesManager.getHermesPath()`.
  */
-export function isHermesAvailable(prefsPrefix: string): boolean {
-  const configuredPath = Zotero.Prefs.get(
-    `${prefsPrefix}.binaryPath`,
-    true,
-  ) as string;
+export function isHermesAvailable(configuredPath: string): boolean {
   return Boolean(configuredPath || findHermesPath());
 }
 

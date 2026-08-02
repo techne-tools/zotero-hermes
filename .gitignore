@@ -1,16 +1,27 @@
-# dot files
-.DS_Store
+# Dependencies
+node_modules/
 
-# Node.js
-node_modules
-pnpm-lock.yaml
-yarn.lock
+# Build output
+.scaffold/
+*.xpi
 
-# TSC
+# Environment
+.env
+
+# TypeScript incremental build
 tsconfig.tsbuildinfo
 
-# Scaffold
-.env
-.scaffold
-build
-logs
+# Debug / dev artifacts
+*.py
+fd_info.json
+hermes_stderr.txt
+hermes_stdout.txt
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo

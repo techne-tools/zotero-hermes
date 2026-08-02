@@ -19,6 +19,11 @@ export class ConversationManager {
   private currentConversation: Conversation | null = null;
   private conversations = new Map<string, Conversation>();
 
+  // Cached resolved directory path. Invalidated when org/folder prefs change.
+  private _cachedDir: string | null = null;
+  private _cachedDirOrg: string | null = null;
+  private _cachedDirFolder: string | null = null;
+
   constructor(addon: Addon) {
     this.addon = addon;
   }
@@ -47,15 +52,30 @@ export class ConversationManager {
   }
 
   /**
-   * Get the conversations directory path, respecting organization preference.
+   * Get the conversations directory path, respecting organisation preference.
+   * Result is cached and only recomputed when the org or folder prefs change.
    */
   private getConversationsDir(): string {
-    const baseDir = this.getBaseDir();
     const organization =
       this.addon.data.hermes?.preferences?.get<string>(
         "conversationOrganization",
         "flat",
       ) || "flat";
+    const folderName =
+      this.addon.data.hermes?.preferences?.get("chatSaveFolder", "hermes") ||
+      "hermes";
+
+    // Invalidate cache if relevant prefs have changed since last call.
+    if (
+      this._cachedDir !== null &&
+      this._cachedDirOrg === organization &&
+      this._cachedDirFolder === folderName
+    ) {
+      return this._cachedDir;
+    }
+
+    const baseDir = this.getBaseDir();
+    let resolvedDir: string;
 
     if (organization === "by-date") {
       const now = new Date();
@@ -69,11 +89,17 @@ export class ConversationManager {
           0o755,
         );
       }
-      return subDir.path;
+      resolvedDir = subDir.path;
+    } else {
+      // flat (default) or by-project (not yet implemented)
+      resolvedDir = baseDir;
     }
 
-    // flat (default) or by-project (not yet implemented)
-    return baseDir;
+    this._cachedDir = resolvedDir;
+    this._cachedDirOrg = organization;
+    this._cachedDirFolder = folderName;
+
+    return resolvedDir;
   }
 
   /**

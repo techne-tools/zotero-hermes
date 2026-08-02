@@ -101,7 +101,7 @@
 
 - [x] **Fix storage folder mismatch**
   - Parent item key ≠ attachment item key; agent looked in wrong folder
-  - Solution: `ItemManager.extractItemData()` resolves `getBestAttachment()` and uses attachment key
+  - Solution: `ItemManager.extractItemData()` (now async) properly `await`s `getBestAttachment()` and uses the attachment key; the previous sync cast returned a Promise object instead of the resolved item
   - File: `src/modules/hermes/ItemManager.ts`
 
 - [x] **Add copy-to-clipboard buttons**

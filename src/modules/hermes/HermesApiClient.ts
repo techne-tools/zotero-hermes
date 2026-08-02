@@ -203,16 +203,16 @@ export class HermesApiClient implements ChatClient {
         throw new Error("API response has no body");
       }
 
-      // Stream SSE response
+      // Stream SSE response using the standard ReadableStreamDefaultReader API.
+      // reader.read() takes NO arguments — passing a Uint8Array view is only
+      // valid on ReadableStreamBYOBReader, not the default reader.
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
 
       try {
         while (true) {
-          // Firefox/Zotero requires an ArrayBufferView argument for reader.read()
-          const chunk = new Uint8Array(65536);
-          const { done, value } = await reader.read(chunk);
+          const { done, value } = await reader.read();
           if (done) {
             buffer += decoder.decode();
           } else if (value) {

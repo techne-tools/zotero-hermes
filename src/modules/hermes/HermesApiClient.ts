@@ -204,9 +204,10 @@ export class HermesApiClient implements ChatClient {
       }
 
       // Stream SSE response using the standard ReadableStreamDefaultReader API.
-      // reader.read() takes NO arguments — passing a Uint8Array view is only
-      // valid on ReadableStreamBYOBReader, not the default reader.
-      const reader = response.body.getReader();
+      // The zotero-types lib types read() as requiring a view (Firefox 115 BYOB
+      // typing quirk) — cast to any to use the standard no-arg form, which is
+      // what the runtime actually supports for a default reader.
+      const reader = response.body.getReader() as any;
       const decoder = new TextDecoder();
       let buffer = "";
 

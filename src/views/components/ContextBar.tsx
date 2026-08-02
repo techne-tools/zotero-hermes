@@ -1,5 +1,5 @@
 import React from "react";
-import type { ContextItem } from "../HermesChatView"; // Will need to move these types to a shared file
+import { ContextItem } from "../types";
 
 interface ContextBarProps {
   items: ContextItem[];

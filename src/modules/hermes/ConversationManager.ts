@@ -1,5 +1,5 @@
 import type Addon from "../../addon";
-import type { ChatMessage } from "../../views/HermesChatView";
+import type { ChatMessage } from "../../views/types";
 
 export interface Conversation {
   id: string;

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 
-import type { ChatMessage } from "./HermesChatView";
+import type { ChatMessage } from "../../views/types";
 
 /**
  * Custom hook to buffer rapid stream chunks and flush them into React state

@@ -1,6 +1,6 @@
 import type Addon from "../../addon";
 import type { Conversation } from "./ConversationManager";
-import type { ChatMessage as UIMessage } from "../../views/HermesChatView";
+import { ChatMessage } from "../../views/types";
 
 /**
  * Manages chat conversations and state for Hermes Agent.

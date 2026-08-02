@@ -91,5 +91,5 @@ export function isHermesAvailable(prefsPrefix: string): boolean {
  * Get the home directory from the environment.
  */
 export function getHomeDir(): string {
-  return getEnv().get("HOME") || "~/";
+  return getEnv().get("HOME") || "";
 }

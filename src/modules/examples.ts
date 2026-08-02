@@ -1,5 +1,3 @@
-import { getLocaleID, getString } from "../utils/locale";
-
 /**
  * Minimal examples module - only essential code kept
  * All template example factories removed to reduce bloat

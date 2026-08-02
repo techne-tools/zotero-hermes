@@ -24,7 +24,7 @@ interface InlineSegment {
   url?: string;
 }
 
-function parseInline(text: string): InlineSegment[] {
+export function parseInline(text: string): InlineSegment[] {
   const segments: InlineSegment[] = [];
   let remaining = text;
 

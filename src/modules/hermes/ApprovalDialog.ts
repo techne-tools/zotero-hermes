@@ -4,11 +4,18 @@ import type { PendingFileChange } from "./types";
 /**
  * Approval dialog for file modifications suggested by Hermes Agent.
  * Intercepts file write/delete operations and requires user approval.
+ *
+ * CONCURRENCY SAFETY: showDialog() is serialised through a queue so that
+ * concurrent calls (e.g. two rapid /savechat commands) never overwrite each
+ * other's dialog element or leak Promises.
  */
 export class ApprovalDialog {
   private readonly addon: Addon;
   private pendingChanges = new Map<string, PendingFileChange>();
-  private dialogElement: HTMLDialogElement | null = null;
+
+  // Queue serialisation — at most one modal is open at a time.
+  private isShowingDialog = false;
+  private dialogQueue: Array<() => void> = [];
 
   constructor(addon: Addon) {
     this.addon = addon;
@@ -16,10 +23,11 @@ export class ApprovalDialog {
 
   /**
    * Add a pending file change and show approval dialog.
+   * If a dialog is already open, this call is queued until the current one resolves.
    */
   public async addPendingChange(change: PendingFileChange): Promise<boolean> {
     this.pendingChanges.set(change.id, change);
-    const approved = await this.showDialog(change);
+    const approved = await this.enqueueDialog(change);
     if (!approved) {
       this.pendingChanges.delete(change.id);
     }
@@ -27,19 +35,48 @@ export class ApprovalDialog {
   }
 
   /**
+   * Enqueue a dialog show request.
+   * Resolves when the user approves or denies the queued change.
+   */
+  private enqueueDialog(change: PendingFileChange): Promise<boolean> {
+    return new Promise<boolean>((resolve) => {
+      const run = () => {
+        this.isShowingDialog = true;
+        this.showDialog(change)
+          .then((result) => {
+            resolve(result);
+          })
+          .finally(() => {
+            this.isShowingDialog = false;
+            // Dequeue the next waiting dialog, if any.
+            const next = this.dialogQueue.shift();
+            if (next) next();
+          });
+      };
+
+      if (this.isShowingDialog) {
+        this.dialogQueue.push(run);
+      } else {
+        run();
+      }
+    });
+  }
+
+  /**
    * Show approval dialog for a file change.
    * Uses createElement (not innerHTML) to avoid XUL sandbox crashes.
+   * Always creates a fresh <dialog> element; never reuses a stale one.
    */
   private async showDialog(change: PendingFileChange): Promise<boolean> {
     return new Promise((resolve) => {
       const doc = Zotero.getMainWindow().document;
 
-      // Create dialog if it doesn't exist
-      if (!this.dialogElement) {
-        this.dialogElement = doc.createElement("dialog");
-        this.dialogElement.className = "hermes-approval-dialog";
-        doc.documentElement?.appendChild(this.dialogElement);
-      }
+      // Always create a fresh dialog element — never reuse a stale one from a
+      // previous call (the old code cached this.dialogElement and overwrote it
+      // on concurrent calls, leaking the prior Promise).
+      const dialogElement = doc.createElement("dialog");
+      dialogElement.className = "hermes-approval-dialog";
+      doc.documentElement?.appendChild(dialogElement);
 
       const actionText =
         change.action === "create"
@@ -47,11 +84,6 @@ export class ApprovalDialog {
           : change.action === "delete"
             ? "Delete"
             : "Modify";
-
-      // Clear previous content and build with createElement
-      while (this.dialogElement.firstChild) {
-        this.dialogElement.removeChild(this.dialogElement.firstChild);
-      }
 
       const contentDiv = doc.createElement("div");
       contentDiv.className = "hermes-approval-content";
@@ -90,13 +122,10 @@ export class ApprovalDialog {
       actionsDiv.appendChild(denyBtn);
 
       contentDiv.appendChild(actionsDiv);
-      this.dialogElement.appendChild(contentDiv);
+      dialogElement.appendChild(contentDiv);
 
       const cleanup = () => {
-        if (this.dialogElement) {
-          this.dialogElement.remove();
-          this.dialogElement = null;
-        }
+        dialogElement.remove();
       };
 
       approveBtn.addEventListener("click", () => {
@@ -109,9 +138,10 @@ export class ApprovalDialog {
         resolve(false);
       });
 
-      this.dialogElement.showModal();
+      dialogElement.showModal();
     });
   }
+
   /**
    * Get a pending file change by ID.
    */

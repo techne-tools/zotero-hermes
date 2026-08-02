@@ -726,13 +726,20 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
   }, [input]);
 
   // 3. Send button click → native
+  //    When agent is typing the button shows a StopIcon — clicking it cancels the stream.
   useEffect(() => {
     const btn = sendBtnRef.current;
     if (!btn) return;
-    const handler = () => void sendMessage();
+    const handler = () => {
+      if (stateRef.current.isTyping) {
+        void hermes.client.cancel();
+      } else {
+        void sendMessage();
+      }
+    };
     btn.addEventListener("click", handler);
     return () => btn.removeEventListener("click", handler);
-  }, [sendMessage]);
+  }, [sendMessage, hermes.client]);
 
   // 4. Textarea Enter key → native + slash command navigation
   useEffect(() => {
@@ -1087,25 +1094,27 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
     return () => win.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const attachSelectedItems = useCallback(() => {
+  const attachSelectedItems = useCallback(async () => {
     const items = hermes.items.getSelectedItems();
     if (items.length === 0) {
       setError("No items selected in Zotero library.");
       return;
     }
+    // extractItemData is async (awaits getBestAttachment) — resolve all before
+    // calling setContextItems, since state updater functions must be synchronous.
+    const resolved = await Promise.all(
+      items.map(async (item) => ({
+        id: `item-${item.id}`,
+        type: "item" as const,
+        text: item.getDisplayTitle(),
+        data: item,
+        extracted: await hermes.items.extractItemData(item),
+      })),
+    );
     setContextItems((prev) => {
-      const newItems = items
-        .map((item) => {
-          const extracted = hermes.items.extractItemData(item);
-          return {
-            id: `item-${item.id}`,
-            type: "item" as const,
-            text: item.getDisplayTitle(),
-            data: item,
-            extracted,
-          };
-        })
-        .filter((item) => !prev.some((p) => p.id === item.id));
+      const newItems = resolved.filter(
+        (item) => !prev.some((p) => p.id === item.id),
+      );
       return [...prev, ...newItems];
     });
   }, [hermes.items]);

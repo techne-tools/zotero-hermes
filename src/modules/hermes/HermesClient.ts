@@ -80,7 +80,11 @@ export class HermesClient implements ChatClient {
   }
 
   public isReady(): boolean {
-    return isHermesAvailable(pkg.config.prefsPrefix);
+    // Use PreferencesManager as the single source of truth for the binary path,
+    // rather than reading the raw prefs prefix from package.json directly.
+    const configuredPath =
+      this.addon.data.hermes?.preferences?.getHermesPath() || "";
+    return isHermesAvailable(configuredPath);
   }
 
   public getIsConnected(): boolean {
@@ -101,7 +105,11 @@ export class HermesClient implements ChatClient {
     }
 
     try {
-      const hermesPath = resolveHermesPath(pkg.config.prefsPrefix);
+      // Resolve binary path via PreferencesManager (single source of truth),
+      // falling back to auto-discovery via $PATH and common install locations.
+      const configuredPath =
+        this.addon.data.hermes?.preferences?.getHermesPath() || "";
+      const hermesPath = resolveHermesPath(configuredPath);
 
       if (!hermesPath) {
         throw new Error(

@@ -32,11 +32,11 @@ export class ItemManager {
     return zoteroPane.getSelectedItems() || [];
   }
 
-  public attachSelectedItems(): AttachedItem[] {
+  public async attachSelectedItems(): Promise<AttachedItem[]> {
     const items = this.getSelectedItems();
     const attached: AttachedItem[] = [];
     for (const item of items) {
-      const attachedItem = this.extractItemData(item);
+      const attachedItem = await this.extractItemData(item);
       if (attachedItem) {
         this.attachedItems.push(attachedItem);
         attached.push(attachedItem);
@@ -45,13 +45,14 @@ export class ItemManager {
     return attached;
   }
 
-  public extractItemData(item: Zotero.Item): AttachedItem | null {
+  public async extractItemData(item: Zotero.Item): Promise<AttachedItem | null> {
     try {
-      // Resolve the best attachment's storage path
+      // Resolve the best attachment's storage path.
+      // getBestAttachment() is async in Zotero's API — must be awaited.
       let storagePath: string | undefined;
       let attachmentKey: string | undefined;
       try {
-        const bestAttachment = (item as any).getBestAttachment?.() as
+        const bestAttachment = await (item as any).getBestAttachment?.() as
           | Zotero.Item
           | false
           | undefined;

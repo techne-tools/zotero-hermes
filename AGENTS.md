@@ -105,6 +105,14 @@ Zotero plugins run in a **Firefox 115 ESR sandbox** with severe React limitation
 - Terminal events: `stop`, `usage`, `session_info`, `error`
 - Prevents stuck "Hermes is thinking" when stream never terminates
 
+#### Stop Button Wiring
+
+- The send button doubles as a stop button — it shows `StopIcon` while `isTyping` is true
+- Its native `click` handler reads `stateRef.current.isTyping` (not React state) to decide:
+  - If typing → calls `client.cancel()` to abort the in-flight stream
+  - If idle → calls `sendMessage()` as normal
+- `cancel()` is implemented on both `HermesClient` (kills subprocess stdin) and `HermesApiClient` (aborts `AbortController`)
+
 ### Item Context Resolution
 
 **Critical**: Zotero parent items and attachments have **different keys**.
@@ -112,7 +120,7 @@ Zotero plugins run in a **Firefox 115 ESR sandbox** with severe React limitation
 - Parent item (book, article) has key `ABC123`
 - PDF attachment is a **child item** with its own key `XYZ789`
 - Storage folder is `~/Zotero/storage/XYZ789/` (attachment key, NOT parent key)
-- `ItemManager.extractItemData()` calls `item.getBestAttachment()` to resolve the real attachment
+- `ItemManager.extractItemData()` is **async** — it `await`s `item.getBestAttachment()` to resolve the real attachment (the Zotero API returns a Promise; the old sync cast was silently broken)
 - Passes `attachmentKey` and `storagePath` in context so agent finds the correct folder
 
 ### Agent Context Format

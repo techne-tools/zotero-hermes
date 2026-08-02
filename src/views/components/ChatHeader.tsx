@@ -1,5 +1,5 @@
 import React from "react";
-import type Addon from "../../../addon";
+import type Addon from "../../addon";
 import { SearchIcon, MenuIcon, AttachIcon, PlusIcon, SettingsIcon } from "../Icons"; // Will need to move icons too
 
 interface ChatHeaderProps {

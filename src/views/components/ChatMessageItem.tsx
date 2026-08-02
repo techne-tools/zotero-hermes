@@ -1,5 +1,5 @@
 import React, { memo } from "react";
-import type Addon from "../../../addon";
+import type Addon from "../../addon";
 import { ChatMessage } from "../types";
 import { MarkdownRenderer } from "../../utils/MarkdownRenderer";
 import { CopyIcon, EditIcon, CheckIcon, NoteIcon } from "./Icons";

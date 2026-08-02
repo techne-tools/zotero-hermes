@@ -1,6 +1,6 @@
 import React from "react";
 import { ChatMessage } from "../types";
-import type Addon from "../../../addon";
+import type Addon from "../../addon";
 import { ChatMessageItem } from "./ChatMessageItem";
 
 interface MessageListProps {

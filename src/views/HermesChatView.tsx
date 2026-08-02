@@ -32,11 +32,11 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
   const [slashSelectionIndex, setSlashSelectionIndex] = useState(0);
 
   // refs and other hooks ... (kept from original for logic)
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-  const sendBtnRef = useRef<HTMLButtonElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const slashDropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null!);
+  const sendBtnRef = useRef<HTMLButtonElement>(null!);
+  const messagesEndRef = useRef<HTMLDivElement>(null!);
+  const messagesContainerRef = useRef<HTMLDivElement>(null!);
+  const slashDropdownRef = useRef<HTMLDivElement>(null!);
   const stateRef = useRef({ input, isTyping }); // simplified for example
 
   const hermes = addon.data.hermes;

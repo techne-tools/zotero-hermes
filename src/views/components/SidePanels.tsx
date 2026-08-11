@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React from "react";
 
 interface SidePanelsProps {
@@ -18,10 +19,16 @@ export const SidePanels: React.FC<SidePanelsProps> = ({
 }) => {
   return (
     <>
-      {isExportOpen && <div className="hermes-export-dropdown">Export Options...</div>}
-      {isConversationListOpen && <div className="hermes-conversation-list">Conversations...</div>}
+      {isExportOpen && (
+        <div className="hermes-export-dropdown">Export Options...</div>
+      )}
+      {isConversationListOpen && (
+        <div className="hermes-conversation-list">Conversations...</div>
+      )}
       {isSearchOpen && <div className="hermes-search-bar">Search...</div>}
-      {isSessionSettingsOpen && <div className="hermes-session-settings">Settings...</div>}
+      {isSessionSettingsOpen && (
+        <div className="hermes-session-settings">Settings...</div>
+      )}
     </>
   );
 };

@@ -1,3 +1,4 @@
+/* eslint-disable no-control-regex, no-useless-escape */
 /**
  * Strip ANSI escape codes from a string.
  * Handles color codes, cursor movements, clear lines, and other terminal sequences.

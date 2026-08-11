@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import type { SlashCommand } from "../../modules/hermes/SlashCommands";
 import { StopIcon } from "./Icons";
 
@@ -36,7 +36,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
       )}
       <div className="hermes-input-row">
         <textarea ref={inputRef} placeholder="Message Hermes..." />
-        <button ref={sendBtnRef} disabled={!input.trim() || isTyping}>
+        <button ref={sendBtnRef} disabled={!isTyping && !input.trim()}>
           {isTyping ? <StopIcon /> : "Send"}
         </button>
       </div>

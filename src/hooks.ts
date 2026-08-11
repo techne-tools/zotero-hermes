@@ -323,7 +323,9 @@ function unregisterHermesSidebar(win: Window): void {
       if (reactContainer && reactContainer._unmount) {
         try {
           reactContainer._unmount();
-        } catch (e) {}
+        } catch (e) {
+          // ignore unmount errors
+        }
       }
       hermesPane.parentNode?.removeChild(hermesPane);
     }

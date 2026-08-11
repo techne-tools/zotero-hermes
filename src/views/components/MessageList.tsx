@@ -32,7 +32,9 @@ export const MessageList: React.FC<MessageListProps> = ({
           message={msg}
           addon={addon}
           onEditMessage={
-            msg.role === "user" ? (newText) => onEditMessage(idx, newText) : undefined
+            msg.role === "user"
+              ? (newText) => onEditMessage(idx, newText)
+              : undefined
           }
         />
       ))}

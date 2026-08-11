@@ -45,14 +45,16 @@ export class ItemManager {
     return attached;
   }
 
-  public async extractItemData(item: Zotero.Item): Promise<AttachedItem | null> {
+  public async extractItemData(
+    item: Zotero.Item,
+  ): Promise<AttachedItem | null> {
     try {
       // Resolve the best attachment's storage path.
       // getBestAttachment() is async in Zotero's API — must be awaited.
       let storagePath: string | undefined;
       let attachmentKey: string | undefined;
       try {
-        const bestAttachment = await (item as any).getBestAttachment?.() as
+        const bestAttachment = (await (item as any).getBestAttachment?.()) as
           | Zotero.Item
           | false
           | undefined;

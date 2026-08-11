@@ -144,6 +144,6 @@ npm run build
 
 ## References
 
-- [Obsidian Hermes Plugin](/Users/chriswenn/Development/obsidian-hermes) - Reference implementation
+- [Obsidian Hermes Plugin](https://github.com/prismatic7/obsidian-hermes) - Reference implementation
 - [Zotero Plugin Template](https://github.com/windingwind/zotero-plugin-template) - Base template
 - [Hermes Agent](https://github.com/NousResearch/hermes-agent) - Agent documentation

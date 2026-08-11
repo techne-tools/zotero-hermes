@@ -70,11 +70,12 @@ export function parseInline(text: string): InlineSegment[] {
           content: remaining.slice(0, earliestMatch.index),
         });
       }
-      segments.push({
+      const seg: InlineSegment = {
         type: earliestMatch.type as InlineSegment["type"],
         content: earliestMatch.content,
-        url: earliestMatch.url,
-      });
+      };
+      if (earliestMatch.url !== undefined) seg.url = earliestMatch.url;
+      segments.push(seg);
       remaining = remaining.slice(earliestMatch.index + earliestMatch.length);
     } else {
       segments.push({ type: "text", content: remaining });

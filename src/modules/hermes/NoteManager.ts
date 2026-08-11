@@ -89,13 +89,19 @@ export class NoteManager {
     }
 
     // Format content: Zotero notes are HTML/rich text. We can prefix with a title header if specified.
+    // The title is escaped before interpolation to prevent HTML injection.
     let noteContent = content;
-    if (
-      title &&
-      !content.includes(`<h1>${title}</h1>`) &&
-      !content.includes(`<h2>${title}</h2>`)
-    ) {
-      noteContent = `<h1>${title}</h1>\n${content}`;
+    if (title) {
+      const escapedTitle = title
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+      if (
+        !content.includes(`<h1>${escapedTitle}</h1>`) &&
+        !content.includes(`<h2>${escapedTitle}</h2>`)
+      ) {
+        noteContent = `<h1>${escapedTitle}</h1>\n${content}`;
+      }
     }
 
     note.setNote(noteContent);

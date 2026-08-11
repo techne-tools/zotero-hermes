@@ -1,33 +1,310 @@
-/* eslint-disable */
 import React from "react";
+import { CloseIcon } from "./Icons";
+
+export interface ConversationSummary {
+  id: string;
+  title: string;
+  updatedAt: number;
+}
 
 interface SidePanelsProps {
+  isExportOpen: boolean;
   isConversationListOpen: boolean;
   isSearchOpen: boolean;
   isSessionSettingsOpen: boolean;
-  isExportOpen: boolean;
-  onCloseAll: () => void;
-  // Panel content components/props would go here
+  showOnboarding: boolean;
+  conversations: ConversationSummary[];
+  searchQuery: string;
+  searchMatches: number[];
+  currentMatchIndex: number;
+  allowedTools: string[] | null;
+  searchInputRef: React.RefObject<HTMLInputElement | null>;
+  onExportHtml: () => void;
+  onExportJson: () => void;
+  onExportMarkdown: () => void;
+  onLoadConversation: (id: string) => void;
+  onDeleteConversation: (id: string) => void;
+  onCloseConversationList: () => void;
+  onSearchChange: (query: string) => void;
+  onSearchKeyDown: (e: React.KeyboardEvent) => void;
+  onSearchPrev: () => void;
+  onSearchNext: () => void;
+  onCloseSearch: () => void;
+  onAllowAllTools: () => void;
+  onBlockAllTools: () => void;
+  onToggleTool: (tool: string, checked: boolean) => void;
+  onCloseSessionSettings: () => void;
+  onDismissOnboarding: () => void;
 }
 
 export const SidePanels: React.FC<SidePanelsProps> = ({
+  isExportOpen,
   isConversationListOpen,
   isSearchOpen,
   isSessionSettingsOpen,
-  isExportOpen,
-  onCloseAll,
+  showOnboarding,
+  conversations,
+  searchQuery,
+  searchMatches,
+  currentMatchIndex,
+  allowedTools,
+  searchInputRef,
+  onExportHtml,
+  onExportJson,
+  onExportMarkdown,
+  onLoadConversation,
+  onDeleteConversation,
+  onCloseConversationList,
+  onSearchChange,
+  onSearchKeyDown,
+  onSearchPrev,
+  onSearchNext,
+  onCloseSearch,
+  onAllowAllTools,
+  onBlockAllTools,
+  onToggleTool,
+  onCloseSessionSettings,
+  onDismissOnboarding,
 }) => {
   return (
     <>
+      {/* Export Options Dropdown */}
       {isExportOpen && (
-        <div className="hermes-export-dropdown">Export Options...</div>
+        <div
+          className="hermes-export-dropdown"
+          style={{
+            position: "absolute",
+            top: "45px",
+            right: "12px",
+            backgroundColor: "var(--hermes-bg-secondary, #fafafa)",
+            border: "1px solid var(--hermes-border, #e0e0e0)",
+            borderRadius: "6px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            zIndex: 1000,
+            display: "flex",
+            flexDirection: "column",
+            padding: "4px 0",
+            minWidth: "120px",
+          }}
+        >
+          <button
+            onClick={onExportHtml}
+            style={{
+              padding: "6px 12px",
+              border: "none",
+              background: "none",
+              textAlign: "left",
+              cursor: "pointer",
+              fontSize: "0.85em",
+              color: "inherit",
+            }}
+          >
+            HTML format
+          </button>
+          <button
+            onClick={onExportJson}
+            style={{
+              padding: "6px 12px",
+              border: "none",
+              background: "none",
+              textAlign: "left",
+              cursor: "pointer",
+              fontSize: "0.85em",
+              color: "inherit",
+            }}
+          >
+            JSON format
+          </button>
+          <button
+            onClick={onExportMarkdown}
+            style={{
+              padding: "6px 12px",
+              border: "none",
+              background: "none",
+              textAlign: "left",
+              cursor: "pointer",
+              fontSize: "0.85em",
+              color: "inherit",
+            }}
+          >
+            Markdown format
+          </button>
+        </div>
       )}
+
+      {/* Conversation List */}
       {isConversationListOpen && (
-        <div className="hermes-conversation-list">Conversations...</div>
+        <div className="hermes-conversation-list">
+          <div className="hermes-conversation-list-header">
+            <span className="hermes-conversation-list-title">
+              Previous Conversations
+            </span>
+            <button
+              onClick={onCloseConversationList}
+              className="hermes-small-btn"
+            >
+              <CloseIcon />
+            </button>
+          </div>
+          {conversations.length === 0 ? (
+            <div className="hermes-conversation-empty">
+              No saved conversations
+            </div>
+          ) : (
+            <ul style={{ margin: 0, padding: "0 0 0 1em" }}>
+              {conversations.slice(0, 10).map((conv) => (
+                <li key={conv.id} className="hermes-conversation-item">
+                  <button
+                    onClick={() => onLoadConversation(conv.id)}
+                    className="hermes-conversation-item-btn"
+                  >
+                    {conv.title}
+                  </button>
+                  <button
+                    onClick={() => onDeleteConversation(conv.id)}
+                    className="hermes-small-btn"
+                    style={{ color: "red", padding: "0 4px" }}
+                    title="Delete"
+                  >
+                    🗑️
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
-      {isSearchOpen && <div className="hermes-search-bar">Search...</div>}
+
+      {/* Search Bar */}
+      {isSearchOpen && (
+        <div className="hermes-search-bar">
+          <input
+            ref={searchInputRef}
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            onKeyDown={onSearchKeyDown}
+            placeholder="Search messages..."
+            className="hermes-search-input"
+          />
+          {searchMatches.length > 0 && (
+            <span className="hermes-search-count">
+              {currentMatchIndex + 1} / {searchMatches.length}
+            </span>
+          )}
+          <button
+            onClick={onSearchPrev}
+            className="hermes-small-btn"
+            title="Previous"
+          >
+            ↑
+          </button>
+          <button
+            onClick={onSearchNext}
+            className="hermes-small-btn"
+            title="Next"
+          >
+            ↓
+          </button>
+          <button
+            onClick={onCloseSearch}
+            className="hermes-small-btn"
+            title="Close"
+          >
+            <CloseIcon />
+          </button>
+        </div>
+      )}
+
+      {/* Session Settings */}
       {isSessionSettingsOpen && (
-        <div className="hermes-session-settings">Settings...</div>
+        <div className="hermes-session-settings">
+          <div className="hermes-session-settings-header">
+            <span className="hermes-session-settings-title">
+              Session Settings
+            </span>
+            <button
+              onClick={onCloseSessionSettings}
+              className="hermes-small-btn"
+            >
+              <CloseIcon />
+            </button>
+          </div>
+          <p className="hermes-session-settings-desc">
+            Configure tool permissions for this conversation. Disabled tools
+            will not be available to the agent.
+          </p>
+          <div className="hermes-session-settings-actions">
+            <button
+              onClick={onAllowAllTools}
+              className="hermes-session-btn-secondary"
+            >
+              Allow All
+            </button>
+            <button
+              onClick={onBlockAllTools}
+              className="hermes-session-btn-secondary"
+            >
+              Block All
+            </button>
+          </div>
+          <div>
+            {["read_file", "write_file", "terminal"].map((tool) => (
+              <label key={tool} className="hermes-session-tool-toggle">
+                <input
+                  type="checkbox"
+                  checked={allowedTools === null || allowedTools.includes(tool)}
+                  onChange={(e) => onToggleTool(tool, e.target.checked)}
+                />
+                {tool === "read_file" && "Read Files"}
+                {tool === "write_file" && "Write Files"}
+                {tool === "terminal" && "Terminal Commands"}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Onboarding Panel */}
+      {showOnboarding && (
+        <div className="hermes-onboarding">
+          <div className="hermes-onboarding-header">
+            <span>Welcome to Hermes</span>
+            <button onClick={onDismissOnboarding} className="hermes-small-btn">
+              <CloseIcon />
+            </button>
+          </div>
+          <div className="hermes-onboarding-content">
+            <p>
+              Hermes is an AI assistant that helps you work with your Zotero
+              library.
+            </p>
+            <ul>
+              <li>
+                <strong>Attach items</strong> — Select Zotero items and click
+                the paperclip icon to provide context
+              </li>
+              <li>
+                <strong>Ask questions</strong> — Chat with Hermes about your
+                research, annotations, and metadata
+              </li>
+              <li>
+                <strong>Slash commands</strong> — Type <code>/help</code> to
+                see available commands
+              </li>
+              <li>
+                <strong>Session settings</strong> — Control which tools the
+                agent can use
+              </li>
+            </ul>
+            <p>
+              Your conversations are saved locally and can be searched or
+              exported.
+            </p>
+          </div>
+          <div className="hermes-onboarding-security">
+            🔒 Hermes runs locally. Your data stays on your machine.
+          </div>
+        </div>
       )}
     </>
   );

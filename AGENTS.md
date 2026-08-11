@@ -57,6 +57,22 @@ Usage notes:
 
 ---
 
+## Governance Docs (read first)
+
+These documents govern all work in this repo. Read them before planning or
+implementing:
+
+| Doc | Role |
+|---|---|
+| `DESIGN.md` | **Design north star** — target state. Every design decision is measured against it. |
+| `PRODUCT.md` | **Product intent** — what the plugin is for, who it serves, what it is not. |
+| `ARCHITECTURE.md` | **Current code reality** — how the code is actually structured today. |
+| `.agent/rules/agent-standards.md` | **Agent contract** — sandbox constraints, security rules, code quality, worktree discipline. |
+
+**Conflict rule:** when docs and code disagree, FLAG the conflict — do not
+silently pick a side. Keep verifiable claims (test counts, file lists) in
+these docs current at review time.
+
 ## Development Notes
 
 ### Zotero Sandbox Constraints (Critical)

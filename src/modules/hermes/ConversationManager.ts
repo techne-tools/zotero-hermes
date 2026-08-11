@@ -30,13 +30,27 @@ export class ConversationManager {
 
   /**
    * Get the base conversations directory path.
+   * Prefers the Zotero profile directory; falls back to the Zotero data
+   * directory. Never writes to /tmp — conversations are user data and must
+   * survive restarts.
    */
   private getBaseDir(): string {
     const profileDir = Zotero.getProfileDirectory?.();
-    if (!profileDir) {
-      return "/tmp/zotero-hermes-conversations";
+    let baseDir: nsIFile | null = null;
+    if (profileDir) {
+      baseDir = profileDir.clone() as nsIFile;
+    } else {
+      const dataDir = (Zotero as any).getZoteroDirectory?.()?.path;
+      if (dataDir) {
+        baseDir = Zotero.File.pathToFile(dataDir);
+      }
     }
-    const baseDir = profileDir.clone() as nsIFile;
+    if (!baseDir) {
+      this.addon.log(
+        "[ConversationManager] No profile or data directory available — conversations will not be persisted",
+      );
+      return "";
+    }
     const folderName =
       this.addon.data.hermes?.preferences?.get("chatSaveFolder", "hermes") ||
       "hermes";
@@ -75,6 +89,12 @@ export class ConversationManager {
     }
 
     const baseDir = this.getBaseDir();
+    if (!baseDir) {
+      this._cachedDir = "";
+      this._cachedDirOrg = organization;
+      this._cachedDirFolder = folderName;
+      return "";
+    }
     let resolvedDir: string;
 
     if (organization === "by-date") {
@@ -106,7 +126,9 @@ export class ConversationManager {
    * Get the file path for a conversation.
    */
   private getConversationFile(id: string): string {
-    return `${this.getConversationsDir()}/${id}.json`;
+    const dir = this.getConversationsDir();
+    if (!dir) return "";
+    return `${dir}/${id}.json`;
   }
 
   /**

@@ -96,7 +96,7 @@ Zotero plugins run in a **Firefox 115 ESR sandbox** with significant React limit
 ### Build from Source
 
 ```bash
-git clone https://github.com/prismatic7/zotero-hermes.git
+git clone https://github.com/NousResearch/zotero-hermes.git
 cd zotero-hermes
 npm install
 npm run build
@@ -145,6 +145,42 @@ Open **Zotero → Edit → Settings → Hermes Agent** to configure:
 - "What are the key findings?" (with item attached)
 - "Compare these two articles" (with multiple items attached)
 - "/clear" — Clear the conversation
+
+## Recent Changes (11 August 2026)
+
+### Fixed
+
+- **Chat UI restored** — the chat view was a non-functional stub (empty
+  callbacks, placeholder components) since the 2026-08-02 component split.
+  The full implementation was ported from git history into the proper
+  component structure: `HermesChatView` (state + orchestration),
+  `ChatMessageItem` (copy/save-note/edit/collapsible), `InputArea` (native
+  listeners + slash dropdown), `MessageList` (typing + error),
+  `SidePanels` (export/conversations/search/settings/onboarding),
+  `ContextBar` (chips), `ChatHeader` (toolbar).
+- **Hardcoded path removed** — `HermesClient` no longer falls back to
+  `Zotero data dir`; Zotero data dir is resolved at runtime.
+- **Command injection surface closed** — the `hermes` binary is now spawned
+  directly with an argument array (no `zsh -c` shell string), so a
+  configured path with metacharacters cannot inject commands.
+- **HTML injection in note titles** — `NoteManager.writeNote` escapes the
+  title before interpolating into `<h1>`.
+- **`/tmp` data-loss fallback removed** — `ConversationManager` no longer
+  writes conversations to `/tmp`; it falls back to the Zotero data directory.
+- **Timer leak** — `HermesClient.waitForResponse` clears its 90s timeout
+  when the response arrives.
+- **Log bug** — `processStdoutBuffer` debug log now interpolates the line
+  count (was printing the literal template string).
+
+### Changed
+
+- **Governance docs added** — `DESIGN.md` (design north star), `PRODUCT.md`
+  (product intent), `ARCHITECTURE.md` (code reality), and
+  `.agent/rules/agent-standards.md` (agent contract), wired into AGENTS.md
+  with explicit precedence and a conflict rule.
+- **`archive/` removed** — 1.5MB of drifting duplicate source; the live
+  source is the single source of truth.
+- **Tracked `.DS_Store` files removed** from git.
 
 ## Recent Changes (17 July 2026)
 

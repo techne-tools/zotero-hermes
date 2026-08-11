@@ -120,10 +120,14 @@ export class HermesClient implements ChatClient {
       this.addon.log(`Starting Hermes ACP from: ${hermesPath}`);
 
       this.addon.log(
-        `Spawning Hermes ACP via zsh with manual .zshrc sourcing from: ${hermesPath}`,
+        `Spawning Hermes ACP from: ${hermesPath}`,
       );
 
-      // Spawn hermes acp subprocess using Firefox Subprocess.sys.mjs via zsh.
+      // Spawn hermes acp subprocess using Firefox Subprocess.sys.mjs.
+      // The binary is invoked directly with an argument array (no shell), so
+      // a configured path containing shell metacharacters cannot inject
+      // commands. PATH is extended via the environment object instead of a
+      // shell export.
       const homeDir = getHomeDir();
       const customPath = `/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${homeDir}/.local/bin`;
 
@@ -131,16 +135,16 @@ export class HermesClient implements ChatClient {
         "resource://gre/modules/Subprocess.sys.mjs",
       );
       this.childProcess = await Subprocess.call({
-        command: "/bin/zsh",
-        arguments: [
-          "-c",
-          `export PATH="${customPath}:$PATH" && "${hermesPath}" acp`,
-        ],
+        command: hermesPath,
+        arguments: ["acp"],
         stdin: "pipe",
         stdout: "pipe",
         stderr: "pipe",
-        environment: { PYTHONUNBUFFERED: "1" },
-        environmentAppend: true,
+        environment: {
+          PYTHONUNBUFFERED: "1",
+          PATH: `${customPath}:${this.getEnvPath()}`,
+        },
+        environmentAppend: false,
       });
 
       this.setupStdioHandlers();
@@ -218,10 +222,14 @@ export class HermesClient implements ChatClient {
     const zoteroDataDir =
       (Zotero as any).getZoteroDirectory?.()?.path ||
       (Zotero as any).DataDirectory?.dir ||
-      "Zotero data dir";
+      "";
     const zoteroProfileDir = Zotero.getProfileDirectory?.()?.path || "";
-    const zoteroStorageDir = `${zoteroDataDir}/storage`;
-    const zoteroDbPath = `${zoteroDataDir}/zotero.sqlite`;
+    const zoteroStorageDir = zoteroDataDir
+      ? `${zoteroDataDir}/storage`
+      : "";
+    const zoteroDbPath = zoteroDataDir
+      ? `${zoteroDataDir}/zotero.sqlite`
+      : "";
 
     const persona =
       this.addon.data.hermes?.preferences?.get("currentPersona", "default") ||
@@ -447,7 +455,7 @@ export class HermesClient implements ChatClient {
     }
     if (processedCount > 0) {
       this.logDebug(
-        "[HermesClient] processStdoutBuffer: processed ${processedCount} lines",
+        `[HermesClient] processStdoutBuffer: processed ${processedCount} lines`,
       );
     }
   }
@@ -780,13 +788,21 @@ export class HermesClient implements ChatClient {
       this.pendingErrors.set(messageId, reject);
 
       // Timeout after 90 seconds (accommodates slow python agent MCP initialization)
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         if (this.pendingResponses.has(messageId)) {
           this.pendingResponses.delete(messageId);
           this.pendingErrors.delete(messageId);
           reject(new Error(`Request ${messageId} timed out`));
         }
       }, 90000);
+
+      // Clear the timeout when the response arrives so the timer doesn't
+      // linger for 90s after every request.
+      const originalResolve = resolve;
+      this.pendingResponses.set(messageId, (response: JsonRpcResponse) => {
+        clearTimeout(timeout);
+        originalResolve(response);
+      });
     });
   }
 
@@ -823,6 +839,21 @@ export class HermesClient implements ChatClient {
 
   private generateMessageId(): string {
     return `msg_${++this.messageIdCounter}_${Date.now()}`;
+  }
+
+  /**
+   * Read the current PATH from the environment (nsIEnvironment).
+   * Used to extend PATH for the spawned subprocess without a shell.
+   */
+  private getEnvPath(): string {
+    try {
+      const env = (Components.classes as any)[
+        "@mozilla.org/process/environment;1"
+      ].getService((Components.interfaces as any).nsIEnvironment);
+      return env.get("PATH") || "";
+    } catch {
+      return "";
+    }
   }
 
   /**

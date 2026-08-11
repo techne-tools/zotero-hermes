@@ -164,6 +164,26 @@ MCP (Model Context Protocol) server integration was attempted but consistently f
 - System instruction explicitly states MCP is unavailable
 - All Zotero data comes from attached context items
 
+### Worktree Development (Test-Fix Workflows)
+
+When fixing tests or doing isolated work, use a **git worktree** — never run tests against a dirty main tree. These gotchas were harvested from the 2026-08-11 markdown parser fix (see FLEET.md Q10–Q13):
+
+1. **Branch from the last building commit, not clean main** — clean `main` can be build-broken (e.g. `src/hooks.ts` importing a symbol that only exists on an in-flight branch). Verify the base ref builds before creating the worktree, or re-point with `git reset --hard <building-commit>`.
+
+2. **Copy the gitignored `.env`** — the scaffold loads it via dotenv; without it you get "No Zotero Found." It contains:
+   ```
+   ZOTERO_PLUGIN_ZOTERO_BIN_PATH = /Applications/Zotero.app/Contents/MacOS/zotero
+   ZOTERO_PLUGIN_PROFILE_PATH = Zotero profile dir
+   ```
+
+3. **`NODE_ENV=test` is mandatory for `npm ci`** — ambient `NODE_ENV=production` (Hermes TUI quirk) makes npm 11 omit devDependencies (only 6 packages installed otherwise). Always prefix: `NODE_ENV=test npm ci --no-audit --no-fund`.
+
+4. **Headless Zotero teardown lingers** — the suite result appears in the log BEFORE the process exits. Run tests backgrounded, read the log for the result, then kill the process. Don't wait for exit.
+
+5. **Never stash a dirty tree to run tests** — the test build regenerates `typings/prefs.d.ts` (tracked, ~10 deletions), which blocks a stash pop. Commit to a task branch first, then run tests.
+
+6. **opencode sandbox blocks `/tmp` writes** — dispatch briefs must say "work only inside this worktree, no /tmp paths". Also: exit 0 is UNVERIFIED — gate on `git diff` + TASK.md status, not just the exit code.
+
 ### Files Modified in Recent Session (5 June 2026)
 
 | File                                 | Change                                                                |

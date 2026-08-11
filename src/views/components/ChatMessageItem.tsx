@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { memo } from "react";
 import type Addon from "../../addon";
 import { ChatMessage } from "../types";

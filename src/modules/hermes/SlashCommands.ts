@@ -13,8 +13,9 @@ export interface SlashCommand {
 const BUILT_IN_COMMANDS: SlashCommand[] = [
   {
     description: "Clear the current conversation",
-    execute: async (_addon) => {
-      return null;
+    execute: async (addon) => {
+      addon.data.hermes?.chat.clearMessages();
+      return "Conversation cleared.";
     },
     name: "clear",
   },

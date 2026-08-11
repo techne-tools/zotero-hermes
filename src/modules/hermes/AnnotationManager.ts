@@ -27,7 +27,7 @@ export class AnnotationManager {
     let pdfItem: Zotero.Item | null = null;
     if (item.isRegularItem()) {
       try {
-        const bestAttachment = (item as any).getBestAttachment?.() as
+        const bestAttachment = (await (item as any).getBestAttachment?.()) as
           | Zotero.Item
           | false
           | undefined;
@@ -99,7 +99,7 @@ export class AnnotationManager {
 
     let pdfItem: Zotero.Item | null = null;
     if (item.isRegularItem()) {
-      const bestAttachment = (item as any).getBestAttachment?.() as
+      const bestAttachment = (await (item as any).getBestAttachment?.()) as
         | Zotero.Item
         | false
         | undefined;

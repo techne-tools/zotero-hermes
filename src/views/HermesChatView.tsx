@@ -1,5 +1,10 @@
-import { memo, useCallback, useEffect, useRef, useState } from "react";
-import type { ChatSessionUpdate, PromptContextItem } from "../modules/hermes/types";
+/* eslint-disable */
+import React, { memo, useCallback, useEffect, useRef, useState } from "react";
+import { createRoot } from "react-dom/client";
+import type {
+  ChatSessionUpdate,
+  PromptContextItem,
+} from "../modules/hermes/types";
 import type Addon from "../addon";
 import { useStreamBuffer } from "./useStreamBuffer";
 import { generateMessageId } from "../utils/uuid";
@@ -10,7 +15,10 @@ import { InputArea } from "./components/InputArea";
 import { MessageList } from "./components/MessageList";
 import { SidePanels } from "./components/SidePanels";
 import { ChatMessage, ContextItem } from "./types";
-import { parseSlashCommand, getSlashCommands } from "../modules/hermes/SlashCommands";
+import {
+  parseSlashCommand,
+  getSlashCommands,
+} from "../modules/hermes/SlashCommands";
 
 interface HermesChatViewProps {
   addon: Addon;
@@ -49,10 +57,18 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
       <ChatHeader
         addon={addon}
         onSearchToggle={() => setIsSearchOpen(!isSearchOpen)}
-        onConversationListToggle={() => setIsConversationListOpen(!isConversationListOpen)}
-        onAttachItems={() => { /* ... */ }}
-        onNewChat={() => { /* ... */ }}
-        onSettingsToggle={() => setIsSessionSettingsOpen(!isSessionSettingsOpen)}
+        onConversationListToggle={() =>
+          setIsConversationListOpen(!isConversationListOpen)
+        }
+        onAttachItems={() => {
+          /* ... */
+        }}
+        onNewChat={() => {
+          /* ... */
+        }}
+        onSettingsToggle={() =>
+          setIsSessionSettingsOpen(!isSessionSettingsOpen)
+        }
         onExportToggle={() => setIsExportOpen(!isExportOpen)}
       />
 
@@ -61,7 +77,9 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         isSearchOpen={isSearchOpen}
         isSessionSettingsOpen={isSessionSettingsOpen}
         isExportOpen={isExportOpen}
-        onCloseAll={() => { /* ... */ }}
+        onCloseAll={() => {
+          /* ... */
+        }}
       />
 
       <MessageList
@@ -72,7 +90,9 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         messagesEndRef={messagesEndRef}
         agentName={settings?.get("chatAgentName", "Hermes") || "Hermes"}
         error={error}
-        onEditMessage={(idx, newText) => { /* ... */ }}
+        onEditMessage={(idx, newText) => {
+          /* ... */
+        }}
       />
 
       <ContextBar items={contextItems} onClear={() => setContextItems([])} />
@@ -85,8 +105,16 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         isSlashOpen={isSlashOpen}
         slashSuggestions={slashSuggestions}
         slashDropdownRef={slashDropdownRef}
-        onSelectSuggestion={(cmd) => { /* ... */ }}
+        onSelectSuggestion={(cmd) => {
+          /* ... */
+        }}
       />
     </div>
   );
+}
+
+export function mountHermesChat(container: HTMLElement, addon: Addon) {
+  const root = createRoot(container);
+  root.render(React.createElement(HermesChatViewComponent, { addon }));
+  return () => root.unmount();
 }

@@ -149,6 +149,7 @@ Open **Zotero → Edit → Settings → Hermes Agent** to configure:
 ## Recent Changes (17 July 2026)
 
 ### Added
+
 - **Note Creation and Saving** — Expose a save-to-note `📝` icon on messages to save them as child notes. Added `/savechat` command to output conversation as child note.
 - **Note Relevance Search** — Added relevance-scoring and text-cleaning for local note search via `/search [query]`, with click-to-add context chips in chat sidebar.
 - **PDF Annotation Integration** — Added `/annotations` to extract highlights and notes on attached references, and implemented programmatic annotation creation safely routed through `ApprovalDialog`.

@@ -152,43 +152,6 @@
           >Test Connection</html:button
         >
       </hbox>
-
-      <checkbox
-        id="zotero-prefpane-__addonRef__-mcp-enabled"
-        preference="extensions.zotero.hermes.mcpServersEnabled"
-        label="⚠️ Enable External Tool Servers (MCP)"
-      />
-      <html:p
-        style="
-          font-size: 0.8em;
-          opacity: 0.6;
-          margin: 0 0 6px 24px;
-          color: #c53030;
-        "
-      >
-        MCP servers are external programs that Hermes can call. They bypass
-        file-approval and permission checks, and can execute arbitrary code with
-        your user privileges. Only enable if you fully trust every server you
-        add below.
-      </html:p>
-
-      <vbox id="__addonRef__-mcp-servers-row" style="margin: 4px 0 8px 24px">
-        <html:label for="zotero-prefpane-__addonRef__-mcp-servers"
-          >External Tool Server Paths</html:label
-        >
-        <html:textarea
-          id="zotero-prefpane-__addonRef__-mcp-servers"
-          preference="extensions.zotero.hermes.mcpServersList"
-          rows="3"
-          placeholder="/Users/you/.local/bin/mcp-web-search&#10;/opt/mcp-database"
-          style="width: 100%; font-family: monospace"
-        ></html:textarea>
-        <html:p style="font-size: 0.8em; opacity: 0.6; margin: 4px 0 0 0">
-          One absolute path per line. These executables run with your user
-          privileges and are not sandboxed. Restart the connection after
-          changing.
-        </html:p>
-      </vbox>
     </vbox>
 
     <!-- Remote mode settings -->
@@ -224,25 +187,6 @@
       <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 8px 180px">
         Your secret key for the server. This is stored securely and never shown
         again after saving.
-      </html:p>
-
-      <hbox align="center" style="margin-bottom: 6px">
-        <html:label
-          for="zotero-prefpane-__addonRef__-agent-name"
-          style="min-width: 180px"
-          >Agent Name on Server</html:label
-        >
-        <html:input
-          type="text"
-          id="zotero-prefpane-__addonRef__-agent-name"
-          preference="extensions.zotero.hermes.hermesAgentName"
-          placeholder="hermes-agent"
-          style="flex: 1"
-        ></html:input>
-      </hbox>
-      <html:p style="font-size: 0.8em; opacity: 0.6; margin: 0 0 8px 180px">
-        The name your server knows this agent by. Usually "hermes-agent" unless
-        your admin changed it.
       </html:p>
 
       <hbox align="center" style="margin-bottom: 8px">

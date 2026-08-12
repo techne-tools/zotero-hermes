@@ -747,7 +747,9 @@ export class HermesClient implements ChatClient {
       params: {
         cwd: path,
         workdir: path,
-        mcpServers: this.getMcpServers(),
+        // MCP was removed — the agent receives all Zotero data via
+        // attached context items, never through external tool servers.
+        mcpServers: [],
       },
     };
 
@@ -854,22 +856,5 @@ export class HermesClient implements ChatClient {
     } catch {
       return "";
     }
-  }
-
-  /**
-   * Read MCP server config from preferences.
-   * Returns one path per line as an array, or empty array if disabled.
-   */
-  private getMcpServers(): string[] {
-    const enabled =
-      this.addon.data.hermes?.preferences?.get("mcpServersEnabled", false) ??
-      false;
-    if (!enabled) return [];
-    const list =
-      this.addon.data.hermes?.preferences?.get("mcpServersList", "") ?? "";
-    return list
-      .split("\n")
-      .map((s: string) => s.trim())
-      .filter(Boolean);
   }
 }

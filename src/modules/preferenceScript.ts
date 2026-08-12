@@ -16,7 +16,6 @@ export async function registerPrefsScripts(_window: Window) {
   }
   bindPrefEvents();
   updateConnectionModeUI();
-  updateMcpUI();
 }
 
 /**
@@ -49,25 +48,6 @@ function updateConnectionModeUI(): void {
   }
 }
 
-/**
- * Show/hide MCP servers textarea based on the MCP enabled checkbox.
- */
-function updateMcpUI(): void {
-  const doc = addon.data.prefs?.window?.document;
-  if (!doc) return;
-
-  const mcpCheckbox = doc.getElementById(
-    `zotero-prefpane-${config.addonRef}-mcp-enabled`,
-  ) as any;
-  const mcpServersRow = doc.getElementById(
-    `${config.addonRef}-mcp-servers-row`,
-  ) as HTMLElement | null;
-
-  if (!mcpCheckbox || !mcpServersRow) return;
-
-  mcpServersRow.style.display = mcpCheckbox.checked ? "" : "none";
-}
-
 function bindPrefEvents(): void {
   const doc = addon.data.prefs?.window?.document;
   if (!doc) return;
@@ -78,14 +58,6 @@ function bindPrefEvents(): void {
   );
   modeDropdown?.addEventListener("command", () => {
     updateConnectionModeUI();
-  });
-
-  // MCP enabled checkbox — toggle servers textarea
-  const mcpCheckbox = doc.getElementById(
-    `zotero-prefpane-${config.addonRef}-mcp-enabled`,
-  );
-  mcpCheckbox?.addEventListener("command", () => {
-    updateMcpUI();
   });
 
   // Test Local Connection button

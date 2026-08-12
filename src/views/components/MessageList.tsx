@@ -9,8 +9,8 @@ interface MessageListProps {
   isTyping: boolean;
   agentName: string;
   error: string | null;
-  messagesContainerRef: React.RefObject<HTMLDivElement | null>;
-  messagesEndRef: React.RefObject<HTMLDivElement | null>;
+  messagesContainerRef: React.RefObject<HTMLDivElement>;
+  messagesEndRef: React.RefObject<HTMLDivElement>;
   messageRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
   onEditMessage: (idx: number, newText: string) => void;
   onDismissError: () => void;

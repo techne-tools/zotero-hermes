@@ -137,7 +137,9 @@ one), preventing Promise leaks on concurrent calls.
 ## Testing
 
 - **Unit tests:** `test/` — markdown renderer, slash commands, stripAnsi,
-  tag manager, startup. Run with `NODE_ENV=test npm test`.
+  tag manager, startup, systemPrompt, ItemManager, ChatManager,
+  ConversationManager, HermesClient NDJSON handling. Run with
+  `NODE_ENV=test npm test`.
 - **Build:** `NODE_ENV=test npm run build` (zotero-plugin build + `tsc --noEmit`).
 - **CI:** GitHub Actions — lint, build, test on push/PR to main.
 
@@ -146,9 +148,11 @@ one), preventing Promise leaks on concurrent calls.
 1. **`any` types** in sandbox-facing code (Subprocess, Components, Zotero
    internals) — necessary where the sandbox API is untyped, but should be
    narrowed where possible.
-2. **`getMcpServers()`** in HermesClient is dead code — MCP was removed but
-   the method and prefs remain.
-3. **`/* eslint-disable */`** was removed from the views during the 2026-08-11
+2. **`/* eslint-disable */`** was removed from the views during the 2026-08-11
    restoration; remaining disables should be justified.
-4. **Test coverage** is thin — the core client modules (HermesClient,
-   HermesApiClient, ChatManager, ConversationManager) have no unit tests.
+3. **Test coverage** is still thin on the transport layer — HermesApiClient
+   (HTTP/SSE) has no unit tests; the ACP client tests cover NDJSON parsing
+   but not the full connect/disconnect lifecycle.
+4. **`UIExampleFactory`** is a misleading name — it is live code that
+   registers the plugin's own `zoteroPane.css` stylesheet on window load.
+   Renaming it (e.g. `registerPaneStylesheet`) would clarify intent.

@@ -18,7 +18,7 @@ interface SidePanelsProps {
   searchMatches: number[];
   currentMatchIndex: number;
   allowedTools: string[] | null;
-  searchInputRef: React.RefObject<HTMLInputElement | null>;
+  searchInputRef: React.RefObject<HTMLInputElement>;
   onExportHtml: () => void;
   onExportJson: () => void;
   onExportMarkdown: () => void;

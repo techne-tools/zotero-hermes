@@ -419,7 +419,12 @@ function onShutdown(): void {
 }
 
 /**
- * Handle notify events
+ * Handle notify events.
+ *
+ * The plugin does not currently subscribe to Zotero item/collection
+ * notifications — the chat UI reads state on demand. Keep this hook
+ * registered (the scaffold requires it) but do not log every event;
+ * that produces noise on every item change in the library.
  */
 async function onNotify(
   event: string,
@@ -427,8 +432,12 @@ async function onNotify(
   ids: Array<string | number>,
   extraData: { [key: string]: any },
 ) {
-  // Placeholder for future notify handling
-  addon.data.ztoolkit.log("notify", event, type, ids, extraData);
+  // No-op: notifications are intentionally not handled yet.
+  // If item-change reactivity is added later, dispatch here.
+  void event;
+  void type;
+  void ids;
+  void extraData;
 }
 
 /**

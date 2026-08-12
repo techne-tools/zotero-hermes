@@ -35,7 +35,7 @@ export function parseInline(text: string): InlineSegment[] {
     { regex: /\*([^*]+)\*/g, type: "italic" as const },
     { regex: /_([^_]+)_/g, type: "italic" as const },
     { regex: /~~([^~]+)~~/g, type: "strikethrough" as const },
-    { regex: /\[([^\]]+)\]\(([^)]+)\)/g, type: "link" as const },
+    { regex: /\[([^\]]+)\]\(((?:[^()\\]|\\.)*)\)/g, type: "link" as const },
   ];
 
   while (remaining.length > 0) {
@@ -186,8 +186,18 @@ function parseBlocks(text: string): Block[] {
           .slice(1, -1)
           .split("|")
           .map((h) => h.trim());
-        // Skip separator row (|---|...|)
-        const dataRows = tableLines.slice(2);
+        // Only skip a separator row (|---|...|) if one actually exists;
+        // otherwise treat row 1 as data (min1: table separator fix).
+        const isSeparatorRow =
+          tableLines.length >= 2 &&
+          tableLines[1]
+            .slice(1, -1)
+            .split("|")
+            .map((c) => c.trim())
+            .every((c) => /^:?-{1,}:?$/.test(c));
+        const dataRows = isSeparatorRow
+          ? tableLines.slice(2)
+          : tableLines.slice(1);
         const rows = dataRows.map((row) =>
           row
             .slice(1, -1)

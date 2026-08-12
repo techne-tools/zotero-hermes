@@ -486,3 +486,60 @@ describe("HermesClient NDJSON handling", function () {
     expect(updates[0]).to.deep.include({ content: "after bad line" });
   });
 });
+
+describe("HermesClient sendPrompt tool restrictions (C2/M8 regression)", function () {
+  function setupConnectedClient() {
+    const client = new HermesClient(makeAddon());
+    const child = makeMockChildProcess();
+    // Fake a connected state so sendPrompt skips connect().
+    (client as any).childProcess = child;
+    (client as any)._isConnected = true;
+    (client as any).sessionId = "s1";
+    (client as any).setupStdioHandlers();
+    const written: string[] = [];
+    child.stdin.write = (async (data: string) => {
+      written.push(data);
+    }) as any;
+    return { client, written };
+  }
+
+  it("should write a tool restriction block when allowedTools is provided", async function () {
+    const { client, written } = setupConnectedClient();
+    await client.sendPrompt("hello", [], { allowedTools: ["read_file"] });
+
+    const lastWrite = written[written.length - 1];
+    const parsed = JSON.parse(lastWrite);
+    const promptBlocks = parsed.params.prompt as Array<{ text: string }>;
+    const restriction = promptBlocks.find((b) =>
+      b.text.includes("restricted to ONLY using"),
+    );
+    expect(restriction).to.not.be.undefined;
+    expect(restriction!.text).to.include("read_file");
+  });
+
+  it("should NOT write a restriction block when allowedTools is null (unrestricted)", async function () {
+    const { client, written } = setupConnectedClient();
+    await client.sendPrompt("hello", [], { allowedTools: null });
+
+    const lastWrite = written[written.length - 1];
+    const parsed = JSON.parse(lastWrite);
+    const promptBlocks = parsed.params.prompt as Array<{ text: string }>;
+    const restriction = promptBlocks.find((b) =>
+      b.text.includes("restricted to ONLY using"),
+    );
+    expect(restriction).to.be.undefined;
+  });
+
+  it("should transmit an explicit block-all when allowedTools is an empty array (M8 regression)", async function () {
+    const { client, written } = setupConnectedClient();
+    await client.sendPrompt("hello", [], { allowedTools: [] });
+
+    const lastWrite = written[written.length - 1];
+    const parsed = JSON.parse(lastWrite);
+    const promptBlocks = parsed.params.prompt as Array<{ text: string }>;
+    const restriction = promptBlocks.find((b) =>
+      b.text.includes("not allowed to use ANY tools"),
+    );
+    expect(restriction).to.not.be.undefined;
+  });
+});

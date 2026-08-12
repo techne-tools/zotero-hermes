@@ -90,6 +90,28 @@ export class ItemManager {
     }
   }
 
+  /**
+   * Attach a single item (used by the add-context: link handler and the
+   * slash-command flow). Extracts metadata and records it in attachedItems
+   * so slash commands (/annotations, /cite, /tag, /savechat) can find it.
+   */
+  public async attachItem(item: Zotero.Item): Promise<AttachedItem | null> {
+    const attachedItem = await this.extractItemData(item);
+    if (attachedItem) {
+      this.addAttachedItem(attachedItem);
+    }
+    return attachedItem;
+  }
+
+  /**
+   * Record an already-extracted AttachedItem, deduping by item id.
+   */
+  public addAttachedItem(attachedItem: AttachedItem): void {
+    if (!this.attachedItems.some((a) => a.id === attachedItem.id)) {
+      this.attachedItems.push(attachedItem);
+    }
+  }
+
   public clearAttachedItems(): void {
     this.attachedItems = [];
   }

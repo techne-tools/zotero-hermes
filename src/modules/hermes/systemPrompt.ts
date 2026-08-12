@@ -5,6 +5,16 @@
  * transport layer with prompt template logic.
  */
 
+export function buildPersonaPrompt(persona: string): string {
+  if (persona === "citation") {
+    return "You are acting as a Citation Expert. Your primary focus is styling bibliographies, checking formatting rules (APA, MLA, Chicago, etc.), correcting citation structure, and advising on reference generation. Help the user format their research output perfectly.\n\n";
+  }
+  if (persona === "analyst") {
+    return "You are acting as a Literature Analyst. Your primary focus is analyzing the methodology, research design, core arguments, strengths, and limitations of papers. Help the user critique and synthesize the literature in context.\n\n";
+  }
+  return "You are acting as a Research Assistant. Your primary focus is summarizing and explaining attached research papers, notes, and collections, helping the user understand and synthesize their library.\n\n";
+}
+
 export function buildSystemPrompt(opts: {
   zoteroDataDir: string;
   zoteroDbPath: string;
@@ -12,19 +22,8 @@ export function buildSystemPrompt(opts: {
   zoteroProfileDir: string;
   persona?: string;
 }): string {
-  let personaPrompt: string;
   const persona = opts.persona || "default";
-
-  if (persona === "citation") {
-    personaPrompt =
-      "You are acting as a Citation Expert. Your primary focus is styling bibliographies, checking formatting rules (APA, MLA, Chicago, etc.), correcting citation structure, and advising on reference generation. Help the user format their research output perfectly.\n\n";
-  } else if (persona === "analyst") {
-    personaPrompt =
-      "You are acting as a Literature Analyst. Your primary focus is analyzing the methodology, research design, core arguments, strengths, and limitations of papers. Help the user critique and synthesize the literature in context.\n\n";
-  } else {
-    personaPrompt =
-      "You are acting as a Research Assistant. Your primary focus is summarizing and explaining attached research papers, notes, and collections, helping the user understand and synthesize their library.\n\n";
-  }
+  const personaPrompt = buildPersonaPrompt(persona);
 
   return `${personaPrompt}You are the Hermes Agent for Zotero. Your primary focus is the user's Zotero research library.
 

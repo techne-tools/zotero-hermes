@@ -47,6 +47,10 @@ export const ChatMessageItem = memo(function ChatMessageItem({
   const [isSaved, setIsSaved] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(message.content);
+  // M3: collapse state must be declared unconditionally — putting the
+  // useState inside the reasoning/tool branch below violated the rules
+  // of hooks (hook count changed between renders for the same component).
+  const [isExpanded, setIsExpanded] = useState(!message.isCollapsed);
 
   const content = stripAnsi(message.content);
 
@@ -147,7 +151,6 @@ export const ChatMessageItem = memo(function ChatMessageItem({
 
   // Collapsible reasoning and tool messages
   if (message.role === "reasoning" || message.role === "tool") {
-    const [isExpanded, setIsExpanded] = useState(!message.isCollapsed);
     const toggleExpand = useCallback(() => {
       setIsExpanded((prev) => !prev);
     }, []);

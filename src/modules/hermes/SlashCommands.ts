@@ -26,10 +26,14 @@ const BUILT_IN_COMMANDS: SlashCommand[] = [
       if (items.length === 0) {
         return "No items selected in Zotero library.";
       }
-      const titles = items
-        .map((item: Zotero.Item) => item.getDisplayTitle())
-        .join(", ");
-      return `Added **${items.length} item(s)** to context: ${titles}`;
+      // C3: actually attach — populate ItemManager.attachedItems so the
+      // metadata is available to slash commands AND the agent context.
+      const attached = await addon.data.hermes!.items.attachSelectedItems();
+      if (attached.length === 0) {
+        return "Selected items could not be attached to context.";
+      }
+      const titles = attached.map((i) => i.title).join(", ");
+      return `Added **${attached.length} item(s)** to context: ${titles}`;
     },
     name: "context",
   },
@@ -195,6 +199,10 @@ const BUILT_IN_COMMANDS: SlashCommand[] = [
   {
     description: "List all PDF annotations for the attached Zotero item",
     execute: async (addon, _args) => {
+      // M4: respect the enableAnnotations pref
+      if (!addon.data.hermes!.preferences.get("enableAnnotations", true)) {
+        return "Annotation reading is disabled. Enable it in Zotero → Settings → Hermes → Automatic Context.";
+      }
       const attachedItems = addon.data.hermes!.items.getAttachedItems();
       if (attachedItems.length === 0) {
         return "No item attached to the conversation. Attach an item first.";
@@ -228,6 +236,10 @@ const BUILT_IN_COMMANDS: SlashCommand[] = [
     description:
       "Generate in-text citation and bibliography for the attached item",
     execute: async (addon, args) => {
+      // M4: respect the enableCitations pref
+      if (!addon.data.hermes!.preferences.get("enableCitations", true)) {
+        return "Citation generation is disabled. Enable it in Zotero → Settings → Hermes → Automatic Context.";
+      }
       const attachedItems = addon.data.hermes!.items.getAttachedItems();
       if (attachedItems.length === 0) {
         return "No item attached to the conversation. Attach an item first.";
@@ -278,6 +290,10 @@ const BUILT_IN_COMMANDS: SlashCommand[] = [
     description:
       "Suggest or apply tags for the attached Zotero item. Usage: `/tag` (to suggest) or `/tag tag1, tag2` (to apply)",
     execute: async (addon, args) => {
+      // M4: respect the enableTags pref
+      if (!addon.data.hermes!.preferences.get("enableTags", true)) {
+        return "Tag management is disabled. Enable it in Zotero → Settings → Hermes → Automatic Context.";
+      }
       const attachedItems = addon.data.hermes!.items.getAttachedItems();
       if (attachedItems.length === 0) {
         return "No item attached to the conversation. Attach an item first.";

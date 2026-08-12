@@ -168,9 +168,9 @@ export class ConversationManager {
   }
 
   /**
-   * Load a conversation from disk.
+   * Load a conversation from disk WITHOUT making it the current one.
    */
-  public loadConversation(id: string): Conversation | null {
+  private loadConversationFromFile(id: string): Conversation | null {
     const filePath = this.getConversationFile(id);
 
     try {
@@ -180,11 +180,7 @@ export class ConversationManager {
       }
 
       const json = Zotero.File.getContents(file) as string;
-      const conversation = JSON.parse(json) as Conversation;
-
-      this.conversations.set(id, conversation);
-      this.currentConversation = conversation;
-      return conversation;
+      return JSON.parse(json) as Conversation;
     } catch (err) {
       this.addon.log(`Failed to load conversation: ${(err as Error).message}`);
       return null;
@@ -192,13 +188,28 @@ export class ConversationManager {
   }
 
   /**
+   * Load a conversation from disk and make it the current one.
+   */
+  public loadConversation(id: string): Conversation | null {
+    const conversation = this.loadConversationFromFile(id);
+    if (conversation) {
+      this.conversations.set(id, conversation);
+      this.currentConversation = conversation;
+    }
+    return conversation;
+  }
+
+  /**
    * Load all conversations from disk.
+   * Does NOT mutate the current conversation — listing history must not
+   * clobber the active chat's state (M1).
    */
   public loadAllConversations(): Conversation[] {
     const dir = this.getConversationsDir();
     const dirFile = Zotero.File.pathToFile(dir);
 
-    if (!dirFile.exists() || !dirFile.isDirectory()) {
+    // nsIFile.isDirectory is a boolean PROPERTY, not a method (min1 fix).
+    if (!dirFile.exists() || !dirFile.isDirectory) {
       return [];
     }
 
@@ -208,7 +219,9 @@ export class ConversationManager {
     while (entries.hasMoreElements()) {
       const entry = entries.getNext() as nsIFile;
       if (entry.leafName.endsWith(".json")) {
-        const conv = this.loadConversation(entry.leafName.replace(".json", ""));
+        const conv = this.loadConversationFromFile(
+          entry.leafName.replace(".json", ""),
+        );
         if (conv) {
           conversations.push(conv);
         }

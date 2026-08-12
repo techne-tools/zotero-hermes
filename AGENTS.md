@@ -222,6 +222,8 @@ These cost a full debugging session. Read before writing tests that touch the `Z
 
 6. **Mock `Zotero.File.pathToFile` must throw on empty path** — `ConversationManager` relies on that throw to skip persistence when no profile/data dir exists. A mock that silently accepts `""` will write files with empty paths and break the "no persist" test.
 
+7. **`nsIFile.isDirectory` is a boolean PROPERTY, not a method** — `dirFile.isDirectory` (no parens). Calling it as `isDirectory()` throws "is not a function" at runtime. The M1 regression test (loadAllConversations with a populated dir) caught this in the original implementation — it had never run against a populated directory before.
+
 ### Files Modified in Recent Session (5 June 2026)
 
 | File                                 | Change                                                                |

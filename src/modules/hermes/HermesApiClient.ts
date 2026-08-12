@@ -1,7 +1,6 @@
-import { config } from "../../../package.json";
-
 import type Addon from "../../addon";
 
+import { buildPersonaPrompt } from "./systemPrompt";
 import type { ChatClient, ChatSessionUpdate, PromptContextItem } from "./types";
 
 /**
@@ -129,30 +128,30 @@ export class HermesApiClient implements ChatClient {
     const url = `${this.getApiUrl()}/v1/chat/completions`;
     const messages: Record<string, unknown>[] = [];
 
-    // Inject persona as a system message
+    // Inject persona as a system message (single source of truth:
+    // buildPersonaPrompt from systemPrompt.ts — same wording as ACP mode)
     const persona = (this.addon.data.hermes?.preferences?.get(
       "currentPersona",
       "default",
     ) || "default") as string;
-    if (persona === "citation") {
-      messages.push({
-        role: "system",
-        content:
-          "You are acting as a Citation Expert. Your primary focus is styling bibliographies, checking formatting rules (APA, MLA, Chicago, etc.), correcting citation structure, and advising on reference generation. Help the user format their research output perfectly.",
-      });
-    } else if (persona === "analyst") {
-      messages.push({
-        role: "system",
-        content:
-          "You are acting as a Literature Analyst. Your primary focus is analyzing the methodology, research design, core arguments, strengths, and limitations of papers. Help the user critique and synthesize the literature in context.",
-      });
-    }
+    messages.push({
+      role: "system",
+      content: buildPersonaPrompt(persona),
+    });
 
-    // Inject tool restrictions as a system message
-    if (options?.allowedTools) {
+    // M8: inject tool restrictions. null/undefined = unrestricted (skip);
+    // an empty array = block ALL tools and must still be transmitted.
+    if (
+      options?.allowedTools !== undefined &&
+      options?.allowedTools !== null
+    ) {
+      const restriction =
+        options.allowedTools.length > 0
+          ? `You are restricted to ONLY using the following tools: ${options.allowedTools.join(", ")}.`
+          : "You are not allowed to use ANY tools in this conversation. Answer using only the provided context and your own knowledge.";
       messages.push({
         role: "system",
-        content: `You are restricted to ONLY using the following tools: ${options.allowedTools.join(", ")}.`,
+        content: restriction,
       });
     }
 
@@ -348,15 +347,16 @@ export class HermesApiClient implements ChatClient {
   // --- Private helpers ---
 
   private getApiUrl(): string {
-    const url = Zotero.Prefs.get(
-      `${config.prefsPrefix}.apiUrl`,
-      true,
-    ) as string;
-    return (url || "").replace(/\/$/, "");
+    // Use PreferencesManager (single source of truth for prefs) instead of
+    // reading raw Zotero.Prefs with the hardcoded prefix.
+    return (
+      (this.addon.data.hermes?.preferences?.get<string>("apiUrl", "") || "")
+        .replace(/\/$/, "")
+    );
   }
 
   private getApiKey(): string {
-    return Zotero.Prefs.get(`${config.prefsPrefix}.apiKey`, true) as string;
+    return this.addon.data.hermes?.preferences?.get<string>("apiKey", "") || "";
   }
 
   private getAuthHeaders(): Record<string, string> {

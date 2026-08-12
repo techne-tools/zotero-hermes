@@ -63,7 +63,6 @@ export class HermesClient implements ChatClient {
   private reconnectAttempts = 0;
   private readonly MAX_RECONNECT_ATTEMPTS = 5;
   private reconnectTimeout: number | null = null;
-  private currentAllowedTools: string[] | null = null;
 
   constructor(addon: Addon) {
     this.addon = addon;
@@ -118,10 +117,6 @@ export class HermesClient implements ChatClient {
       }
 
       this.addon.log(`Starting Hermes ACP from: ${hermesPath}`);
-
-      this.addon.log(
-        `Spawning Hermes ACP from: ${hermesPath}`,
-      );
 
       // Spawn hermes acp subprocess using Firefox Subprocess.sys.mjs.
       // The binary is invoked directly with an argument array (no shell), so
@@ -213,8 +208,6 @@ export class HermesClient implements ChatClient {
       await this.connect();
     }
 
-    this.currentAllowedTools = options?.allowedTools ?? null;
-
     const messageId = this.generateMessageId();
     const promptBlocks: Array<{ type: string; text: string }> = [];
 
@@ -245,6 +238,24 @@ export class HermesClient implements ChatClient {
         persona,
       }),
     });
+
+    // C2/M8: transmit tool restrictions in ACP mode. `null`/undefined means
+    // "no restriction" (skip); an empty array means "block all tools" and
+    // MUST still be transmitted — `if (options?.allowedTools)` alone would
+    // silently drop the Block All setting.
+    if (
+      options?.allowedTools !== undefined &&
+      options?.allowedTools !== null
+    ) {
+      const restriction =
+        options.allowedTools.length > 0
+          ? `You are restricted to ONLY using the following tools: ${options.allowedTools.join(", ")}. Do not use any other tools.`
+          : "You are not allowed to use ANY tools in this conversation. Answer using only the provided context and your own knowledge.";
+      promptBlocks.push({
+        type: "text",
+        text: restriction,
+      });
+    }
 
     // Add context items with full metadata
     for (const item of contextItems) {
@@ -410,7 +421,9 @@ export class HermesClient implements ChatClient {
         const chunk = stderrDecoder.decode(data);
         const line = chunk.trim();
         if (line) {
-          this.addon.log(`Hermes stderr: ${line}`);
+          // Only surface stderr when debugging; the agent writes progress
+          // to stderr routinely and it is noise in normal operation.
+          this.logDebug(`[HermesClient stderr] ${line}`);
         }
       } catch (e) {
         this.addon.log("Error decoding stderr chunk:", e);
@@ -447,7 +460,12 @@ export class HermesClient implements ChatClient {
           this.handleMessage(message);
           processedCount++;
         } catch (e) {
-          this.addon.log("Failed to parse NDJSON line", line);
+          // Parse errors on individual lines are expected during partial
+          // writes; gate the raw line behind debug mode (min1: NDJSON log).
+          this.logDebug(
+            "[HermesClient] Failed to parse NDJSON line:",
+            line.slice(0, 200),
+          );
         }
       }
 
@@ -739,7 +757,12 @@ export class HermesClient implements ChatClient {
    */
   private async createSession(): Promise<void> {
     const messageId = this.generateMessageId();
-    const path = Zotero.getProfileDirectory?.()?.path || "/tmp";
+    // Working directory for the agent's session. Prefer the Zotero profile
+    // directory; fall back to the Zotero data directory — never /tmp, so
+    // any files the agent creates land somewhere persistent and sensible.
+    const profileDir = Zotero.getProfileDirectory?.()?.path;
+    const dataDir = (Zotero as any).getZoteroDirectory?.()?.path || "";
+    const path = profileDir || dataDir || "";
     const request: JsonRpcRequest = {
       jsonrpc: "2.0",
       id: messageId,

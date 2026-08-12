@@ -33,6 +33,22 @@ export function useStreamBuffer(
     null,
   );
   const lastSoundTimeRef = useRef<number>(0);
+  // Single shared AudioContext — creating a new one per flush leaks
+  // contexts (each holds native resources) until the tab is closed.
+  const audioCtxRef = useRef<any | null>(null);
+
+  const getAudioContext = useCallback((): any | null => {
+    const g = globalThis as any;
+    if (!g.AudioContext && !g.webkitAudioContext) return null;
+    if (!audioCtxRef.current) {
+      try {
+        audioCtxRef.current = new (g.AudioContext || g.webkitAudioContext)();
+      } catch {
+        return null;
+      }
+    }
+    return audioCtxRef.current;
+  }, []);
 
   const flushBuffer = useCallback(() => {
     const content = pendingContentRef.current;
@@ -54,21 +70,23 @@ export function useStreamBuffer(
       if (now - lastSoundTimeRef.current > 80) {
         lastSoundTimeRef.current = now;
         try {
-          const g = globalThis as any;
-          const audioCtx = new (g.AudioContext || g.webkitAudioContext)();
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
-          osc.type = "sine";
-          osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-          gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(
-            0.001,
-            audioCtx.currentTime + 0.05,
-          );
-          osc.start(audioCtx.currentTime);
-          osc.stop(audioCtx.currentTime + 0.05);
+          const audioCtx = getAudioContext();
+          // Don't return here — the message flush below must always run.
+          if (audioCtx) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(
+              0.001,
+              audioCtx.currentTime + 0.05,
+            );
+            osc.start(audioCtx.currentTime);
+            osc.stop(audioCtx.currentTime + 0.05);
+          }
         } catch {
           // AudioContext may not be available in sandbox; silently ignore
         }

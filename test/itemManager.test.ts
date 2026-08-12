@@ -172,6 +172,26 @@ describe("ItemManager.attachSelectedItems", function () {
     expect(manager.getAttachedItems()).to.have.length(2);
   });
 
+  it("should attach a single item via attachItem (C1 regression)", async function () {
+    const manager = new ItemManager(mockAddon());
+    const item = mockItem({ id: 7, key: "CCC", fields: { title: "C" } });
+
+    const attached = await manager.attachItem(item);
+    expect(attached).to.not.be.null;
+    expect(attached?.id).to.equal(7);
+    expect(manager.getAttachedItems()).to.have.length(1);
+    expect(manager.getAttachedItems()[0].key).to.equal("CCC");
+  });
+
+  it("should dedupe items attached twice via addAttachedItem (C1 regression)", async function () {
+    const manager = new ItemManager(mockAddon());
+    const item = mockItem({ id: 7, key: "CCC", fields: { title: "C" } });
+
+    await manager.attachItem(item);
+    await manager.attachItem(item);
+    expect(manager.getAttachedItems()).to.have.length(1);
+  });
+
   it("should clear attached items", async function () {
     const manager = new ItemManager(mockAddon());
     const item = mockItem({ id: 1, key: "AAA", fields: { title: "A" } });

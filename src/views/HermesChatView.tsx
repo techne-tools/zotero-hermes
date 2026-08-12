@@ -26,6 +26,7 @@ interface HermesChatViewProps {
 
 /**
  * Determine if a CSS color value represents a dark color.
+ * Supports rgb()/rgba(), #rgb/#rrggbb/#rrggbbaa hex, and transparency.
  */
 function isDarkColor(color: string): boolean {
   const rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
@@ -36,6 +37,22 @@ function isDarkColor(color: string): boolean {
     const brightness = (r * 299 + g * 587 + b * 114) / 1000;
     return brightness < 128;
   }
+  // Hex colours (3, 6, or 8 digits) — computed styles often return hex.
+  const hexMatch = color.match(/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
+  if (hexMatch) {
+    let hex = hexMatch[1];
+    if (hex.length === 3) {
+      hex = hex
+        .split("")
+        .map((c) => c + c)
+        .join("");
+    }
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    return brightness < 128;
+  }
   if (color === "transparent" || color === "rgba(0, 0, 0, 0)") {
     return false;
   }
@@ -43,7 +60,9 @@ function isDarkColor(color: string): boolean {
 }
 
 export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
-  addon.log("HermesChatViewComponent: React component rendering");
+  // No render log here — this component re-renders on every stream chunk;
+  // logging on each render floods the console (min1: render log noise).
+  // Lifecycle logs live in mountHermesChat / the stream subscription.
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -191,34 +210,52 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
+  // Keep ChatManager in sync with the view state so slash commands
+  // (/export, /savechat) and the persistence layer see the current
+  // conversation. setMessages schedules a debounced save (500ms), which
+  // is exactly the intended write path during streaming (min1: the
+  // old code never pushed view messages into ChatManager, so /export
+  // and /savechat exported an empty conversation).
+  useEffect(() => {
+    hermes.chat.setMessages(messages);
+  }, [messages, hermes.chat]);
+
   // ─── Send Logic ───
-  const sendToHermes = useCallback(
-    async (text: string) => {
-      addon.log("[ChatView] sendToHermes called with text:", text.slice(0, 60));
+  /**
+   * Shared send pipeline used by both sendToHermes and resendFromIndex (M7).
+   * - builds the prompt context from the current contextItems state
+   * - appends the user message + an empty assistant message (truncating
+   *   first when resending from an index)
+   * - connects the client if needed, then streams via client.sendPrompt
+   */
+  const performSend = useCallback(
+    async (text: string, truncateToIndex?: number) => {
       const st = stateRef.current;
       const streamingMessageId = generateMessageId();
       streamingMessageIdRef.current = streamingMessageId;
       reasoningMessageIdRef.current = null;
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: generateMessageId(),
-          content: text,
-          role: "user",
-          timestamp: Date.now(),
-        },
-        {
-          content: "",
-          id: streamingMessageId,
-          role: "assistant",
-          timestamp: Date.now(),
-        },
-      ]);
+      const userMessage: ChatMessage = {
+        id: generateMessageId(),
+        content: text,
+        role: "user",
+        timestamp: Date.now(),
+      };
+      const assistantMessage: ChatMessage = {
+        content: "",
+        id: streamingMessageId,
+        role: "assistant",
+        timestamp: Date.now(),
+      };
+
+      if (truncateToIndex !== undefined) {
+        setMessages([...st.messages.slice(0, truncateToIndex), userMessage, assistantMessage]);
+      } else {
+        setMessages((prev) => [...prev, userMessage, assistantMessage]);
+      }
       setInput("");
       setIsTyping(true);
 
-      // Haptic feedback when agent starts responding
       if (
         settings.get("enableHapticFeedback", false) &&
         typeof navigator !== "undefined" &&
@@ -236,22 +273,17 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
       }, 60000);
 
       const client = hermes.client;
-      addon.log(
-        "[ChatView] client type:",
-        client.constructor.name,
-        "connected:",
-        client.getIsConnected(),
-      );
       if (!client.getIsConnected()) {
         try {
-          addon.log("[ChatView] Connecting client...");
           await client.connect();
-          addon.log("[ChatView] Client connected successfully");
         } catch (err) {
-          addon.log("[ChatView] Connection failed:", (err as Error).message);
           setError(`Connection failed: ${(err as Error).message}`);
           setIsTyping(false);
           streamingMessageIdRef.current = null;
+          if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+            typingTimeoutRef.current = null;
+          }
           return;
         }
       }
@@ -269,102 +301,44 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
       );
 
       try {
-        addon.log("[ChatView] Calling client.sendPrompt...");
         await client.sendPrompt(text, promptContextItems, {
           allowedTools: st.allowedTools,
         });
-        addon.log("[ChatView] client.sendPrompt returned");
       } catch (err) {
-        addon.log("[ChatView] sendPrompt failed:", (err as Error).message);
         setError(`Send failed: ${(err as Error).message}`);
         setIsTyping(false);
         streamingMessageIdRef.current = null;
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+          typingTimeoutRef.current = null;
+        }
+      }
+
+      // M8: persist the tool restriction state into the current
+      // conversation so it survives restarts and can be restored.
+      const conv = hermes.conversations.getCurrentConversation();
+      if (conv) {
+        conv.allowedTools = st.allowedTools;
+        hermes.conversations.saveConversation(conv);
       }
     },
-    [hermes.client, addon],
+    [hermes.client, addon, settings],
+  );
+
+  const sendToHermes = useCallback(
+    async (text: string) => {
+      addon.log("[ChatView] sendToHermes called with text:", text.slice(0, 60));
+      await performSend(text);
+    },
+    [performSend, addon],
   );
 
   const resendFromIndex = useCallback(
     async (index: number, newText: string) => {
       addon.log("[ChatView] resendFromIndex called at index:", index);
-      const st = stateRef.current;
-
-      const streamingMessageId = generateMessageId();
-      streamingMessageIdRef.current = streamingMessageId;
-      reasoningMessageIdRef.current = null;
-
-      // Truncate messages up to this user message index
-      const nextMessages = st.messages.slice(0, index);
-
-      setMessages([
-        ...nextMessages,
-        {
-          id: generateMessageId(),
-          content: newText,
-          role: "user",
-          timestamp: Date.now(),
-        },
-        {
-          content: "",
-          id: streamingMessageId,
-          role: "assistant",
-          timestamp: Date.now(),
-        },
-      ]);
-
-      setInput("");
-      setIsTyping(true);
-
-      if (
-        settings.get("enableHapticFeedback", false) &&
-        typeof navigator !== "undefined" &&
-        navigator.vibrate
-      ) {
-        navigator.vibrate(50);
-      }
-
-      typingTimeoutRef.current = setTimeout(() => {
-        addon.log("[ChatView] Typing timeout reached, clearing indicator");
-        setIsTyping(false);
-        streamingMessageIdRef.current = null;
-        reasoningMessageIdRef.current = null;
-      }, 60000);
-
-      const client = hermes.client;
-      if (!client.getIsConnected()) {
-        try {
-          await client.connect();
-        } catch (err) {
-          setError(`Connection failed: ${(err as Error).message}`);
-          setIsTyping(false);
-          streamingMessageIdRef.current = null;
-          return;
-        }
-      }
-
-      const promptContextItems: PromptContextItem[] = st.contextItems.map(
-        (item) => ({
-          id: item.id,
-          type: item.type,
-          text: item.text,
-          data: item.data ? JSON.stringify(item.data.toJSON()) : undefined,
-          extracted: item.extracted
-            ? (item.extracted as unknown as Record<string, unknown>)
-            : undefined,
-        }),
-      );
-
-      try {
-        await client.sendPrompt(newText, promptContextItems, {
-          allowedTools: st.allowedTools,
-        });
-      } catch (err) {
-        setError(`Send failed: ${(err as Error).message}`);
-        setIsTyping(false);
-        streamingMessageIdRef.current = null;
-      }
+      await performSend(newText, index);
     },
-    [hermes.client, addon],
+    [performSend, addon],
   );
 
   const sendMessage = useCallback(async () => {
@@ -388,6 +362,7 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
       if (slashCmd.command.name === "clear") {
         setMessages([]);
         setContextItems([]);
+        setAllowedTools(null);
         hermes.chat.clearMessages();
         hermes.conversations.createConversation();
         return;
@@ -567,6 +542,11 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         update.type === "tool_complete"
       ) {
         flushNow();
+        // M4: respect the showToolUse pref — tool messages are purely
+        // informational and can be hidden entirely.
+        if (!settings.get("showToolUse", true)) {
+          return;
+        }
         if (update.toolCall) {
           const isRunning =
             update.type !== "tool_complete" &&
@@ -657,20 +637,16 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         });
       } else if (update.type === "usage" && update.usage) {
         flushNow();
-        setTokenUsage({
-          input: update.usage.inputTokens,
-          output: update.usage.outputTokens,
-          total: update.usage.totalTokens,
-        });
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: generateMessageId(),
-            content: `📊 Tokens: ${update.usage!.inputTokens} in, ${update.usage!.outputTokens} out, ${update.usage!.totalTokens} total`,
-            role: "system",
-            timestamp: Date.now(),
-          },
-        ]);
+        // C4: single display — the token dashboard (gated on the
+        // showTokenCount pref). Previously this ALSO appended a system
+        // message, showing the same numbers twice.
+        if (settings.get("showTokenCount", false)) {
+          setTokenUsage({
+            input: update.usage.inputTokens,
+            output: update.usage.outputTokens,
+            total: update.usage.totalTokens,
+          });
+        }
         // usage_update often signals the end of a turn when no stop is sent
         setIsTyping(false);
       } else if (update.type === "session_info") {
@@ -755,7 +731,9 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
                 ];
               });
             } else {
-              const extracted = await hermes.items.extractItemData(item);
+              // C1: also record in ItemManager.attachedItems so slash
+              // commands can resolve items added via add-context: links.
+              const extracted = await hermes.items.attachItem(item);
               setContextItems((prev) => {
                 if (prev.some((p) => p.id === `item-${itemId}`)) return prev;
                 return [
@@ -776,6 +754,13 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         }
       } else if (href && href.startsWith("apply-tag:")) {
         e.preventDefault();
+        // M4: respect the enableTags pref
+        if (!settings.get("enableTags", true)) {
+          setError(
+            "Tag management is disabled. Enable it in Zotero → Settings → Hermes.",
+          );
+          return;
+        }
         const tag = href.substring("apply-tag:".length);
         const attachedItems = hermes.items.getAttachedItems();
         if (attachedItems.length === 0) {
@@ -828,7 +813,9 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
     void (async () => {
       const extractedItems = await Promise.all(
         items.map(async (item) => {
-          const extracted = await hermes.items.extractItemData(item);
+          // C1: populate ItemManager.attachedItems so slash commands
+          // (/annotations, /cite, /tag, /savechat) can resolve the item.
+          const extracted = await hermes.items.attachItem(item);
           return {
             id: `item-${item.id}`,
             type: "item" as const,
@@ -870,6 +857,9 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         setMessages(conv.messages || []);
         setContextItems([]);
         setError(null);
+        // M8: restore the conversation's tool restriction state (null =
+        // unrestricted, array = restricted list, [] = block all).
+        setAllowedTools(conv.allowedTools ?? null);
         hermes.chat.loadFromConversation(conv);
         setIsConversationListOpen(false);
       }
@@ -879,17 +869,29 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
 
   const handleDeleteConversation = useCallback(
     (id: string) => {
+      // M2: deleting a history item must not wipe the active chat view.
+      // Only reset the view when the deleted conversation IS the current
+      // one (ConversationManager already nulls currentConversation then).
+      const wasCurrent =
+        hermes.conversations.getCurrentConversation()?.id === id;
       hermes.conversations.deleteConversation(id);
       loadConversationList();
-      if (messages.length > 0) {
+      if (wasCurrent) {
         setMessages([]);
         setContextItems([]);
+        hermes.conversations.createConversation();
       }
     },
-    [hermes.conversations, loadConversationList, messages.length],
+    [hermes.conversations, loadConversationList],
   );
 
   const exportToHtml = useCallback(async (): Promise<void> => {
+    // Escape & first so previously-escaped entities aren't double-escaped.
+    const escapeHtml = (s: string) =>
+      s
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
     const html = `<!DOCTYPE html>
 <html>
 <head><title>Hermes Conversation</title></head>
@@ -899,8 +901,8 @@ ${messages
   .map(
     (m) => `
 <div style="margin: 1em 0; padding: 0.5em; background: ${m.role === "user" ? "#e3f2fd" : "#f5f5f5"}; border-radius: 4px;">
-  <strong>${m.role.toUpperCase()}</strong>
-  <p>${m.content.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+  <strong>${escapeHtml(m.role.toUpperCase())}</strong>
+  <p>${escapeHtml(m.content)}</p>
 </div>`,
   )
   .join("\n")}
@@ -993,6 +995,7 @@ ${messages
     setMessages([]);
     setContextItems([]);
     setError(null);
+    setAllowedTools(null);
     hermes.chat.clearMessages();
     hermes.conversations.createConversation();
   }, [hermes.chat, hermes.conversations]);
@@ -1308,10 +1311,15 @@ export function mountHermesChat(
   }
 
   // Listen for OS theme changes and update dynamically
+  // M6: keep a reference so the listener can be removed on unmount.
+  let mq: MediaQueryList | null = null;
+  let onThemeChange: ((e: MediaQueryListEvent) => void) | null = null;
   try {
-    const mq = win?.matchMedia?.("(prefers-color-scheme: dark)");
+    mq = win?.matchMedia?.("(prefers-color-scheme: dark)") as
+      | MediaQueryList
+      | null;
     if (mq) {
-      const onThemeChange = (e: MediaQueryListEvent) => {
+      onThemeChange = (e: MediaQueryListEvent) => {
         const newIsDark = e.matches;
         const newTheme = {
           bg: newIsDark ? "#1e1e1e" : "#ffffff",
@@ -1364,6 +1372,14 @@ export function mountHermesChat(
   }
 
   return () => {
+    // M6: remove the matchMedia listener to avoid leaks on unmount/toggle.
+    if (mq && onThemeChange) {
+      try {
+        mq.removeEventListener("change", onThemeChange);
+      } catch {
+        // ignore
+      }
+    }
     root?.unmount();
   };
 }

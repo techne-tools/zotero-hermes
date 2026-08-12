@@ -20,9 +20,12 @@ export class DebugLogger {
 
   private get isEnabled(): boolean {
     try {
+      // Default must be FALSE to match the documented behaviour (off by
+      // default). The old `true` default made DebugLogger log everything
+      // until the pref was explicitly initialised.
       return Zotero.Prefs.get(
         "extensions.zotero.hermes.enableDebugMode",
-        true,
+        false,
       ) as boolean;
     } catch {
       return false;

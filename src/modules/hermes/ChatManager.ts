@@ -20,9 +20,14 @@ export class ChatManager {
 
   /**
    * Schedule a debounced save to disk. Only the last call within the
-   * debounce window actually writes.
+   * debounce window actually writes. Respects the autoSave pref (M4).
    */
   private scheduleSave(): void {
+    const autoSave = this.addon.data.hermes?.preferences?.get<boolean>(
+      "autoSave",
+      true,
+    );
+    if (autoSave === false) return;
     if (this.saveTimer) clearTimeout(this.saveTimer);
     this.saveTimer = setTimeout(() => {
       this.saveTimer = null;

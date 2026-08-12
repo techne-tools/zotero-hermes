@@ -39,70 +39,41 @@ import { mountHermesChat } from "./views/HermesChatView";
 
 async function onStartup() {
   try {
-    addon.log("Step 1: Waiting for Zotero promises...");
+    addon.log("Hermes startup: waiting for Zotero promises...");
     await Promise.all([
       Zotero.initializationPromise,
       Zotero.unlockPromise,
       Zotero.uiReadyPromise,
     ]);
-    addon.log("Step 2: Zotero promises resolved");
 
     // Initialize locale FIRST
     initLocale();
-    addon.log("Step 3: Locale initialized");
 
     // Debug mode can now gate verbose logs below this point
     const debug = new DebugLogger(addon);
-    debug.info("Debug mode enabled — verbose logging active");
 
     // Audit log for recording all agent actions
     const auditLog = new AuditLog(addon);
     auditLog.record("connection", "Plugin startup", "success");
 
     // Initialize Hermes modules
-    addon.log("Step 4: Creating ApprovalDialog...");
     const approvalDialog = new ApprovalDialog(addon);
-    addon.log("Step 5: ApprovalDialog created");
-
-    addon.log("Step 6: Creating Hermes client...");
     const preferences = new PreferencesManager(addon);
     const connectionMode = preferences.getConnectionMode();
     let client;
     if (connectionMode === "api") {
       client = new HermesApiClient(addon);
-      addon.log("Step 7: HermesApiClient created (API mode)");
     } else {
       client = new HermesClient(addon);
-      addon.log("Step 7: HermesClient created (ACP/stdio mode)");
     }
 
-    addon.log("Step 8: Creating ChatManager...");
     const chat = new ChatManager(addon);
-    addon.log("Step 9: ChatManager created");
-
-    addon.log("Step 10: Creating NoteManager...");
     const notes = new NoteManager(addon, approvalDialog);
-    addon.log("Step 11: NoteManager created");
-
-    addon.log("Step 12: Creating ItemManager...");
     const items = new ItemManager(addon);
-    addon.log("Step 13: ItemManager created");
-
-    addon.log("Step 14: Creating CitationManager...");
     const citations = new CitationManager(addon);
-    addon.log("Step 15: CitationManager created");
-
-    addon.log("Step 16: Creating AnnotationManager...");
     const annotations = new AnnotationManager(addon);
-    addon.log("Step 17: AnnotationManager created");
-
-    addon.log("Step 18: Creating TagManager...");
     const tags = new TagManager(addon);
-    addon.log("Step 19: TagManager created");
-
-    addon.log("Step 20: Creating ConversationManager...");
     const conversations = new ConversationManager(addon);
-    addon.log("Step 21: ConversationManager created");
 
     addon.data.hermes = {
       client,
@@ -118,14 +89,12 @@ async function onStartup() {
       debug,
       auditLog,
     };
-    addon.log("Step 24: Hermes modules initialized");
+    addon.log("Hermes modules initialized (mode: " + connectionMode + ")");
     // Load FTL/Stylesheets for all existing windows
     const mainWindows = Zotero.getMainWindows();
-    addon.log(`Step 25: Found ${mainWindows.length} main windows`);
     if (mainWindows.length > 0) {
       await Promise.all(mainWindows.map((win) => onMainWindowLoad(win)));
     }
-    addon.log("Step 26: onMainWindowLoad complete for all windows");
 
     // Register preferences pane in Zotero Settings
     try {
@@ -135,7 +104,6 @@ async function onStartup() {
         label: getString("prefs-title"),
         image: `chrome://${addon.data.config.addonRef}/content/icons/favicon.png`,
       });
-      addon.log("Step 27: Preference pane registered");
     } catch (prefErr) {
       addon.log(
         `Failed to register preference pane: ${(prefErr as Error).message}`,
@@ -370,7 +338,7 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
     })
     .show();
 
-  await Zotero.Promise.delay(1000);
+  await Zotero.Promise.delay(100);
   popupWin.changeLine({
     progress: 30,
     text: `[30%] ${getString("startup-begin")}`,
@@ -382,7 +350,7 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
   // Register full-height sidebar and toolbar button
   registerHermesSidebar(win);
 
-  await Zotero.Promise.delay(1000);
+  await Zotero.Promise.delay(100);
 
   popupWin.changeLine({
     progress: 100,
@@ -398,6 +366,16 @@ async function onMainWindowUnload(win: Window): Promise<void> {
 }
 
 function onShutdown(): void {
+  // M5: disconnect the Hermes client so the ACP subprocess is killed
+  // cleanly (no orphaned `hermes acp` processes after Zotero exits).
+  try {
+    addon.data.hermes?.client?.disconnect();
+  } catch (error) {
+    addon.log(
+      `Error disconnecting Hermes client on shutdown: ${(error as Error).message}`,
+    );
+  }
+
   try {
     const mainWindows = Zotero.getMainWindows();
     for (const win of mainWindows) {

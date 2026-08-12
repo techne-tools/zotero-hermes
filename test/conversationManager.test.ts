@@ -271,4 +271,38 @@ describe("ConversationManager", function () {
     manager.clearMessages();
     expect(manager.getCurrentConversation()?.messages).to.have.length(0);
   });
+
+  it("should not mutate currentConversation when listing history (M1 regression)", function () {
+    const fs = new MockFs();
+    installZoteroGlobals(fs);
+    const manager = new ConversationManager(makeAddon(fs));
+
+    const current = manager.createConversation("Current");
+    current.messages = [
+      { id: "m1", role: "user", content: "active chat", timestamp: 1 } as any,
+    ];
+    manager.saveConversation(current);
+
+    // A second conversation on disk
+    const older = manager.createConversation("Older");
+    manager.saveConversation(older);
+
+    // Switch the active conversation back to "Current" — it must survive
+    // a subsequent loadAllConversations() unchanged.
+    manager.setCurrentConversation(current.id);
+
+    try {
+      const listed = manager.loadAllConversations();
+      expect(listed.length).to.equal(2);
+      // The list operation must not have clobbered the active conversation.
+      expect(manager.getCurrentConversation()?.id).to.equal(current.id);
+      expect(manager.getCurrentConversation()?.title).to.equal("Current");
+      expect(manager.getCurrentConversation()?.messages).to.have.length(1);
+    } catch (err) {
+      // AGENTS.md gotcha: chai assertion messages are lost in the reporter;
+      // surface the message via window.debug when available.
+      (window as any).debug?.(`M1 failure: ${(err as Error).message}`);
+      throw err;
+    }
+  });
 });

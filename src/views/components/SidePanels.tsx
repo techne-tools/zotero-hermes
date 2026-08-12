@@ -152,7 +152,8 @@ export const SidePanels: React.FC<SidePanelsProps> = ({
             </div>
           ) : (
             <ul style={{ margin: 0, padding: "0 0 0 1em" }}>
-              {conversations.slice(0, 10).map((conv) => (
+              {/* No hard cap — the CSS max-height + overflow-y scrolls. */}
+              {conversations.map((conv) => (
                 <li key={conv.id} className="hermes-conversation-item">
                   <button
                     onClick={() => onLoadConversation(conv.id)}

@@ -148,44 +148,4 @@ export class ApprovalDialog {
   public getPendingChange(id: string): PendingFileChange | undefined {
     return this.pendingChanges.get(id);
   }
-
-  /**
-   * Get all pending changes.
-   */
-  public getPendingChanges(): PendingFileChange[] {
-    return Array.from(this.pendingChanges.values());
-  }
-
-  /**
-   * Approve all pending changes.
-   */
-  public async approveAll(): Promise<number> {
-    const pending = this.getPendingChanges();
-    let approved = 0;
-    for (const change of pending) {
-      if (change.status === "pending") {
-        change.status = "approved";
-        approved++;
-      }
-    }
-    return approved;
-  }
-
-  /**
-   * Get count of pending changes.
-   */
-  public getPendingCount(): number {
-    let count = 0;
-    for (const change of this.pendingChanges.values()) {
-      if (change.status === "pending") count++;
-    }
-    return count;
-  }
-
-  /**
-   * Clear all pending changes.
-   */
-  public clearPendingChanges(): void {
-    this.pendingChanges.clear();
-  }
 }

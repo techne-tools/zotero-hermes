@@ -200,6 +200,28 @@ When fixing tests or doing isolated work, use a **git worktree** — never run t
 
 6. **opencode sandbox blocks `/tmp` writes** — dispatch briefs must say "work only inside this worktree, no /tmp paths". Also: exit 0 is UNVERIFIED — gate on `git diff` + TASK.md status, not just the exit code.
 
+### Test Runner Gotchas (2026-08-12 — unit test suite)
+
+These cost a full debugging session. Read before writing tests that touch the `Zotero` global:
+
+1. **`zotero-plugin test` runs in WATCH mode by default** — the process never exits after tests finish. Always run `npm test -- --no-watch` (or `--exit-on-finish`) for CI/verification runs. Without it, the suite "hangs" after the last test.
+
+2. **NEVER replace the `Zotero` global in tests** — the test runner's reporter calls `Zotero.HTTP.request` to stream results back to the server, and `Zotero.Utilities.Internal.quit` to exit. Replacing `globalThis.Zotero` with a mock breaks the reporter: every `send()` throws, the server never receives the "end" event, and the suite hangs forever with no error output. **Pattern**: spread-overlay the real object and override only what you need:
+   ```ts
+   const realZotero = (globalThis as any).Zotero;
+   (globalThis as any).__realZotero = realZotero;
+   (globalThis as any).Zotero = { ...realZotero, getProfileDirectory: () => ... };
+   // restore in after(): (globalThis as any).Zotero = (globalThis as any).__realZotero;
+   ```
+
+3. **`Components` is a read-only global in the Firefox sandbox** — you cannot reassign `globalThis.Components`. The real one already provides `nsIFile.DIRECTORY_TYPE`, so don't mock it.
+
+4. **Some `Zotero.File` properties are read-only** (e.g. `putContents`, `getContents`) — direct assignment throws. Use the spread-overlay pattern above instead.
+
+5. **Chai assertion errors lose their message in the reporter** — the scaffold's reporter serializes `data.error` via JSON, and chai's `message` is non-enumerable, so failures show as `Expected: undefined / Received: undefined`. To debug, wrap the test body in try/catch and call `(window as any).debug?.(err.stack)` (the scaffold defines `window.debug` which POSTs to the server).
+
+6. **Mock `Zotero.File.pathToFile` must throw on empty path** — `ConversationManager` relies on that throw to skip persistence when no profile/data dir exists. A mock that silently accepts `""` will write files with empty paths and break the "no persist" test.
+
 ### Files Modified in Recent Session (5 June 2026)
 
 | File                                 | Change                                                                |

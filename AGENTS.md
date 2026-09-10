@@ -154,8 +154,8 @@ DOI: 10.1234/example
 URL: https://example.com/paper
 Item type: journalArticle
 Zotero attachment key: XYZ789
-Zotero storage path: Zotero data dir/storage/XYZ789/
-Zotero file path: Zotero data dir/storage/XYZ789/filename.pdf
+Zotero storage path: /Users/<user>/Zotero/storage/XYZ789/
+Zotero file path: /Users/<user>/Zotero/storage/XYZ789/filename.pdf
 ```
 
 The system instruction explicitly tells the agent:
@@ -189,7 +189,7 @@ When fixing tests or doing isolated work, use a **git worktree** — never run t
 2. **Copy the gitignored `.env`** — the scaffold loads it via dotenv; without it you get "No Zotero Found." It contains:
    ```
    ZOTERO_PLUGIN_ZOTERO_BIN_PATH = /Applications/Zotero.app/Contents/MacOS/zotero
-   ZOTERO_PLUGIN_PROFILE_PATH = Zotero profile dir
+   ZOTERO_PLUGIN_PROFILE_PATH = /Users/<user>/Library/Application Support/Zotero/Profiles/<profile>.default
    ```
 
 3. **`NODE_ENV=test` is mandatory for `npm ci`** — ambient `NODE_ENV=production` (Hermes TUI quirk) makes npm 11 omit devDependencies (only 6 packages installed otherwise). Always prefix: `NODE_ENV=test npm ci --no-audit --no-fund`.

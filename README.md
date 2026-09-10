@@ -161,7 +161,7 @@ Open **Zotero → Edit → Settings → Hermes Agent** to configure:
   `SidePanels` (export/conversations/search/settings/onboarding),
   `ContextBar` (chips), `ChatHeader` (toolbar).
 - **Hardcoded path removed** — `HermesClient` no longer falls back to
-  `Zotero data dir`; Zotero data dir is resolved at runtime.
+  a hardcoded Zotero data dir; it is resolved at runtime.
 - **Command injection surface closed** — the `hermes` binary is now spawned
   directly with an argument array (no `zsh -c` shell string), so a
   configured path with metacharacters cannot inject commands.

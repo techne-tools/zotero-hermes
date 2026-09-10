@@ -632,4 +632,4 @@ npm run lint:fix
 - [Zotero Types](https://github.com/windingwind/zotero-types)
 - [Zotero Plugin Toolkit](https://github.com/windingwind/zotero-plugin-toolkit)
 - [Hermes Agent Docs](https://hermes-agent.nousresearch.com/docs/)
-- [Obsidian Hermes Reference](obsidian-hermes)
+- [Obsidian Hermes Reference](https://github.com/NousResearch/obsidian-hermes)

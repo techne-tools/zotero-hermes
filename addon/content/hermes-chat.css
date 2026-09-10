@@ -212,12 +212,11 @@
 .hermes-message-reasoning {
   background-color: var(--hermes-bg-tertiary, #f8f4e8);
   /* Clearly distinct from response bubbles: dashed border, italic,
-     muted text, and a left accent bar. */
+     muted text. */
   border-style: dashed;
   border-color: var(--hermes-border, #c0c0c0);
   font-style: italic;
   opacity: 0.75;
-  border-left: 3px solid var(--hermes-accent, #4a90d9);
 }
 
 .hermes-message-tool {

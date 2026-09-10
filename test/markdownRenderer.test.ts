@@ -55,4 +55,20 @@ describe("MarkdownRenderer (parseInline)", function () {
     const result = parseInline(input);
     expect(result).to.not.deep.include({ type: "doi" });
   });
+
+  it("should auto-link a DOI inside an italic span", function () {
+    // Citations are often wrapped in *...* — the DOI must still link.
+    const input =
+      "*Dalmasso, F. (2013) 'Badiou's Spectator-Subject', Performance Research, 18(1), pp. 77–83. DOI: 10.1080/13528165.2013.789246 — engages the Rhapsody*'s concept.";
+    const result = parseInline(input);
+    const italic = result.find((s) => s.type === "italic");
+    expect(italic).to.exist;
+    // The italic segment's content re-parses to include a doi segment
+    const inner = parseInline(italic!.content);
+    expect(inner).to.deep.include({
+      type: "doi",
+      content: "DOI: 10.1080/13528165.2013.789246",
+      url: "https://doi.org/10.1080/13528165.2013.789246",
+    });
+  });
 });

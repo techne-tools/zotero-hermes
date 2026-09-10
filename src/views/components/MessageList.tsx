@@ -82,6 +82,11 @@ export const MessageList: React.FC<MessageListProps> = ({
               if (el) messageRefs.current.set(msg.id, el);
               else messageRefs.current.delete(msg.id);
             }}
+            // The wrapper must be a flex column so the inner .hermes-message
+            // can align itself (align-self needs a flex parent). Without this,
+            // .hermes-message-user/.hermes-message-assistant alignment is
+            // ignored and every bubble stretches full width.
+            style={{ display: "flex", flexDirection: "column" }}
           >
             <ChatMessageItem
               message={msg}

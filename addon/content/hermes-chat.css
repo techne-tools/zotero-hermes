@@ -284,6 +284,10 @@
 /* ─── Message Content ─── */
 .hermes-message-content {
   padding: 0 12px 10px;
+  /* Zotero's XUL chrome disables text selection by default; re-enable it
+     so users can highlight and copy chat text. */
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .hermes-message-content-pre {

@@ -722,6 +722,14 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
       if (!link) return;
 
       const href = link.getAttribute("href");
+      // http(s) links: open in the system browser via Zotero.launchURL.
+      // The sandbox blocks default navigation (target=_blank does nothing),
+      // so we must intercept and hand the URL to Zotero.
+      if (href && (href.startsWith("http://") || href.startsWith("https://"))) {
+        e.preventDefault();
+        Zotero.launchURL(href);
+        return;
+      }
       if (href && href.startsWith("add-context:")) {
         e.preventDefault();
         const itemIdStr = href.substring("add-context:".length);

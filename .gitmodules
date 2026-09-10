@@ -1,0 +1,3 @@
+[submodule ".refs/zotero-pdfjs-types"]
+	path = .refs/zotero-pdfjs-types
+	url = https://github.com/zotero-plugin-dev/zotero-pdfjs-types.git

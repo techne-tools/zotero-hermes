@@ -81,7 +81,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
         />
         <button
           ref={sendBtnRef}
-          disabled={!input.trim() || isTyping}
+          disabled={!input.trim()}
           className="hermes-send-btn"
           style={{
             padding: "6px 16px",
@@ -96,7 +96,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
             display: "inline-flex",
             alignItems: "center",
             gap: "4px",
-            opacity: !input.trim() || isTyping ? 0.5 : 1,
+            opacity: !input.trim() ? 0.5 : 1,
           }}
         >
           {isTyping ? <StopIcon /> : "Send"}

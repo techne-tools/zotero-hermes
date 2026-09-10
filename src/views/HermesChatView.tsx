@@ -441,13 +441,33 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
   }, [input]);
 
   // 3. Send button click → native
+  // The send button doubles as a stop button (AGENTS.md: Stop Button Wiring).
+  // Reads stateRef.current.isTyping (not React state) to decide: typing →
+  // client.cancel() to abort the in-flight stream; idle → sendMessage().
   useEffect(() => {
     const btn = sendBtnRef.current;
     if (!btn) return;
-    const handler = () => void sendMessage();
+    const handler = () => {
+      const st = stateRef.current;
+      if (st.isTyping) {
+        addon.log("[ChatView] Stop requested — cancelling in-flight stream");
+        void hermes.client.cancel();
+        // Clear the typing state immediately — the ACP cancel is
+        // asynchronous and no terminal event is guaranteed to follow.
+        setIsTyping(false);
+        streamingMessageIdRef.current = null;
+        reasoningMessageIdRef.current = null;
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+          typingTimeoutRef.current = null;
+        }
+        return;
+      }
+      void sendMessage();
+    };
     btn.addEventListener("click", handler);
     return () => btn.removeEventListener("click", handler);
-  }, [sendMessage]);
+  }, [sendMessage, hermes.client, addon]);
 
   // 4. Textarea Enter key → native + slash command navigation
   useEffect(() => {

@@ -71,4 +71,30 @@ describe("MarkdownRenderer (parseInline)", function () {
       url: "https://doi.org/10.1080/13528165.2013.789246",
     });
   });
+
+  it("should auto-link a bare URL", function () {
+    const input =
+      "Direct article page: https://www.performancephilosophy.org/journal/article/view/162";
+    const result = parseInline(input);
+    expect(result).to.deep.include({
+      type: "url",
+      content: "https://www.performancephilosophy.org/journal/article/view/162",
+      url: "https://www.performancephilosophy.org/journal/article/view/162",
+    });
+  });
+
+  it("should not split a full doi.org URL into url + doi", function () {
+    // Regression: the DOI regex used to match the 10.xxxx/... part after
+    // the slash in https://doi.org/10.21476/pp.2017.33162, leaving the
+    // prefix as plain text and the DOI as a broken half-link.
+    const input =
+      "DOI link: https://doi.org/10.21476/pp.2017.33162";
+    const result = parseInline(input);
+    expect(result).to.deep.include({
+      type: "url",
+      content: "https://doi.org/10.21476/pp.2017.33162",
+      url: "https://doi.org/10.21476/pp.2017.33162",
+    });
+    expect(result).to.not.deep.include({ type: "doi" });
+  });
 });

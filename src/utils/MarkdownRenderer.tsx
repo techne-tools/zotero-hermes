@@ -19,7 +19,15 @@ import { memo, ReactNode } from "react";
  */
 
 interface InlineSegment {
-  type: "text" | "bold" | "italic" | "code" | "link" | "strikethrough" | "doi";
+  type:
+    | "text"
+    | "bold"
+    | "italic"
+    | "code"
+    | "link"
+    | "strikethrough"
+    | "doi"
+    | "url";
   content: string;
   url?: string;
 }
@@ -36,8 +44,16 @@ export function parseInline(text: string): InlineSegment[] {
     { regex: /_([^_]+)_/g, type: "italic" as const },
     { regex: /~~([^~]+)~~/g, type: "strikethrough" as const },
     { regex: /\[([^\]]+)\]\(((?:[^()\\]|\\.)*)\)/g, type: "link" as const },
-    // Bare DOIs (with optional doi: prefix) auto-link to doi.org
-    { regex: /\b((?:doi:\s*)?10\.\d{4,9}\/[^\s<>]+)/gi, type: "doi" as const },
+    // Bare URLs auto-link
+    { regex: /(https?:\/\/[^\s<>]+)/g, type: "url" as const },
+    // Bare DOIs (with optional doi: prefix) auto-link to doi.org. The
+    // negative lookbehind prevents matching a DOI that is already part of
+    // a full https://doi.org/ URL (e.g. after the slash in
+    // "https://doi.org/10.21476/pp.2017.33162").
+    {
+      regex: /(?<![\w/])((?:doi:\s*)?10\.\d{4,9}\/[^\s<>]+)/gi,
+      type: "doi" as const,
+    },
   ];
 
   while (remaining.length > 0) {
@@ -81,6 +97,10 @@ export function parseInline(text: string): InlineSegment[] {
         // Strip any doi: prefix and link to doi.org
         seg.url = `https://doi.org/${seg.content.replace(/^doi:\s*/i, "")}`;
       }
+      if (seg.type === "url") {
+        // The URL is its own href
+        seg.url = seg.content;
+      }
       segments.push(seg);
       remaining = remaining.slice(earliestMatch.index + earliestMatch.length);
     } else {
@@ -116,6 +136,7 @@ function renderInline(segments: InlineSegment[]): ReactNode[] {
         );
       case "link":
       case "doi":
+      case "url":
         return (
           <a
             key={i}

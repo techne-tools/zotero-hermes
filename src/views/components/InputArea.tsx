@@ -44,9 +44,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
               onClick={() => onSelectSuggestion(cmd)}
             >
               <span className="hermes-slash-item-name">/{cmd.name}</span>
-              <span className="hermes-slash-item-desc">
-                {cmd.description}
-              </span>
+              <span className="hermes-slash-item-desc">{cmd.description}</span>
             </button>
           ))}
         </div>

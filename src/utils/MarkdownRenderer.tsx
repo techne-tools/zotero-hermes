@@ -116,7 +116,9 @@ function renderInline(segments: InlineSegment[]): ReactNode[] {
   return segments.map((seg, i) => {
     switch (seg.type) {
       case "bold":
-        return <strong key={i}>{renderInline(parseInline(seg.content))}</strong>;
+        return (
+          <strong key={i}>{renderInline(parseInline(seg.content))}</strong>
+        );
       case "italic":
         return <em key={i}>{renderInline(parseInline(seg.content))}</em>;
       case "code":

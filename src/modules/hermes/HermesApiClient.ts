@@ -141,10 +141,7 @@ export class HermesApiClient implements ChatClient {
 
     // M8: inject tool restrictions. null/undefined = unrestricted (skip);
     // an empty array = block ALL tools and must still be transmitted.
-    if (
-      options?.allowedTools !== undefined &&
-      options?.allowedTools !== null
-    ) {
+    if (options?.allowedTools !== undefined && options?.allowedTools !== null) {
       const restriction =
         options.allowedTools.length > 0
           ? `You are restricted to ONLY using the following tools: ${options.allowedTools.join(", ")}.`
@@ -350,9 +347,8 @@ export class HermesApiClient implements ChatClient {
     // Use PreferencesManager (single source of truth for prefs) instead of
     // reading raw Zotero.Prefs with the hardcoded prefix.
     return (
-      (this.addon.data.hermes?.preferences?.get<string>("apiUrl", "") || "")
-        .replace(/\/$/, "")
-    );
+      this.addon.data.hermes?.preferences?.get<string>("apiUrl", "") || ""
+    ).replace(/\/$/, "");
   }
 
   private getApiKey(): string {

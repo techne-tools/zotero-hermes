@@ -87,8 +87,7 @@ describe("MarkdownRenderer (parseInline)", function () {
     // Regression: the DOI regex used to match the 10.xxxx/... part after
     // the slash in https://doi.org/10.21476/pp.2017.33162, leaving the
     // prefix as plain text and the DOI as a broken half-link.
-    const input =
-      "DOI link: https://doi.org/10.21476/pp.2017.33162";
+    const input = "DOI link: https://doi.org/10.21476/pp.2017.33162";
     const result = parseInline(input);
     expect(result).to.deep.include({
       type: "url",

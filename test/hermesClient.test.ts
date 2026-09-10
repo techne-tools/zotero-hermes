@@ -413,7 +413,9 @@ describe("HermesClient NDJSON handling", function () {
       },
     });
 
-    child.stdout.onInput!(new TextEncoder().encode(`${line1}\n${line2}\n`).buffer);
+    child.stdout.onInput!(
+      new TextEncoder().encode(`${line1}\n${line2}\n`).buffer,
+    );
 
     expect(updates.filter((u) => u.type === "message")).to.have.length(2);
     expect(updates[0]).to.deep.include({ content: "one" });
@@ -443,9 +445,7 @@ describe("HermesClient NDJSON handling", function () {
 
     // First chunk: half the line, no newline
     const half = Math.floor(line.length / 2);
-    child.stdout.onInput!(
-      new TextEncoder().encode(line.slice(0, half)).buffer,
-    );
+    child.stdout.onInput!(new TextEncoder().encode(line.slice(0, half)).buffer);
     expect(updates).to.have.length(0);
 
     // Second chunk: rest of the line + newline

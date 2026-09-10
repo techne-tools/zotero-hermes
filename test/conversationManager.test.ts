@@ -50,7 +50,10 @@ class MockFile {
     this.fs?.files.delete(this.path);
   }
 
-  public get directoryEntries(): { hasMoreElements: () => boolean; getNext: () => MockFile } {
+  public get directoryEntries(): {
+    hasMoreElements: () => boolean;
+    getNext: () => MockFile;
+  } {
     let i = 0;
     return {
       hasMoreElements: () => i < this.children.length,
@@ -63,7 +66,8 @@ class MockFile {
 class MockFs {
   public files = new Map<string, string>();
   public dirs = new Set<string>();
-  public profileDir: string | null = "/Users/test/Library/Application Support/Zotero/Profiles/abc.default";
+  public profileDir: string | null =
+    "/Users/test/Library/Application Support/Zotero/Profiles/abc.default";
 
   public pathToFile(path: string): MockFile {
     // The real Zotero.File.pathToFile throws on an empty path; the
@@ -135,7 +139,8 @@ function installZoteroGlobals(fs: MockFs) {
     },
     // When profileDir is null, the fallback data dir must also be null
     // so ConversationManager cannot persist anywhere.
-    getZoteroDirectory: () => (fs.profileDir ? realZotero?.getZoteroDirectory?.() : null),
+    getZoteroDirectory: () =>
+      fs.profileDir ? realZotero?.getZoteroDirectory?.() : null,
     File: {
       ...realZotero?.File,
       pathToFile: (path: string) => fs.pathToFile(path),

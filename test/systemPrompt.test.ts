@@ -9,7 +9,8 @@ describe("systemPrompt.buildSystemPrompt", function () {
     zoteroDataDir: "/Users/test/Zotero",
     zoteroDbPath: "/Users/test/Zotero/zotero.sqlite",
     zoteroStorageDir: "/Users/test/Zotero/storage",
-    zoteroProfileDir: "/Users/test/Library/Application Support/Zotero/Profiles/abc.default",
+    zoteroProfileDir:
+      "/Users/test/Library/Application Support/Zotero/Profiles/abc.default",
   };
 
   it("should default to the research assistant persona", function () {

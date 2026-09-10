@@ -105,10 +105,7 @@ export const MessageList: React.FC<MessageListProps> = ({
         <div className="hermes-error-bar">
           <span>⚠️</span>
           <span style={{ flex: 1 }}>{error}</span>
-          <button
-            onClick={onDismissError}
-            className="hermes-error-bar-close"
-          >
+          <button onClick={onDismissError} className="hermes-error-bar-close">
             ✕
           </button>
         </div>

@@ -217,8 +217,8 @@ export const SidePanels: React.FC<SidePanelsProps> = ({
                 research, annotations, and metadata
               </li>
               <li>
-                <strong>Slash commands</strong> — Type <code>/help</code> to
-                see available commands
+                <strong>Slash commands</strong> — Type <code>/help</code> to see
+                available commands
               </li>
               <li>
                 <strong>Session settings</strong> — Control which tools the

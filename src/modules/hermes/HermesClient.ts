@@ -217,12 +217,8 @@ export class HermesClient implements ChatClient {
       (Zotero as any).DataDirectory?.dir ||
       "";
     const zoteroProfileDir = Zotero.getProfileDirectory?.()?.path || "";
-    const zoteroStorageDir = zoteroDataDir
-      ? `${zoteroDataDir}/storage`
-      : "";
-    const zoteroDbPath = zoteroDataDir
-      ? `${zoteroDataDir}/zotero.sqlite`
-      : "";
+    const zoteroStorageDir = zoteroDataDir ? `${zoteroDataDir}/storage` : "";
+    const zoteroDbPath = zoteroDataDir ? `${zoteroDataDir}/zotero.sqlite` : "";
 
     const persona =
       this.addon.data.hermes?.preferences?.get("currentPersona", "default") ||
@@ -243,10 +239,7 @@ export class HermesClient implements ChatClient {
     // "no restriction" (skip); an empty array means "block all tools" and
     // MUST still be transmitted — `if (options?.allowedTools)` alone would
     // silently drop the Block All setting.
-    if (
-      options?.allowedTools !== undefined &&
-      options?.allowedTools !== null
-    ) {
+    if (options?.allowedTools !== undefined && options?.allowedTools !== null) {
       const restriction =
         options.allowedTools.length > 0
           ? `You are restricted to ONLY using the following tools: ${options.allowedTools.join(", ")}. Do not use any other tools.`

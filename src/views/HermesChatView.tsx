@@ -248,7 +248,11 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
       };
 
       if (truncateToIndex !== undefined) {
-        setMessages([...st.messages.slice(0, truncateToIndex), userMessage, assistantMessage]);
+        setMessages([
+          ...st.messages.slice(0, truncateToIndex),
+          userMessage,
+          assistantMessage,
+        ]);
       } else {
         setMessages((prev) => [...prev, userMessage, assistantMessage]);
       }
@@ -1274,9 +1278,9 @@ export function mountHermesChat(
   let mq: MediaQueryList | null = null;
   let onThemeChange: ((e: MediaQueryListEvent) => void) | null = null;
   try {
-    mq = win?.matchMedia?.("(prefers-color-scheme: dark)") as
-      | MediaQueryList
-      | null;
+    mq = win?.matchMedia?.(
+      "(prefers-color-scheme: dark)",
+    ) as MediaQueryList | null;
     if (mq) {
       onThemeChange = (e: MediaQueryListEvent) => {
         const newIsDark = e.matches;

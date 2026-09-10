@@ -1,5 +1,11 @@
 import React from "react";
-import { CloseIcon } from "./Icons";
+import {
+  CloseIcon,
+  TrashIcon,
+  ChevronUpIcon,
+  ChevronDownIcon,
+  LockIcon,
+} from "./Icons";
 
 export interface ConversationSummary {
   id: string;
@@ -92,10 +98,11 @@ export const SidePanels: React.FC<SidePanelsProps> = ({
                   <button
                     onClick={() => onDeleteConversation(conv.id)}
                     className="hermes-small-btn"
-                    style={{ color: "red", padding: "0 4px" }}
+                    style={{ color: "var(--hermes-danger, #b3261e)", padding: "0 4px" }}
                     title="Delete"
+                    aria-label="Delete conversation"
                   >
-                    🗑️
+                    <TrashIcon />
                   </button>
                 </li>
               ))}
@@ -125,14 +132,14 @@ export const SidePanels: React.FC<SidePanelsProps> = ({
             className="hermes-small-btn"
             title="Previous"
           >
-            ↑
+            <ChevronUpIcon />
           </button>
           <button
             onClick={onSearchNext}
             className="hermes-small-btn"
             title="Next"
           >
-            ↓
+            <ChevronDownIcon />
           </button>
           <button
             onClick={onCloseSearch}
@@ -231,7 +238,12 @@ export const SidePanels: React.FC<SidePanelsProps> = ({
             </p>
           </div>
           <div className="hermes-onboarding-security">
-            🔒 Hermes runs locally. Your data stays on your machine.
+            <span
+              style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+            >
+              <LockIcon />
+              Hermes runs locally. Your data stays on your machine.
+            </span>
           </div>
         </div>
       )}

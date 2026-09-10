@@ -139,7 +139,7 @@ const BUILT_IN_COMMANDS: SlashCommand[] = [
                 ? cleanText.substring(0, 80) + "..."
                 : cleanText;
             const title = (note as any).getNoteTitle?.() || "Untitled Note";
-            return `- 📝 **Note: ${title}**: "${preview}" [Add to Context](add-context:${note.id})`;
+            return `- **Note: ${title}**: "${preview}" [Add to Context](add-context:${note.id})`;
           })
           .join("\n");
 
@@ -154,7 +154,7 @@ const BUILT_IN_COMMANDS: SlashCommand[] = [
             const yearStr = item.getField("date")
               ? ` (${item.getField("date")})`
               : "";
-            return `- 📚 **Item: ${item.getDisplayTitle()}**${creatorStr}${yearStr} [Add to Context](add-context:${item.id})`;
+            return `- **Item: ${item.getDisplayTitle()}**${creatorStr}${yearStr} [Add to Context](add-context:${item.id})`;
           })
           .join("\n");
 

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import type { SlashCommand } from "../../modules/hermes/SlashCommands";
 import { StopIcon } from "./Icons";
 
@@ -25,13 +25,25 @@ export const InputArea: React.FC<InputAreaProps> = ({
   slashDropdownRef,
   onSelectSuggestion,
 }) => {
+  // Auto-grow the textarea up to 6 lines, then scroll. Runs on every input
+  // change (typing, clearing after send, slash-command insertion) so the box
+  // always fits its content. The send button stays centred via the row's
+  // align-items: center — it never grows with the textarea.
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    const maxHeight = 6 * 13 * 1.5 + 8; // 6 lines × font-size × line-height + padding
+    textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+  }, [input, inputRef]);
+
   return (
     <div
       className="hermes-input-area"
       style={{
-        padding: "8px",
-        borderTop: "1px solid var(--hermes-border, #e0e0e0)",
-        backgroundColor: "var(--hermes-bg-secondary, #fafafa)",
+        padding: "12px 14px",
+        borderTop: "1px solid var(--hermes-border, #dee1db)",
+        backgroundColor: "var(--hermes-bg-secondary, #f7f8f5)",
       }}
     >
       {/* Slash command dropdown */}
@@ -53,9 +65,12 @@ export const InputArea: React.FC<InputAreaProps> = ({
         className="hermes-input-row"
         style={{
           display: "flex",
-          gap: "6px",
+          gap: "8px",
           alignItems: "center",
-          padding: "0 8px",
+          padding: "8px",
+          backgroundColor: "var(--hermes-input-bg, #ffffff)",
+          border: "1px solid var(--hermes-border, #dee1db)",
+          borderRadius: "10px",
         }}
       >
         <textarea
@@ -66,14 +81,15 @@ export const InputArea: React.FC<InputAreaProps> = ({
           className="hermes-textarea"
           style={{
             flex: 1,
+            minHeight: "28px",
             border: "none",
             outline: "none",
             resize: "none",
-            padding: "8px 0",
+            padding: "4px 6px",
             backgroundColor: "transparent",
             color: "inherit",
             fontFamily: "inherit",
-            fontSize: "0.9em",
+            fontSize: "13px",
             lineHeight: 1.5,
           }}
         />
@@ -82,19 +98,21 @@ export const InputArea: React.FC<InputAreaProps> = ({
           disabled={!input.trim()}
           className="hermes-send-btn"
           style={{
-            padding: "6px 16px",
+            height: "28px",
+            padding: "0 16px",
+            lineHeight: 1.5,
             border: "none",
             borderRadius: "6px",
-            backgroundColor: "var(--hermes-accent, #4a90d9)",
-            color: "white",
+            backgroundColor: "var(--hermes-accent, #0b6b54)",
+            color: "var(--hermes-accent-text, #ffffff)",
             cursor: "pointer",
             fontWeight: 600,
-            fontSize: "0.85em",
+            fontSize: "13px",
             whiteSpace: "nowrap",
             display: "inline-flex",
             alignItems: "center",
             gap: "4px",
-            opacity: !input.trim() ? 0.5 : 1,
+            opacity: !input.trim() ? 0.4 : 1,
           }}
         >
           {isTyping ? <StopIcon /> : "Send"}

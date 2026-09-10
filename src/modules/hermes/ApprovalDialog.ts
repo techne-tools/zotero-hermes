@@ -89,7 +89,7 @@ export class ApprovalDialog {
       contentDiv.className = "hermes-approval-content";
 
       const heading = doc.createElement("h3");
-      heading.textContent = "📝 File Change Approval";
+      heading.textContent = "File Change Approval";
       contentDiv.appendChild(heading);
 
       const para = doc.createElement("p");

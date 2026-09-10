@@ -203,3 +203,49 @@ export const CloseIcon = () => (
     <line x1="6" x2="18" y1="6" y2="18" />
   </svg>
 );
+
+export const TrashIcon = () => (
+  <svg
+    fill="none"
+    height="16"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="1.6"
+    viewBox="0 0 24 24"
+    width="16"
+  >
+    <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+  </svg>
+);
+
+export const AlertIcon = () => (
+  <svg
+    fill="none"
+    height="16"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="1.6"
+    viewBox="0 0 24 24"
+    width="16"
+  >
+    <path d="M12 9v4M12 17h.01M10.3 3.9l-8.2 14.2A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+  </svg>
+);
+
+export const LockIcon = () => (
+  <svg
+    fill="none"
+    height="16"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="1.6"
+    viewBox="0 0 24 24"
+    width="16"
+  >
+    <rect height="10" rx="2" width="16" x="4" y="11" />
+    <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+  </svg>
+);

@@ -1096,7 +1096,7 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
             textAlign: "right",
           }}
         >
-          📊 Tokens: <strong>{tokenUsage.input}</strong> in,{" "}
+          Tokens: <strong>{tokenUsage.input}</strong> in,{" "}
           <strong>{tokenUsage.output}</strong> out (Total: {tokenUsage.total})
         </div>
       )}
@@ -1188,24 +1188,32 @@ export function mountHermesChat(
 
   // Apply theme directly to container element — most reliable in XUL sandbox.
   const theme = {
-    bg: isDark ? "#1e1e1e" : "#ffffff",
-    text: isDark ? "#f0f0f0" : "#333333",
-    border: isDark ? "rgba(255,255,255,0.18)" : "#e0e0e0",
-    bgSecondary: isDark ? "#272727" : "#fafafa",
-    bgTertiary: isDark ? "#303030" : "#f0f0f0",
-    inputBg: isDark ? "#303030" : "#ffffff",
-    accent: "#4a90d9",
-    accentText: "#ffffff",
+    bg: isDark ? "#111413" : "#f1f2ef",
+    text: isDark ? "#ecefea" : "#191c1a",
+    textMuted: isDark ? "#8c938c" : "#5e655e",
+    border: isDark ? "#2b322e" : "#dee1db",
+    bgSecondary: isDark ? "#202623" : "#f7f8f5",
+    bgTertiary: isDark ? "#262d2a" : "#ecedea",
+    inputBg: isDark ? "#191d1b" : "#ffffff",
+    accent: isDark ? "#45be97" : "#0b6b54",
+    accentText: isDark ? "#06231a" : "#ffffff",
+    highlight: isDark ? "#e0b054" : "#9a6608",
+    danger: isDark ? "#f2b8b5" : "#b3261e",
+    success: isDark ? "#3fbf83" : "#1c6b44",
   };
 
   container.style.setProperty("--hermes-bg", theme.bg);
   container.style.setProperty("--hermes-text", theme.text);
+  container.style.setProperty("--hermes-text-muted", theme.textMuted);
   container.style.setProperty("--hermes-border", theme.border);
   container.style.setProperty("--hermes-bg-secondary", theme.bgSecondary);
   container.style.setProperty("--hermes-bg-tertiary", theme.bgTertiary);
   container.style.setProperty("--hermes-input-bg", theme.inputBg);
   container.style.setProperty("--hermes-accent", theme.accent);
   container.style.setProperty("--hermes-accent-text", theme.accentText);
+  container.style.setProperty("--hermes-highlight", theme.highlight);
+  container.style.setProperty("--hermes-danger", theme.danger);
+  container.style.setProperty("--hermes-success", theme.success);
 
   // Explicitly set container background/color so something shows even if
   // CSS variable inheritance fails inside the React tree.
@@ -1230,12 +1238,16 @@ export function mountHermesChat(
           #hermes-react-root {
             --hermes-bg: ${theme.bg};
             --hermes-text: ${theme.text};
+            --hermes-text-muted: ${theme.textMuted};
             --hermes-border: ${theme.border};
             --hermes-bg-secondary: ${theme.bgSecondary};
             --hermes-bg-tertiary: ${theme.bgTertiary};
             --hermes-input-bg: ${theme.inputBg};
             --hermes-accent: ${theme.accent};
             --hermes-accent-text: ${theme.accentText};
+            --hermes-highlight: ${theme.highlight};
+            --hermes-danger: ${theme.danger};
+            --hermes-success: ${theme.success};
             background-color: ${theme.bg} !important;
             color: ${theme.text} !important;
             color-scheme: ${isDark ? "dark" : "light"};
@@ -1285,17 +1297,22 @@ export function mountHermesChat(
       onThemeChange = (e: MediaQueryListEvent) => {
         const newIsDark = e.matches;
         const newTheme = {
-          bg: newIsDark ? "#1e1e1e" : "#ffffff",
-          text: newIsDark ? "#f0f0f0" : "#333333",
-          border: newIsDark ? "rgba(255,255,255,0.18)" : "#e0e0e0",
-          bgSecondary: newIsDark ? "#272727" : "#fafafa",
-          bgTertiary: newIsDark ? "#303030" : "#f0f0f0",
-          inputBg: newIsDark ? "#303030" : "#ffffff",
-          accent: "#4a90d9",
-          accentText: "#ffffff",
+          bg: newIsDark ? "#111413" : "#f1f2ef",
+          text: newIsDark ? "#ecefea" : "#191c1a",
+          textMuted: newIsDark ? "#8c938c" : "#5e655e",
+          border: newIsDark ? "#2b322e" : "#dee1db",
+          bgSecondary: newIsDark ? "#202623" : "#f7f8f5",
+          bgTertiary: newIsDark ? "#262d2a" : "#ecedea",
+          inputBg: newIsDark ? "#191d1b" : "#ffffff",
+          accent: newIsDark ? "#45be97" : "#0b6b54",
+          accentText: newIsDark ? "#06231a" : "#ffffff",
+          highlight: newIsDark ? "#e0b054" : "#9a6608",
+          danger: newIsDark ? "#f2b8b5" : "#b3261e",
+          success: newIsDark ? "#3fbf83" : "#1c6b44",
         };
         container.style.setProperty("--hermes-bg", newTheme.bg);
         container.style.setProperty("--hermes-text", newTheme.text);
+        container.style.setProperty("--hermes-text-muted", newTheme.textMuted);
         container.style.setProperty("--hermes-border", newTheme.border);
         container.style.setProperty(
           "--hermes-bg-secondary",
@@ -1306,6 +1323,14 @@ export function mountHermesChat(
           newTheme.bgTertiary,
         );
         container.style.setProperty("--hermes-input-bg", newTheme.inputBg);
+        container.style.setProperty("--hermes-accent", newTheme.accent);
+        container.style.setProperty(
+          "--hermes-accent-text",
+          newTheme.accentText,
+        );
+        container.style.setProperty("--hermes-highlight", newTheme.highlight);
+        container.style.setProperty("--hermes-danger", newTheme.danger);
+        container.style.setProperty("--hermes-success", newTheme.success);
         container.style.backgroundColor = newTheme.bg;
         container.style.color = newTheme.text;
         container.style.colorScheme = newIsDark ? "dark" : "light";

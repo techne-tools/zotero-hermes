@@ -9,6 +9,8 @@ import {
   NoteIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  AlertIcon,
+  StopIcon,
 } from "./Icons";
 import { stripAnsi } from "../../utils/stripAnsi";
 
@@ -141,7 +143,7 @@ export const ChatMessageItem = memo(function ChatMessageItem({
   if (message.role === "tool") {
     const isError = message.toolStatus === "error";
     const isRunning = message.isRunning || message.toolStatus === "running";
-    const statusIcon = isError ? "❌ " : <HelixSpinner isRunning={isRunning} />;
+    const statusIcon = isError ? <AlertIcon /> : <HelixSpinner isRunning={isRunning} />;
     roleLabel = (
       <>
         {statusIcon}Tool: {message.toolName}
@@ -226,7 +228,7 @@ export const ChatMessageItem = memo(function ChatMessageItem({
             }}
             className="hermes-abort-btn"
           >
-            🛑 Abort
+            <StopIcon /> Abort
           </button>
         )}
       </div>

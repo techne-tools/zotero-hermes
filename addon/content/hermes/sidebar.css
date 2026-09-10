@@ -1,26 +1,31 @@
-/* Hermes Sidebar Styles */
+/* Hermes Sidebar Styles — "Reading Room" design language
+   Shares the --hermes-* palette tokens with hermes-chat.css. */
 
 .hermes-chat-container {
   display: flex;
   flex-direction: column;
-  background-color: var(--zotero-background-primary);
+  background-color: var(--hermes-bg, #f1f2ef);
+  color: var(--hermes-text, #191c1a);
+  font-family: var(--hermes-sans, "Source Sans 3", -apple-system, system-ui, sans-serif);
+  font-size: 14px;
+  line-height: 1.55;
   overflow: hidden;
 }
 
 #hermes-messages-list {
   flex: 1;
   overflow-y: auto;
-  padding: 12px;
+  padding: 16px 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .hermes-message {
   padding: 12px;
-  border-radius: 8px;
+  border-radius: var(--hermes-r-surf, 10px);
   max-width: 85%;
-  animation: fadeIn 0.3s ease;
+  animation: fadeIn var(--hermes-dur-base, 220ms) var(--hermes-ease-out, ease-out);
 }
 
 @keyframes fadeIn {
@@ -36,21 +41,28 @@
 
 .hermes-message-user {
   align-self: flex-end;
-  background-color: var(--zotero-accent-color, #4a90d9);
-  color: white;
+  background-color: var(--hermes-bg-secondary, #f7f8f5);
+  border: 1px solid var(--hermes-border, #dee1db);
+  color: var(--hermes-text, #191c1a);
 }
 
 .hermes-message-assistant {
-  align-self: flex-start;
-  background-color: var(--zotero-background-secondary);
-  border: 1px solid var(--zotero-border-color);
+  align-self: stretch;
+  max-width: 100%;
+  background-color: transparent;
+  border: 0;
+  border-top: 1px solid var(--hermes-border, #dee1db);
+  border-radius: 0;
+  padding-top: 12px;
 }
 
 .hermes-message-system {
   align-self: center;
-  background-color: var(--zotero-background-tertiary);
-  font-style: italic;
-  font-size: 0.9em;
+  background-color: transparent;
+  color: var(--hermes-text-muted, #5e655e);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
 .hermes-message-header {
@@ -58,64 +70,76 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
-  font-size: 0.85em;
-  opacity: 0.8;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--hermes-text-muted, #5e655e);
 }
 
 .hermes-message-content {
-  line-height: 1.5;
+  line-height: 1.6;
   white-space: pre-wrap;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.hermes-message-assistant .hermes-message-content {
+  font-family: var(--hermes-serif, "Source Serif 4", Charter, Georgia, serif);
 }
 
 .hermes-input-container {
-  padding: 12px;
-  border-top: 1px solid var(--zotero-border-color);
-  background-color: var(--zotero-background-secondary);
+  padding: 12px 14px;
+  border-top: 1px solid var(--hermes-border, #dee1db);
+  background-color: var(--hermes-bg-secondary, #f7f8f5);
   gap: 8px;
 }
 
 #hermes-input {
   resize: none;
   font-family: inherit;
-  font-size: 0.95em;
-  padding: 8px;
-  border: 1px solid var(--zotero-border-color);
-  border-radius: 6px;
-  background-color: var(--zotero-background-primary);
-  color: var(--zotero-text-primary);
+  font-size: 13px;
+  padding: 8px 10px;
+  border: 1px solid var(--hermes-border, #dee1db);
+  border-radius: var(--hermes-r-surf, 10px);
+  background-color: var(--hermes-input-bg, #ffffff);
+  color: var(--hermes-text, #191c1a);
 }
 
 #hermes-input:focus {
-  outline: 2px solid var(--zotero-accent-color);
-  border-color: transparent;
+  outline: none;
+  border-color: var(--hermes-accent, #0b6b54);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--hermes-accent, #0b6b54) 18%, transparent);
 }
 
 .hermes-btn-primary {
   padding: 8px 16px;
-  background-color: var(--zotero-accent-color, #4a90d9);
-  color: white;
+  background-color: var(--hermes-accent, #0b6b54);
+  color: var(--hermes-accent-text, #ffffff);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--hermes-r-ctl, 6px);
   cursor: pointer;
+  font-family: inherit;
   font-weight: 600;
-  transition: background-color 0.2s;
+  font-size: 13px;
+  transition: filter var(--hermes-dur-fast, 150ms) var(--hermes-ease-out, ease-out);
 }
 
 .hermes-btn-primary:hover {
-  background-color: var(--zotero-accent-color-hover, #3a7bc8);
+  filter: brightness(0.94);
 }
 
 .hermes-btn-primary:disabled {
-  background-color: var(--zotero-background-tertiary);
+  background-color: var(--hermes-bg-tertiary, #ecedea);
+  color: var(--hermes-text-muted, #5e655e);
   cursor: not-allowed;
 }
 
 .hermes-status-bar {
-  padding: 6px 12px;
-  border-top: 1px solid var(--zotero-border-color);
-  background-color: var(--zotero-background-secondary);
-  font-size: 0.8em;
-  color: var(--zotero-text-secondary);
+  padding: 8px 14px;
+  border-top: 1px solid var(--hermes-border, #dee1db);
+  background-color: var(--hermes-bg-secondary, #f7f8f5);
+  font-size: 11px;
+  color: var(--hermes-text-muted, #5e655e);
   justify-content: space-between;
 }
 
@@ -127,18 +151,18 @@
 
 #hermes-connection-status::before {
   content: "";
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background-color: var(--zotero-text-tertiary);
+  background-color: var(--hermes-text-muted, #5e655e);
 }
 
 #hermes-connection-status.connected::before {
-  background-color: #4caf50;
+  background-color: var(--hermes-success, #1c6b44);
 }
 
 #hermes-connection-status.connecting::before {
-  background-color: #ff9800;
+  background-color: var(--hermes-highlight, #9a6608);
   animation: pulse 1.5s infinite;
 }
 
@@ -154,17 +178,18 @@
 
 /* Markdown rendering */
 .hermes-message-content code {
-  background-color: rgba(0, 0, 0, 0.1);
-  padding: 2px 4px;
-  border-radius: 3px;
-  font-family: "Consolas", "Monaco", monospace;
-  font-size: 0.9em;
+  font-family: var(--hermes-mono, "Source Code Pro", monospace);
+  background-color: var(--hermes-bg-tertiary, #ecedea);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.86em;
 }
 
 .hermes-message-content pre {
-  background-color: rgba(0, 0, 0, 0.05);
-  padding: 8px;
-  border-radius: 6px;
+  font-family: var(--hermes-mono, "Source Code Pro", monospace);
+  background-color: var(--hermes-bg-tertiary, #ecedea);
+  padding: 10px 12px;
+  border-radius: var(--hermes-r-ctl, 6px);
   overflow-x: auto;
   margin: 8px 0;
 }
@@ -175,10 +200,11 @@
 }
 
 .hermes-message-content blockquote {
-  border-left: 3px solid var(--zotero-border-color);
+  border-left: 2px solid var(--hermes-accent, #0b6b54);
   margin: 8px 0;
-  padding-left: 12px;
-  color: var(--zotero-text-secondary);
+  padding-left: 14px;
+  color: var(--hermes-text-muted, #5e655e);
+  font-style: italic;
 }
 
 /* Typing indicator */
@@ -190,10 +216,10 @@
 }
 
 .hermes-typing-indicator span {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background-color: var(--zotero-text-tertiary);
+  background-color: var(--hermes-text-muted, #5e655e);
   animation: typingDot 1.4s infinite ease-in-out;
 }
 
@@ -220,19 +246,19 @@
 
 /* Error message styling */
 .hermes-message-error {
-  color: #d32f2f;
-  background-color: rgba(211, 47, 47, 0.1);
-  border: 1px solid rgba(211, 47, 47, 0.3);
-  padding: 8px;
-  border-radius: 4px;
-  font-size: 0.9em;
+  color: var(--hermes-danger, #b3261e);
+  background-color: color-mix(in srgb, var(--hermes-danger, #b3261e) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--hermes-danger, #b3261e) 34%, transparent);
+  padding: 8px 12px;
+  border-radius: var(--hermes-r-surf, 10px);
+  font-size: 13px;
 }
 
 /* Context bar */
 .hermes-context-bar {
-  padding: 8px 12px;
-  border-top: 1px solid var(--zotero-border-color);
-  background-color: var(--zotero-background-tertiary);
+  padding: 8px 14px;
+  border-top: 1px solid var(--hermes-border, #dee1db);
+  background-color: var(--hermes-bg-secondary, #f7f8f5);
   align-items: center;
   gap: 8px;
 }
@@ -246,18 +272,20 @@
   flex-wrap: wrap;
   gap: 6px;
   flex: 1;
+  min-width: 0;
 }
 
 .hermes-context-item {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 8px;
-  background-color: var(--zotero-accent-color, #4a90d9);
-  color: white;
-  border-radius: 4px;
-  font-size: 0.8em;
-  max-width: 200px;
+  padding: 3px 10px;
+  background-color: var(--hermes-bg-tertiary, #ecedea);
+  border: 1px solid var(--hermes-border, #dee1db);
+  color: var(--hermes-text, #191c1a);
+  border-radius: var(--hermes-r-pill, 999px);
+  font-size: 13px;
+  max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -265,12 +293,12 @@
 
 .hermes-context-item-remove {
   cursor: pointer;
-  opacity: 0.7;
+  color: var(--hermes-text-muted, #5e655e);
   font-weight: bold;
 }
 
 .hermes-context-item-remove:hover {
-  opacity: 1;
+  color: var(--hermes-danger, #b3261e);
 }
 
 /* Input actions */
@@ -280,33 +308,35 @@
 }
 
 .hermes-btn-secondary {
-  padding: 4px 10px;
+  padding: 5px 10px;
   background-color: transparent;
-  color: var(--zotero-text-secondary);
-  border: 1px solid var(--zotero-border-color);
-  border-radius: 4px;
+  color: var(--hermes-text, #191c1a);
+  border: 1px solid var(--hermes-border, #dee1db);
+  border-radius: var(--hermes-r-pill, 999px);
   cursor: pointer;
-  font-size: 0.85em;
-  transition: all 0.2s;
+  font-family: inherit;
+  font-size: 13px;
+  transition: background var(--hermes-dur-fast, 150ms) var(--hermes-ease-out, ease-out);
 }
 
 .hermes-btn-secondary:hover {
-  background-color: var(--zotero-background-tertiary);
-  color: var(--zotero-text-primary);
+  background-color: var(--hermes-bg-tertiary, #ecedea);
+  color: var(--hermes-text, #191c1a);
 }
 
 .hermes-btn-small {
-  padding: 2px 8px;
+  padding: 3px 9px;
   background-color: transparent;
-  color: var(--zotero-text-secondary);
-  border: 1px solid var(--zotero-border-color);
-  border-radius: 4px;
+  color: var(--hermes-text-muted, #5e655e);
+  border: 1px solid var(--hermes-border, #dee1db);
+  border-radius: var(--hermes-r-ctl, 6px);
   cursor: pointer;
-  font-size: 0.75em;
+  font-family: inherit;
+  font-size: 12px;
 }
 
 .hermes-btn-small:hover {
-  background-color: rgba(211, 47, 47, 0.1);
-  color: #d32f2f;
-  border-color: #d32f2f;
+  background-color: var(--hermes-bg-tertiary, #ecedea);
+  color: var(--hermes-text, #191c1a);
+  border-color: var(--hermes-border, #dee1db);
 }

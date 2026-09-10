@@ -93,10 +93,10 @@ await annotation.saveTx();
   "name": "Hermes Agent for Zotero",
   "version": "0.1.0",
   "description": "AI-powered research assistant",
-  "author": "NousResearch",
+  "author": "techne-tools",
   "applications": {
     "zotero": {
-      "id": "hermes@nousresearch.com",
+      "id": "hermes@techne-tools.org",
       "strict_min_version": "7.0",
       "strict_max_version": "10.*"
     }

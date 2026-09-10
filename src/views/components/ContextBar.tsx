@@ -1,5 +1,6 @@
 import React from "react";
 import { ContextItem } from "../types";
+import { CloseIcon } from "./Icons";
 
 interface ContextBarProps {
   items: ContextItem[];
@@ -21,9 +22,9 @@ export const ContextBar: React.FC<ContextBarProps> = ({
         display: "flex",
         alignItems: "center",
         gap: "8px",
-        padding: "6px 12px",
-        borderTop: "1px solid var(--hermes-border, #e0e0e0)",
-        backgroundColor: "var(--hermes-bg-secondary, #fafafa)",
+        padding: "8px 14px",
+        borderTop: "1px solid var(--hermes-border, #dee1db)",
+        backgroundColor: "var(--hermes-bg-secondary, #f7f8f5)",
       }}
     >
       <div className="hermes-context-chips">
@@ -34,7 +35,7 @@ export const ContextBar: React.FC<ContextBarProps> = ({
               onClick={() => onRemoveItem(item.id)}
               className="hermes-context-chip-remove"
             >
-              ✕
+              <CloseIcon />
             </button>
           </div>
         ))}

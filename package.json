@@ -1,11 +1,11 @@
 {
   "name": "zotero-hermes",
   "type": "module",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Hermes AI Agent integration for Zotero — Chat with your research library",
   "config": {
     "addonName": "Hermes Agent for Zotero",
-    "addonID": "hermes@nousresearch.com",
+    "addonID": "hermes@techne-tools.org",
     "addonRef": "hermes",
     "addonInstance": "HermesAgent",
     "prefsPrefix": "extensions.zotero.hermes"
@@ -14,11 +14,11 @@
     "type": "git",
     "url": "git+https://github.com/techne-tools/zotero-hermes.git"
   },
-  "author": "NousResearch",
+  "author": "techne-tools",
   "bugs": {
-    "url": "https://github.com/NousResearch/zotero-hermes/issues"
+    "url": "https://github.com/techne-tools/zotero-hermes/issues"
   },
-  "homepage": "https://github.com/NousResearch/zotero-hermes#readme",
+  "homepage": "https://github.com/techne-tools/zotero-hermes#readme",
   "license": "MIT",
   "scripts": {
     "start": "zotero-plugin serve",

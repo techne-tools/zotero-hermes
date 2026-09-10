@@ -34,9 +34,9 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        padding: "8px 12px",
-        borderBottom: "1px solid var(--hermes-border, #e0e0e0)",
-        backgroundColor: "var(--hermes-bg-secondary, #fafafa)",
+        padding: "0 14px",
+        borderBottom: "1px solid var(--hermes-border, #dee1db)",
+        backgroundColor: "var(--hermes-bg-secondary, #f7f8f5)",
         minHeight: "40px",
       }}
     >
@@ -46,14 +46,19 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
       >
         <span
           className="hermes-chat-agent-name"
-          style={{ fontWeight: 600, fontSize: "0.95em" }}
+          style={{
+            fontFamily: "var(--hermes-serif)",
+            fontWeight: 600,
+            fontSize: "16px",
+            letterSpacing: "-0.01em",
+          }}
         >
           {settings?.get("chatAgentName", "Hermes")}
         </span>
       </div>
       <div
         className="hermes-chat-header-right"
-        style={{ display: "flex", gap: "4px", alignItems: "center" }}
+        style={{ display: "flex", gap: "2px", alignItems: "center" }}
       >
         <button
           onClick={onSearchToggle}

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { ChatMessage } from "../types";
 import type Addon from "../../addon";
 import { ChatMessageItem } from "./ChatMessageItem";
+import { AlertIcon, CloseIcon } from "./Icons";
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -66,10 +67,10 @@ export const MessageList: React.FC<MessageListProps> = ({
       style={{
         flex: 1,
         overflowY: "auto",
-        padding: "8px 12px",
+        padding: "16px 14px 20px",
         display: "flex",
         flexDirection: "column",
-        gap: "8px",
+        gap: "16px",
         minWidth: 0,
       }}
     >
@@ -103,10 +104,10 @@ export const MessageList: React.FC<MessageListProps> = ({
       {isTyping && <TypingIndicator agentName={agentName} />}
       {error && (
         <div className="hermes-error-bar">
-          <span>⚠️</span>
+          <AlertIcon />
           <span style={{ flex: 1 }}>{error}</span>
           <button onClick={onDismissError} className="hermes-error-bar-close">
-            ✕
+            <CloseIcon />
           </button>
         </div>
       )}

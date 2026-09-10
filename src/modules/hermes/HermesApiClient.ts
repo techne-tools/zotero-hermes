@@ -428,7 +428,7 @@ export class HermesApiClient implements ChatClient {
     );
     this.emit({
       type: "message",
-      content: `🔌 Reconnecting to Hermes API (attempt ${this.reconnectAttempts}/${this.MAX_RECONNECT_ATTEMPTS})...`,
+      content: `Reconnecting to Hermes API (attempt ${this.reconnectAttempts}/${this.MAX_RECONNECT_ATTEMPTS})...`,
     });
 
     this.reconnectTimeout = setTimeout(() => {

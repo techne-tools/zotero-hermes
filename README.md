@@ -98,7 +98,7 @@ Zotero plugins run in a **Firefox 115 ESR sandbox** with significant React limit
 ### Build from Source
 
 ```bash
-git clone https://github.com/NousResearch/zotero-hermes.git
+git clone https://github.com/techne-tools/zotero-hermes.git
 cd zotero-hermes
 npm install
 npm run build

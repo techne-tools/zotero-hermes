@@ -122,6 +122,29 @@ npm run release
 - Verify addon ID is unique
 - Check browser console for errors
 
+**Plugin not showing after an addon ID change**
+
+`extensions.json` in the profile is authoritative — dropping an XPI into
+`extensions/` is NOT enough; Zotero will not auto-discover it. To swap an
+addon ID:
+
+1. Quit Zotero.
+2. Remove the stale entry from `extensions.json` (back it up first).
+3. Write a new entry mirroring the known-good structure: `id`, `path`,
+   `rootURI` (`jar:file://` with `%40` for `@`, `%20` for spaces, slashes
+   preserved), `targetApplications` (zotero@zotero.org, min/max), `active:
+   true`, `userDisabled: false`, `installTelemetryInfo: {source:
+   "app-profile", method: "sideload"}`.
+4. Restart Zotero and verify the plugin bootstrapped — its prefs
+   (`extensions.zotero.<ref>.*`) only appear if startup code ran.
+
+**Submodule noise before release**
+
+`.refs/zotero-pdfjs-types` accumulates ~100 files of generated `.d.ts`
+noise on every build. Restore it before committing a release so the
+release doesn't record a dirty pointer:
+`git -C .refs/zotero-pdfjs-types checkout -- .`
+
 **ACP connection fails**
 
 - Verify Hermes binary path

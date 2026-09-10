@@ -97,4 +97,19 @@ describe("MarkdownRenderer (parseInline)", function () {
     });
     expect(result).to.not.deep.include({ type: "doi" });
   });
+
+  it("should auto-link a DOI inside a code span", function () {
+    // The agent often wraps DOIs in backticks — the DOI must still link.
+    const input =
+      '1. DiMaggio, "Classification as Culture" (2008) — DOI: `10.1177/000312240807300501`';
+    const result = parseInline(input);
+    const code = result.find((s) => s.type === "code");
+    expect(code).to.exist;
+    const inner = parseInline(code!.content);
+    expect(inner).to.deep.include({
+      type: "doi",
+      content: "10.1177/000312240807300501",
+      url: "https://doi.org/10.1177/000312240807300501",
+    });
+  });
 });

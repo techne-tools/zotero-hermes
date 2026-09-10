@@ -131,7 +131,7 @@ function renderInline(segments: InlineSegment[]): ReactNode[] {
               fontSize: "0.9em",
             }}
           >
-            {seg.content}
+            {renderInline(parseInline(seg.content))}
           </code>
         );
       case "link":

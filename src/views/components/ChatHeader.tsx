@@ -15,7 +15,6 @@ interface ChatHeaderProps {
   onAttachItems: () => void;
   onNewChat: () => void;
   onSettingsToggle: () => void;
-  onExportToggle: () => void;
 }
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
@@ -25,7 +24,6 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onAttachItems,
   onNewChat,
   onSettingsToggle,
-  onExportToggle,
 }) => {
   const settings = addon.data.hermes?.preferences;
 
@@ -91,14 +89,6 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           title="Session Settings"
         >
           <SettingsIcon />
-        </button>
-        <button
-          onClick={onExportToggle}
-          className="hermes-icon-btn"
-          title="Export Conversation"
-          style={{ fontSize: "1.1em", padding: 0 }}
-        >
-          📥
         </button>
       </div>
     </div>

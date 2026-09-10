@@ -178,14 +178,14 @@
 }
 
 .hermes-message-user {
-  align-self: flex-end;
+  align-self: flex-start;
   max-width: 85%;
   background-color: var(--hermes-accent, #4a90d9);
   color: var(--hermes-accent-text, white);
 }
 
 .hermes-message-assistant {
-  align-self: flex-start;
+  align-self: flex-end;
   max-width: 85%;
   background-color: var(--hermes-bg-secondary, #f5f5f5);
   color: inherit;
@@ -202,7 +202,7 @@
 
 .hermes-message-reasoning,
 .hermes-message-tool {
-  align-self: flex-start;
+  align-self: flex-end;
   max-width: 85%;
   min-width: 0;
   border-radius: 8px;
@@ -211,6 +211,13 @@
 
 .hermes-message-reasoning {
   background-color: var(--hermes-bg-tertiary, #f8f4e8);
+  /* Clearly distinct from response bubbles: dashed border, italic,
+     muted text, and a left accent bar. */
+  border-style: dashed;
+  border-color: var(--hermes-border, #c0c0c0);
+  font-style: italic;
+  opacity: 0.75;
+  border-left: 3px solid var(--hermes-accent, #4a90d9);
 }
 
 .hermes-message-tool {

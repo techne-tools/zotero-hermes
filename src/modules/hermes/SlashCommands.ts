@@ -49,29 +49,6 @@ const BUILT_IN_COMMANDS: SlashCommand[] = [
     name: "help",
   },
   {
-    description: "Export conversation as Markdown",
-    execute: async (addon, _args) => {
-      const messages = addon.data.hermes!.chat.getMessages();
-      if (messages.length === 0) {
-        return "No conversation to export.";
-      }
-      const md = messages
-        .map((m: { role: string; content: string }) => {
-          if (
-            m.role === "system" ||
-            m.role === "reasoning" ||
-            m.role === "tool"
-          )
-            return "";
-          return `## ${m.role.toUpperCase()}\n\n${m.content}`;
-        })
-        .filter(Boolean)
-        .join("\n\n");
-      return `Conversation exported:\n\n\`\`\`markdown\n${md}\n\`\`\``;
-    },
-    name: "export",
-  },
-  {
     description: "Save current conversation as a Zotero note",
     execute: async (addon, _args) => {
       const messages = addon.data.hermes!.chat.getMessages();

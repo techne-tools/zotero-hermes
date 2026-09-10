@@ -8,7 +8,6 @@ export interface ConversationSummary {
 }
 
 interface SidePanelsProps {
-  isExportOpen: boolean;
   isConversationListOpen: boolean;
   isSearchOpen: boolean;
   isSessionSettingsOpen: boolean;
@@ -19,9 +18,6 @@ interface SidePanelsProps {
   currentMatchIndex: number;
   allowedTools: string[] | null;
   searchInputRef: React.RefObject<HTMLInputElement>;
-  onExportHtml: () => void;
-  onExportJson: () => void;
-  onExportMarkdown: () => void;
   onLoadConversation: (id: string) => void;
   onDeleteConversation: (id: string) => void;
   onCloseConversationList: () => void;
@@ -38,7 +34,6 @@ interface SidePanelsProps {
 }
 
 export const SidePanels: React.FC<SidePanelsProps> = ({
-  isExportOpen,
   isConversationListOpen,
   isSearchOpen,
   isSessionSettingsOpen,
@@ -49,9 +44,6 @@ export const SidePanels: React.FC<SidePanelsProps> = ({
   currentMatchIndex,
   allowedTools,
   searchInputRef,
-  onExportHtml,
-  onExportJson,
-  onExportMarkdown,
   onLoadConversation,
   onDeleteConversation,
   onCloseConversationList,
@@ -68,70 +60,6 @@ export const SidePanels: React.FC<SidePanelsProps> = ({
 }) => {
   return (
     <>
-      {/* Export Options Dropdown */}
-      {isExportOpen && (
-        <div
-          className="hermes-export-dropdown"
-          style={{
-            position: "absolute",
-            top: "45px",
-            right: "12px",
-            backgroundColor: "var(--hermes-bg-secondary, #fafafa)",
-            border: "1px solid var(--hermes-border, #e0e0e0)",
-            borderRadius: "6px",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-            zIndex: 1000,
-            display: "flex",
-            flexDirection: "column",
-            padding: "4px 0",
-            minWidth: "120px",
-          }}
-        >
-          <button
-            onClick={onExportHtml}
-            style={{
-              padding: "6px 12px",
-              border: "none",
-              background: "none",
-              textAlign: "left",
-              cursor: "pointer",
-              fontSize: "0.85em",
-              color: "inherit",
-            }}
-          >
-            HTML format
-          </button>
-          <button
-            onClick={onExportJson}
-            style={{
-              padding: "6px 12px",
-              border: "none",
-              background: "none",
-              textAlign: "left",
-              cursor: "pointer",
-              fontSize: "0.85em",
-              color: "inherit",
-            }}
-          >
-            JSON format
-          </button>
-          <button
-            onClick={onExportMarkdown}
-            style={{
-              padding: "6px 12px",
-              border: "none",
-              background: "none",
-              textAlign: "left",
-              cursor: "pointer",
-              fontSize: "0.85em",
-              color: "inherit",
-            }}
-          >
-            Markdown format
-          </button>
-        </div>
-      )}
-
       {/* Conversation List */}
       {isConversationListOpen && (
         <div className="hermes-conversation-list">

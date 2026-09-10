@@ -79,7 +79,6 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
 
   // Session settings state
   const [isSessionSettingsOpen, setIsSessionSettingsOpen] = useState(false);
-  const [isExportOpen, setIsExportOpen] = useState(false);
   const [tokenUsage, setTokenUsage] = useState<{
     input: number;
     output: number;
@@ -919,66 +918,6 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
     [hermes.conversations, loadConversationList],
   );
 
-  const exportToHtml = useCallback(async (): Promise<void> => {
-    // Escape & first so previously-escaped entities aren't double-escaped.
-    const escapeHtml = (s: string) =>
-      s
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-    const html = `<!DOCTYPE html>
-<html>
-<head><title>Hermes Conversation</title></head>
-<body>
-<h1>Hermes Conversation</h1>
-${messages
-  .map(
-    (m) => `
-<div style="margin: 1em 0; padding: 0.5em; background: ${m.role === "user" ? "#e3f2fd" : "#f5f5f5"}; border-radius: 4px;">
-  <strong>${escapeHtml(m.role.toUpperCase())}</strong>
-  <p>${escapeHtml(m.content)}</p>
-</div>`,
-  )
-  .join("\n")}
-</body>
-</html>`;
-
-    const blob = new Blob([html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const win = Zotero.getMainWindow();
-    const a = win.document.createElement("a");
-    a.href = url;
-    a.download = `hermes-conversation-${Date.now()}.html`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [messages]);
-
-  const exportToJson = useCallback(() => {
-    const json = JSON.stringify(messages, null, 2);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const win = Zotero.getMainWindow();
-    const a = win.document.createElement("a");
-    a.href = url;
-    a.download = `hermes-conversation-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [messages]);
-
-  const exportToMarkdown = useCallback(() => {
-    const md = messages
-      .map((m) => `## ${m.role.toUpperCase()}\n\n${m.content}`)
-      .join("\n\n");
-    const blob = new Blob([md], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const win = Zotero.getMainWindow();
-    const a = win.document.createElement("a");
-    a.href = url;
-    a.download = `hermes-conversation-${Date.now()}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [messages]);
-
   const performSearch = useCallback(
     (query: string): void => {
       if (!query.trim()) {
@@ -1061,11 +1000,9 @@ ${messages
         onAttachItems={attachSelectedItems}
         onNewChat={newChat}
         onSettingsToggle={() => setIsSessionSettingsOpen((prev) => !prev)}
-        onExportToggle={() => setIsExportOpen((prev) => !prev)}
       />
 
       <SidePanels
-        isExportOpen={isExportOpen}
         isConversationListOpen={isConversationListOpen}
         isSearchOpen={isSearchOpen}
         isSessionSettingsOpen={isSessionSettingsOpen}
@@ -1076,18 +1013,6 @@ ${messages
         currentMatchIndex={currentMatchIndex}
         allowedTools={allowedTools}
         searchInputRef={searchInputRef}
-        onExportHtml={() => {
-          exportToHtml();
-          setIsExportOpen(false);
-        }}
-        onExportJson={() => {
-          exportToJson();
-          setIsExportOpen(false);
-        }}
-        onExportMarkdown={() => {
-          exportToMarkdown();
-          setIsExportOpen(false);
-        }}
         onLoadConversation={handleLoadConversation}
         onDeleteConversation={handleDeleteConversation}
         onCloseConversationList={() => setIsConversationListOpen(false)}

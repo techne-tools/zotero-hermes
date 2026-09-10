@@ -236,3 +236,38 @@ These cost a full debugging session. Read before writing tests that touch the `Z
 | `README.md`                          | Complete rewrite with features, architecture, sandbox constraints     |
 | `TODO.md`                            | Updated Phase 2 completion status, added bug fix session log          |
 | `AGENTS.md`                          | Added development notes, sandbox constraints, architectural decisions |
+
+### Zotero 10 Compatibility (10 September 2026)
+
+Zotero 10.0.2 runs on **Mozilla 140.15.0esr** (was 115 ESR in Zotero 9). The
+plugin was blocked by `strict_max_version: "9.*"` (`appDisabled: True` in
+extensions.json). Fixes landed on branch `feat/zotero-10-compat`:
+
+| File                                 | Change                                                                |
+| ------------------------------------ | --------------------------------------------------------------------- |
+| `addon/manifest.json`                | `strict_max_version` → `10.*`                                          |
+| `zotero-plugin.config.ts`            | esbuild target `firefox115` → `firefox140`                             |
+| `package.json`                       | scaffold `^0.9.2`, zotero-types `^4.1.3`, toolkit `^5.2.0`             |
+| `src/utils/ztoolkit.ts`              | `ZoteroToolkit` import → `zotero-plugin-toolkit/ztoolkit` subpath (5.2.0 breaking change) |
+| `src/modules/hermes/NoteManager.ts`  | `getAsync` now returns `Item \| false` in zotero-types 4.1.3 — widen declared type |
+
+Gotchas learned:
+
+1. **Zotero 10 = Firefox 140 ESR** — esbuild 0.28 supports `firefox140`; the
+   old `firefox115` target still compiles but is stale. Raise it with the
+   version bump.
+2. **toolkit 5.2.0 moved `ZoteroToolkit` to `/ztoolkit`** — root export removed
+   (breaking change, 2026-07-21). Other tools (`BasicTool`, `UITool`,
+   `DialogHelper`, `ColumnOptions`, `unregister`) stay at root.
+3. **zotero-types 4.1.3 tightened `Zotero.Items.getAsync`** to `Item | false`
+   (changelog: "missing `| false` returns"). Guard code that already checked
+   `if (!note)` needs the declared variable type widened to compile.
+4. **scaffold 0.9.2 (2026-09-08) fixes the chai error-serialization gotcha** —
+   the fail reporter now serializes `error.message`/`stack` explicitly. The
+   `window.debug` workaround in gotcha #5 above is no longer needed for
+   debugging failures.
+5. **`npm ci` fails after version bumps** — lock file must be regenerated with
+   `NODE_ENV=test npm install` first (EUSAGE: "lock file's X does not satisfy Y").
+6. **Test run consumes the built XPI** — `zotero-plugin test` installs the
+   addon dir directly and the `.scaffold/build/*.xpi` disappears. Rebuild with
+   `NODE_ENV=production npm run build` before installing into a profile.

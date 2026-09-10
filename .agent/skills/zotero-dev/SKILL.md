@@ -25,7 +25,7 @@ This skill covers:
 
 - Follow established patterns for Zotero plugin development
 - Use appropriate tools and conventions from zotero-plugin-toolkit
-- Test thoroughly across different Zotero versions (target 9.0.0+)
+- Test thoroughly across different Zotero versions (target 9.0.0+, current 10.x)
 - Document important decisions and patterns
 - Prefer XUL/XHTML for UI components (Zotero's native UI system)
 - Use React only where appropriate (chat components, complex UIs)

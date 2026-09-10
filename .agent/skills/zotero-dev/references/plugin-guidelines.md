@@ -156,11 +156,11 @@ this.childProcess = await Subprocess.call({
 
 ## Version Compatibility
 
-- Target Zotero 9.0.0+ (Firefox 115 ESR)
+- Target Zotero 9.0.0+ (current: 10.x, Firefox 140 ESR)
 - Set `strict_min_version` in `addon/manifest.json`
 - Use `zotero-types` for type definitions matching target version
 - Test with Zotero beta releases
-- Manifest: `strict_max_version: "9.*"`
+- Manifest: `strict_max_version: "10.*"`
 
 ### Large Libraries
 

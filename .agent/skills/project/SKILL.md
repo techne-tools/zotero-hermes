@@ -113,7 +113,7 @@ npm run build
 ### Testing Checklist
 
 - [ ] Build succeeds without errors
-- [ ] Plugin loads in Zotero 9.0.0+
+- [ ] Plugin loads in Zotero 9.0.0+ (current: 10.x)
 - [ ] Sidebar opens correctly
 - [ ] Chat messages display properly
 - [ ] Notes can be saved/loaded

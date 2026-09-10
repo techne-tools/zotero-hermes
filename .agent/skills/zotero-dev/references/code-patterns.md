@@ -391,7 +391,7 @@ export class ApprovalDialog {
 
 ### Build Config (`zotero-plugin.config.ts`)
 
-- esbuild target: `firefox115`
+- esbuild target: `firefox140`
 - Entry: `src/index.ts`
 - Output: `.scaffold/build/addon/content/scripts/hermes.js`
 - Pre-build assets from `addon/`

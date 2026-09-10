@@ -650,11 +650,13 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         // usage_update often signals the end of a turn when no stop is sent
         setIsTyping(false);
       } else if (update.type === "session_info") {
-        // session_info_update signals the end of a streaming session
+        // session_info_update is NOT a reliable end-of-turn signal — hermes
+        // sends it BEFORE the final agent_message_chunk (verified on the wire
+        // 2026-09-10). Nulling the refs here would make the flush drop the
+        // final answer silently. Only stop/error end the turn; performSend
+        // resets both refs on the next send.
         flushNow();
         setIsTyping(false);
-        streamingMessageIdRef.current = null;
-        reasoningMessageIdRef.current = null;
       } else if (update.type === "error") {
         flushNow();
         const cleaned = stripAnsi(update.content || "").trim();

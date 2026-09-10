@@ -90,7 +90,8 @@ Zotero plugins run in a **Firefox 115 ESR sandbox** with significant React limit
 ### Prerequisites
 
 1. Zotero 7.0 or later. The manifest pins `strict_min_version` to 7.0 —
-   Zotero's internal compatibility check requires this even on 9.x builds.
+   Zotero's internal compatibility check requires this even on 9.x/10.x builds.
+   `strict_max_version` is `10.*` (Zotero 10 runs on Mozilla 140 ESR).
 2. [Hermes CLI](https://github.com/nousresearch/hermes) installed and available in `$PATH`
 3. Node.js 18+ and npm
 

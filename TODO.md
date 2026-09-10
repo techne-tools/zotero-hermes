@@ -3,7 +3,7 @@
 **Created:** 21 May 2026  
 **Updated:** 5 June 2026  
 **Target Version:** 0.1.0 (Alpha)  
-**Platform:** Zotero 9.0.0+  
+**Platform:** Zotero 9.0.0+ (current: 10.x, Mozilla 140 ESR)  
 **Status:** ✅ Core Infrastructure Complete — API Mode, Preferences UI, Chat Polish & Sound/Haptic Added
 
 ---

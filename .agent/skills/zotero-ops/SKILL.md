@@ -102,7 +102,7 @@ npm run release
 
 ### Manual Testing
 
-- Test in Zotero 9.0.0+
+- Test in Zotero 9.0.0+ (current: 10.x, Mozilla 140 ESR)
 - Test on Windows/macOS/Linux
 - Test with large libraries (10,000+ items)
 

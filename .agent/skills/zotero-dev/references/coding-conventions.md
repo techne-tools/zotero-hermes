@@ -10,8 +10,8 @@ Source: Based on TypeScript best practices, Zotero plugin conventions, and the z
 - **Avoid `any` type**: Use proper types, `unknown`, or type assertions. `any` defeats type safety.
 - **Keep entry points minimal**: `src/index.ts` and `src/addon.ts` should only handle lifecycle and module registration. Delegate feature logic to separate modules.
 - **Split large files**: If a file exceeds ~300 lines, break it into smaller, focused modules.
-- **Bundle everything**: esbuild target `firefox115` bundles into a single output file.
-- **No Node/Electron APIs** — Zotero runs on Firefox 115 ESR.
+- **Bundle everything**: esbuild target `firefox140` bundles into a single output file.
+- **No Node/Electron APIs** — Zotero runs on Firefox 140 ESR (Zotero 10).
 - **Prefer `async/await`** over promise chains; handle errors gracefully with user-friendly messages.
 
 ## Naming Conventions

@@ -80,13 +80,3 @@ export interface PendingFileChange {
   status: "approved" | "pending" | "rejected";
   timestamp: number;
 }
-
-// ─── TokenUsageStats ───
-// Mirrors obsidian-hermes/src/ChatClient.ts
-
-export interface TokenUsageStats {
-  estimatedCost: number;
-  inputTokens: number;
-  outputTokens: number;
-  totalTokens: number;
-}

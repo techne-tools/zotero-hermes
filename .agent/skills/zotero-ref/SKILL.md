@@ -97,8 +97,8 @@ await annotation.saveTx();
   "applications": {
     "zotero": {
       "id": "hermes@nousresearch.com",
-      "strict_min_version": "9.0.0",
-      "strict_max_version": "9.*"
+      "strict_min_version": "7.0",
+      "strict_max_version": "10.*"
     }
   }
 }
@@ -106,8 +106,8 @@ await annotation.saveTx();
 
 ### Version Compatibility
 
-- Zotero 9.0.0+ required
-- Firefox 115 ESR based
+- Zotero 9.0.0+ required (current: 10.x, Firefox 140 ESR)
+- Firefox 140 ESR based (Zotero 10; was 115 ESR in Zotero 9)
 - Check compatibility with Zotero beta releases
 
 ## UI Guidelines

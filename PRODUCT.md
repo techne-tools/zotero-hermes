@@ -68,7 +68,7 @@ wishlist. It is deliberately small and focused on the research workflow.
 
 ## Success Metrics
 
-- The plugin loads without errors in Zotero 9.
+- The plugin loads without errors in Zotero 9 and 10.
 - A user can attach an item, ask a question, and get a grounded answer.
 - All write operations (notes, annotations, tags) require approval.
 - No user-specific paths or secrets in the codebase.

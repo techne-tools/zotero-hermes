@@ -32,7 +32,7 @@ import { ConversationManager } from "./modules/hermes/ConversationManager";
 import { PreferencesManager } from "./modules/hermes/PreferencesManager";
 import { DebugLogger } from "./utils/DebugLogger";
 import { AuditLog } from "./utils/AuditLog";
-import { getString, getLocaleID, initLocale } from "./utils/locale";
+import { getString, initLocale } from "./utils/locale";
 import { registerPrefsScripts } from "./modules/preferenceScript";
 import { createZToolkit } from "./utils/ztoolkit";
 import { mountHermesChat } from "./views/HermesChatView";

@@ -62,7 +62,7 @@ export class NoteManager {
       }
     }
 
-    let note: Zotero.Item;
+    let note: Zotero.Item | false;
     if (noteID) {
       note = await Zotero.Items.getAsync(noteID);
       if (!note || note.itemType !== "note") {

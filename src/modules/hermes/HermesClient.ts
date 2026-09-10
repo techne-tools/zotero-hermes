@@ -485,7 +485,6 @@ export class HermesClient implements ChatClient {
     // Response with id -> resolve pending promise
     if ("id" in message && message.id !== undefined) {
       const resolve = this.pendingResponses.get(message.id);
-      const reject = this.pendingErrors.get(message.id);
       if (resolve) {
         resolve(message as JsonRpcResponse);
         this.pendingResponses.delete(message.id);

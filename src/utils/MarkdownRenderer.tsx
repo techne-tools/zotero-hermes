@@ -19,7 +19,7 @@ import { memo, ReactNode } from "react";
  */
 
 interface InlineSegment {
-  type: "text" | "bold" | "italic" | "code" | "link" | "strikethrough";
+  type: "text" | "bold" | "italic" | "code" | "link" | "strikethrough" | "doi";
   content: string;
   url?: string;
 }
@@ -36,6 +36,8 @@ export function parseInline(text: string): InlineSegment[] {
     { regex: /_([^_]+)_/g, type: "italic" as const },
     { regex: /~~([^~]+)~~/g, type: "strikethrough" as const },
     { regex: /\[([^\]]+)\]\(((?:[^()\\]|\\.)*)\)/g, type: "link" as const },
+    // Bare DOIs (with optional doi: prefix) auto-link to doi.org
+    { regex: /\b((?:doi:\s*)?10\.\d{4,9}\/[^\s<>]+)/gi, type: "doi" as const },
   ];
 
   while (remaining.length > 0) {
@@ -75,6 +77,10 @@ export function parseInline(text: string): InlineSegment[] {
         content: earliestMatch.content,
       };
       if (earliestMatch.url !== undefined) seg.url = earliestMatch.url;
+      if (seg.type === "doi") {
+        // Strip any doi: prefix and link to doi.org
+        seg.url = `https://doi.org/${seg.content.replace(/^doi:\s*/i, "")}`;
+      }
       segments.push(seg);
       remaining = remaining.slice(earliestMatch.index + earliestMatch.length);
     } else {
@@ -109,6 +115,7 @@ function renderInline(segments: InlineSegment[]): ReactNode[] {
           </code>
         );
       case "link":
+      case "doi":
         return (
           <a
             key={i}

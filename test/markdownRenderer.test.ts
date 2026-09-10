@@ -29,4 +29,30 @@ describe("MarkdownRenderer (parseInline)", function () {
       url: "https://example.com",
     });
   });
+
+  it("should auto-link a bare DOI", function () {
+    const input = "See 10.1000/xyz123 for details";
+    const result = parseInline(input);
+    expect(result).to.deep.include({
+      type: "doi",
+      content: "10.1000/xyz123",
+      url: "https://doi.org/10.1000/xyz123",
+    });
+  });
+
+  it("should auto-link a DOI with doi: prefix", function () {
+    const input = "See doi:10.1234/abc.5678 for details";
+    const result = parseInline(input);
+    expect(result).to.deep.include({
+      type: "doi",
+      content: "doi:10.1234/abc.5678",
+      url: "https://doi.org/10.1234/abc.5678",
+    });
+  });
+
+  it("should not treat a plain number as a DOI", function () {
+    const input = "Version 10.5 is out";
+    const result = parseInline(input);
+    expect(result).to.not.deep.include({ type: "doi" });
+  });
 });

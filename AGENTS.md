@@ -62,11 +62,11 @@ Usage notes:
 These documents govern all work in this repo. Read them before planning or
 implementing:
 
-| Doc | Role |
-|---|---|
-| `DESIGN.md` | **Design north star** — target state. Every design decision is measured against it. |
-| `PRODUCT.md` | **Product intent** — what the plugin is for, who it serves, what it is not. |
-| `ARCHITECTURE.md` | **Current code reality** — how the code is actually structured today. |
+| Doc                               | Role                                                                                         |
+| --------------------------------- | -------------------------------------------------------------------------------------------- |
+| `DESIGN.md`                       | **Design north star** — target state. Every design decision is measured against it.          |
+| `PRODUCT.md`                      | **Product intent** — what the plugin is for, who it serves, what it is not.                  |
+| `ARCHITECTURE.md`                 | **Current code reality** — how the code is actually structured today.                        |
 | `.agent/rules/agent-standards.md` | **Agent contract** — sandbox constraints, security rules, code quality, worktree discipline. |
 
 **Conflict rule:** when docs and code disagree, FLAG the conflict — do not
@@ -187,6 +187,7 @@ When fixing tests or doing isolated work, use a **git worktree** — never run t
 1. **Branch from the last building commit, not clean main** — clean `main` can be build-broken (e.g. `src/hooks.ts` importing a symbol that only exists on an in-flight branch). Verify the base ref builds before creating the worktree, or re-point with `git reset --hard <building-commit>`.
 
 2. **Copy the gitignored `.env`** — the scaffold loads it via dotenv; without it you get "No Zotero Found." It contains:
+
    ```
    ZOTERO_PLUGIN_ZOTERO_BIN_PATH = /Applications/Zotero.app/Contents/MacOS/zotero
    ZOTERO_PLUGIN_PROFILE_PATH = /Users/<user>/Library/Application Support/Zotero/Profiles/<profile>.default
@@ -207,6 +208,7 @@ These cost a full debugging session. Read before writing tests that touch the `Z
 1. **`zotero-plugin test` runs in WATCH mode by default** — the process never exits after tests finish. Always run `npm test -- --no-watch` (or `--exit-on-finish`) for CI/verification runs. Without it, the suite "hangs" after the last test.
 
 2. **NEVER replace the `Zotero` global in tests** — the test runner's reporter calls `Zotero.HTTP.request` to stream results back to the server, and `Zotero.Utilities.Internal.quit` to exit. Replacing `globalThis.Zotero` with a mock breaks the reporter: every `send()` throws, the server never receives the "end" event, and the suite hangs forever with no error output. **Pattern**: spread-overlay the real object and override only what you need:
+
    ```ts
    const realZotero = (globalThis as any).Zotero;
    (globalThis as any).__realZotero = realZotero;
@@ -243,13 +245,13 @@ Zotero 10.0.2 runs on **Mozilla 140.15.0esr** (was 115 ESR in Zotero 9). The
 plugin was blocked by `strict_max_version: "9.*"` (`appDisabled: True` in
 extensions.json). Fixes landed on branch `feat/zotero-10-compat`:
 
-| File                                 | Change                                                                |
-| ------------------------------------ | --------------------------------------------------------------------- |
-| `addon/manifest.json`                | `strict_max_version` → `10.*`                                          |
-| `zotero-plugin.config.ts`            | esbuild target `firefox115` → `firefox140`                             |
-| `package.json`                       | scaffold `^0.9.2`, zotero-types `^4.1.3`, toolkit `^5.2.0`             |
-| `src/utils/ztoolkit.ts`              | `ZoteroToolkit` import → `zotero-plugin-toolkit/ztoolkit` subpath (5.2.0 breaking change) |
-| `src/modules/hermes/NoteManager.ts`  | `getAsync` now returns `Item \| false` in zotero-types 4.1.3 — widen declared type |
+| File                                | Change                                                                                    |
+| ----------------------------------- | ----------------------------------------------------------------------------------------- |
+| `addon/manifest.json`               | `strict_max_version` → `10.*`                                                             |
+| `zotero-plugin.config.ts`           | esbuild target `firefox115` → `firefox140`                                                |
+| `package.json`                      | scaffold `^0.9.2`, zotero-types `^4.1.3`, toolkit `^5.2.0`                                |
+| `src/utils/ztoolkit.ts`             | `ZoteroToolkit` import → `zotero-plugin-toolkit/ztoolkit` subpath (5.2.0 breaking change) |
+| `src/modules/hermes/NoteManager.ts` | `getAsync` now returns `Item \| false` in zotero-types 4.1.3 — widen declared type        |
 
 Gotchas learned:
 

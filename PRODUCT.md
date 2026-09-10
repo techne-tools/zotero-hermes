@@ -36,27 +36,27 @@ grounded in the actual metadata, notes, annotations, and tags.
 
 ## Feature Inventory (current)
 
-| Feature | Status |
-|---|---|
-| AI chat sidebar (React) | ✅ Working (restored 2026-08-11) |
-| Attach selected items as context | ✅ |
-| Dual connection (ACP stdio / API SSE) | ✅ |
-| Note save (`/savechat`, per-message 📝) | ✅ |
-| PDF annotations (`/annotations`) | ✅ |
-| Citations (`/cite [style]`) | ✅ |
-| Tag suggestions (`/tag`) | ✅ |
-| Conversation persistence + branching | ✅ |
-| Cmd+F message search | ✅ |
-| Token dashboard | ✅ |
-| Persona switcher (`/persona`) | ✅ |
-| Export (HTML/JSON/Markdown) | ✅ |
-| Terminal output gating | ✅ (behind `allowTerminal` pref) |
-| Terminal abort button | ⚠️ TODO |
-| Virtualized scrolling | ⚠️ Not started |
+| Feature                                 | Status                           |
+| --------------------------------------- | -------------------------------- |
+| AI chat sidebar (React)                 | ✅ Working (restored 2026-08-11) |
+| Attach selected items as context        | ✅                               |
+| Dual connection (ACP stdio / API SSE)   | ✅                               |
+| Note save (`/savechat`, per-message 📝) | ✅                               |
+| PDF annotations (`/annotations`)        | ✅                               |
+| Citations (`/cite [style]`)             | ✅                               |
+| Tag suggestions (`/tag`)                | ✅                               |
+| Conversation persistence + branching    | ✅                               |
+| Cmd+F message search                    | ✅                               |
+| Token dashboard                         | ✅                               |
+| Persona switcher (`/persona`)           | ✅                               |
+| Export (HTML/JSON/Markdown)             | ✅                               |
+| Terminal output gating                  | ✅ (behind `allowTerminal` pref) |
+| Terminal abort button                   | ⚠️ TODO                          |
+| Virtualized scrolling                   | ⚠️ Not started                   |
 
 ## Roadmap (validated against user intent)
 
-The roadmap below is the *user's* intent, not an agent-generated feature
+The roadmap below is the _user's_ intent, not an agent-generated feature
 wishlist. It is deliberately small and focused on the research workflow.
 
 1. **Stability** — the chat UI was restored from a stub (2026-08-11); the

@@ -513,8 +513,12 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
       }
 
       if (update.type === "message" && update.content) {
+        // NOTE: do NOT setIsTyping(true) here — performSend already arms the
+        // indicator before the stream starts, and hermes sends the final
+        // agent_message_chunk AFTER usage/session_info (verified on the wire
+        // 2026-09-10). Re-arming on the last chunk would leave the indicator
+        // stuck when no terminal event follows it.
         appendContent(update.content);
-        setIsTyping(true);
       } else if (update.type === "stop") {
         flushNow();
         setIsTyping(false);

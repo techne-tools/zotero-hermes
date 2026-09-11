@@ -63,6 +63,7 @@ export class HermesClient implements ChatClient {
   private reconnectAttempts = 0;
   private readonly MAX_RECONNECT_ATTEMPTS = 5;
   private reconnectTimeout: number | null = null;
+  private connectPromise: Promise<void> | null = null;
 
   constructor(addon: Addon) {
     this.addon = addon;
@@ -97,77 +98,88 @@ export class HermesClient implements ChatClient {
   /**
    * Connect to Hermes agent via ACP protocol.
    * Auto-discovers the binary if no explicit path is configured.
+   * Thread-safe / re-entrancy safe via connectPromise mutex.
    */
   public async connect(): Promise<void> {
     if (this._isConnected) {
       return;
     }
-
-    try {
-      // Resolve binary path via PreferencesManager (single source of truth),
-      // falling back to auto-discovery via $PATH and common install locations.
-      const configuredPath =
-        this.addon.data.hermes?.preferences?.getHermesPath() || "";
-      const hermesPath = resolveHermesPath(configuredPath);
-
-      if (!hermesPath) {
-        throw new Error(
-          "Hermes binary not found. Install Hermes or set the path in preferences.",
-        );
-      }
-
-      this.addon.log(`Starting Hermes ACP from: ${hermesPath}`);
-
-      // Spawn hermes acp subprocess using Firefox Subprocess.sys.mjs.
-      // The binary is invoked directly with an argument array (no shell), so
-      // a configured path containing shell metacharacters cannot inject
-      // commands. PATH is extended via the environment object instead of a
-      // shell export.
-      const homeDir = getHomeDir();
-      const customPath = `/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${homeDir}/.local/bin`;
-
-      const { Subprocess } = ChromeUtils.importESModule(
-        "resource://gre/modules/Subprocess.sys.mjs",
-      );
-      this.childProcess = await Subprocess.call({
-        command: hermesPath,
-        arguments: ["acp"],
-        stdin: "pipe",
-        stdout: "pipe",
-        stderr: "pipe",
-        environment: {
-          PYTHONUNBUFFERED: "1",
-          PATH: `${customPath}:${this.getEnvPath()}`,
-        },
-        environmentAppend: false,
-      });
-
-      this.setupStdioHandlers();
-
-      // Wait for process startup
-      await Zotero.Promise.delay(300);
-
-      // Initialize ACP handshake
-      await this.initializeConnection();
-
-      // Create a new session
-      await this.createSession();
-
-      this._isConnected = true;
-      this.reconnectAttempts = 0;
-
-      this.addon.log("Hermes ACP connected", { sessionId: this.sessionId });
-    } catch (error) {
-      this.addon.log("ACP connection failed", error);
-      this.disconnect();
-      throw error;
+    if (this.connectPromise) {
+      return this.connectPromise;
     }
+
+    this.connectPromise = (async () => {
+      try {
+        // Resolve binary path via PreferencesManager (single source of truth),
+        // falling back to auto-discovery via $PATH and common install locations.
+        const configuredPath =
+          this.addon.data.hermes?.preferences?.getHermesPath() || "";
+        const hermesPath = resolveHermesPath(configuredPath);
+
+        if (!hermesPath) {
+          throw new Error(
+            "Hermes binary not found. Install Hermes or set the path in preferences.",
+          );
+        }
+
+        this.addon.log(`Starting Hermes ACP from: ${hermesPath}`);
+
+        // Spawn hermes acp subprocess using Firefox Subprocess.sys.mjs.
+        // The binary is invoked directly with an argument array (no shell), so
+        // a configured path containing shell metacharacters cannot inject
+        // commands. PATH is extended via the environment object instead of a
+        // shell export.
+        const homeDir = getHomeDir();
+        const customPath = `/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${homeDir}/.local/bin`;
+
+        const { Subprocess } = ChromeUtils.importESModule(
+          "resource://gre/modules/Subprocess.sys.mjs",
+        );
+        this.childProcess = await Subprocess.call({
+          command: hermesPath,
+          arguments: ["acp"],
+          stdin: "pipe",
+          stdout: "pipe",
+          stderr: "pipe",
+          environment: {
+            PYTHONUNBUFFERED: "1",
+            PATH: `${customPath}:${this.getEnvPath()}`,
+          },
+          environmentAppend: false,
+        });
+
+        this.setupStdioHandlers();
+
+        // Wait for process startup
+        await Zotero.Promise.delay(300);
+
+        // Initialize ACP handshake
+        await this.initializeConnection();
+
+        // Create a new session
+        await this.createSession();
+
+        this._isConnected = true;
+        this.reconnectAttempts = 0;
+
+        this.addon.log("Hermes ACP connected", { sessionId: this.sessionId });
+      } catch (error) {
+        this.addon.log("ACP connection failed", error);
+        this.disconnect();
+        throw error;
+      } finally {
+        this.connectPromise = null;
+      }
+    })();
+
+    return this.connectPromise;
   }
 
   /**
    * Disconnect and clean up the ACP connection.
    */
   public disconnect(): void {
+    this.connectPromise = null;
     if (this.reconnectTimeout !== null) {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = null;
@@ -724,7 +736,7 @@ export class HermesClient implements ChatClient {
       params: {
         protocolVersion: PROTOCOL_VERSION,
         clientCapabilities: {
-          fs: { readTextFile: true, writeTextFile: true },
+          fs: { readTextFile: false, writeTextFile: false },
         },
         clientInfo: {
           name: "zotero-hermes",
@@ -749,12 +761,34 @@ export class HermesClient implements ChatClient {
    */
   private async createSession(): Promise<void> {
     const messageId = this.generateMessageId();
-    // Working directory for the agent's session. Prefer the Zotero profile
-    // directory; fall back to the Zotero data directory — never /tmp, so
-    // any files the agent creates land somewhere persistent and sensible.
-    const profileDir = Zotero.getProfileDirectory?.()?.path;
-    const dataDir = (Zotero as any).getZoteroDirectory?.()?.path || "";
-    const path = profileDir || dataDir || "";
+    // Working directory for the agent's session: isolate files to a dedicated
+    // workspace folder (<profile>/zotero-hermes/workspace/) rather than the root
+    // profile or data directory where zotero.sqlite and sensitive credentials reside.
+    let path = "";
+    try {
+      const profileDir = Zotero.getProfileDirectory?.();
+      if (profileDir) {
+        const wsDir = profileDir.clone() as nsIFile;
+        wsDir.append("zotero-hermes");
+        wsDir.append("workspace");
+        if (!wsDir.exists()) {
+          wsDir.create(
+            Components.interfaces.nsIFile.DIRECTORY_TYPE as number,
+            0o755,
+          );
+        }
+        path = wsDir.path;
+      }
+    } catch {
+      // ignore
+    }
+
+    if (!path) {
+      const profileDir = Zotero.getProfileDirectory?.()?.path;
+      const dataDir = (Zotero as any).getZoteroDirectory?.()?.path || "";
+      path = profileDir || dataDir || "";
+    }
+
     const request: JsonRpcRequest = {
       jsonrpc: "2.0",
       id: messageId,

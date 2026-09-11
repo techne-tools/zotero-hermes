@@ -149,9 +149,8 @@ export function useStreamBuffer(
             const newArray = [...updated];
             newArray.splice(assistantIndex, 0, reasoningMsg);
             updated = newArray;
-          } else {
-            updated = [...updated, reasoningMsg];
           }
+          // If assistantIndex < 0, target message is not in current conversation (e.g. switched conversations); drop it.
         }
       }
 
@@ -176,6 +175,21 @@ export function useStreamBuffer(
     }
     flushBuffer();
   }, [flushBuffer]);
+
+  const clearBuffer = useCallback(() => {
+    if (flushAnimationFrameRef.current !== null) {
+      clearTimeout(
+        flushAnimationFrameRef.current as unknown as ReturnType<
+          typeof setTimeout
+        >,
+      );
+      flushAnimationFrameRef.current = null;
+    }
+    pendingContentRef.current = "";
+    pendingReasoningRef.current = "";
+    streamingMessageIdRef.current = null;
+    reasoningMessageIdRef.current = null;
+  }, []);
 
   const appendContent = useCallback(
     (content: string) => {
@@ -204,6 +218,7 @@ export function useStreamBuffer(
   return {
     appendContent,
     appendReasoning,
+    clearBuffer,
     flushNow,
     reasoningMessageIdRef,
     streamingMessageIdRef,

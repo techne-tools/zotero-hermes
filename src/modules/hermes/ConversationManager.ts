@@ -123,9 +123,23 @@ export class ConversationManager {
   }
 
   /**
+   * Validate that a conversation ID is alphanumeric with hyphens/underscores only.
+   * Rejects path traversal attempts (../, / , \).
+   */
+  public isValidId(id: string): boolean {
+    return Boolean(id && /^[a-zA-Z0-9_-]+$/.test(id));
+  }
+
+  /**
    * Get the file path for a conversation.
    */
   private getConversationFile(id: string): string {
+    if (!this.isValidId(id)) {
+      this.addon.log(
+        `[ConversationManager] Invalid conversation ID rejected: ${id}`,
+      );
+      return "";
+    }
     const dir = this.getConversationsDir();
     if (!dir) return "";
     return `${dir}/${id}.json`;
@@ -157,6 +171,7 @@ export class ConversationManager {
     this.conversations.set(conversation.id, conversation);
 
     const filePath = this.getConversationFile(conversation.id);
+    if (!filePath) return;
     const json = JSON.stringify(conversation, null, 2);
 
     try {
@@ -172,6 +187,7 @@ export class ConversationManager {
    */
   private loadConversationFromFile(id: string): Conversation | null {
     const filePath = this.getConversationFile(id);
+    if (!filePath) return null;
 
     try {
       const file = Zotero.File.pathToFile(filePath);
@@ -236,6 +252,7 @@ export class ConversationManager {
    */
   public deleteConversation(id: string): boolean {
     const filePath = this.getConversationFile(id);
+    if (!filePath) return false;
 
     try {
       const file = Zotero.File.pathToFile(filePath);

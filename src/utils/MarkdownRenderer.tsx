@@ -32,6 +32,22 @@ interface InlineSegment {
   url?: string;
 }
 
+/**
+ * Validate that a URL uses a safe, permitted scheme before rendering as an active link.
+ * Blocks javascript:, chrome:, file:, data:, and other arbitrary schemes from executing
+ * in Zotero's privileged chrome window context.
+ */
+export function isSafeUrl(url?: string): boolean {
+  if (!url) return false;
+  const trimmed = url.trim().toLowerCase();
+  return (
+    trimmed.startsWith("https://") ||
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("add-context:") ||
+    trimmed.startsWith("apply-tag:")
+  );
+}
+
 export function parseInline(text: string): InlineSegment[] {
   const segments: InlineSegment[] = [];
   let remaining = text;
@@ -43,7 +59,10 @@ export function parseInline(text: string): InlineSegment[] {
     { regex: /\*([^*]+)\*/g, type: "italic" as const },
     { regex: /_([^_]+)_/g, type: "italic" as const },
     { regex: /~~([^~]+)~~/g, type: "strikethrough" as const },
-    { regex: /\[([^\]]+)\]\(((?:[^()\\]|\\.)*)\)/g, type: "link" as const },
+    {
+      regex: /\[([^\]]+)\]\(((?:[^()\\]|\\.|\([^()\\]*\))*)\)/g,
+      type: "link" as const,
+    },
     // Bare URLs auto-link
     { regex: /(https?:\/\/[^\s<>]+)/g, type: "url" as const },
     // Bare DOIs (with optional doi: prefix) auto-link to doi.org. The
@@ -88,6 +107,22 @@ export function parseInline(text: string): InlineSegment[] {
           content: remaining.slice(0, earliestMatch.index),
         });
       }
+
+      // If it's a markdown link with an unsafe URL (e.g. javascript:, file:),
+      // disarm it by rendering as inert text rather than an active link.
+      if (
+        earliestMatch.type === "link" &&
+        earliestMatch.url !== undefined &&
+        !isSafeUrl(earliestMatch.url)
+      ) {
+        segments.push({
+          type: "text",
+          content: earliestMatch.content,
+        });
+        remaining = remaining.slice(earliestMatch.index + earliestMatch.length);
+        continue;
+      }
+
       const seg: InlineSegment = {
         type: earliestMatch.type as InlineSegment["type"],
         content: earliestMatch.content,
@@ -139,6 +174,9 @@ function renderInline(segments: InlineSegment[]): ReactNode[] {
       case "link":
       case "doi":
       case "url":
+        if (!seg.url || !isSafeUrl(seg.url)) {
+          return <span key={i}>{seg.content}</span>;
+        }
         return (
           <a
             key={i}

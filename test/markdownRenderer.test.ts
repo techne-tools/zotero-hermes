@@ -111,4 +111,27 @@ describe("MarkdownRenderer (parseInline)", function () {
       url: "https://doi.org/10.1177/000312240807300501",
     });
   });
+
+  it("should disarm unsafe link schemes like javascript: and file:", function () {
+    const malicious =
+      "Click [here](javascript:alert(1)) or [file](file:///etc/passwd)";
+    const result = parseInline(malicious);
+    // Unsafe links should be converted to plain text, not link segments
+    expect(result.some((s) => s.type === "link")).to.be.false;
+    expect(result.some((s) => s.content === "here" && s.type === "text")).to.be
+      .true;
+    expect(result.some((s) => s.content === "file" && s.type === "text")).to.be
+      .true;
+  });
+
+  it("should allow safe link schemes (https, http, add-context, apply-tag)", function () {
+    const safe =
+      "[web](https://example.com) [ctx](add-context:123) [tag](apply-tag:test)";
+    const result = parseInline(safe);
+    const links = result.filter((s) => s.type === "link");
+    expect(links).to.have.lengthOf(3);
+    expect(links[0].url).to.equal("https://example.com");
+    expect(links[1].url).to.equal("add-context:123");
+    expect(links[2].url).to.equal("apply-tag:test");
+  });
 });

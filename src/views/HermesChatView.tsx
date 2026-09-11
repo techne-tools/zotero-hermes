@@ -194,6 +194,7 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
   const {
     appendContent,
     appendReasoning,
+    clearBuffer,
     flushNow,
     reasoningMessageIdRef,
     streamingMessageIdRef,
@@ -725,15 +726,29 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
       if (!link) return;
 
       const href = link.getAttribute("href");
+      if (!href) return;
+
+      // Defense-in-depth: unconditionally block navigation on any unrecognized scheme
+      // to prevent chrome privilege escalation via javascript:, chrome:, file:, etc.
+      if (
+        !href.startsWith("http://") &&
+        !href.startsWith("https://") &&
+        !href.startsWith("add-context:") &&
+        !href.startsWith("apply-tag:")
+      ) {
+        e.preventDefault();
+        return;
+      }
+
       // http(s) links: open in the system browser via Zotero.launchURL.
       // The sandbox blocks default navigation (target=_blank does nothing),
       // so we must intercept and hand the URL to Zotero.
-      if (href && (href.startsWith("http://") || href.startsWith("https://"))) {
+      if (href.startsWith("http://") || href.startsWith("https://")) {
         e.preventDefault();
         Zotero.launchURL(href);
         return;
       }
-      if (href && href.startsWith("add-context:")) {
+      if (href.startsWith("add-context:")) {
         e.preventDefault();
         const itemIdStr = href.substring("add-context:".length);
         const itemId = parseInt(itemIdStr, 10);
@@ -887,8 +902,23 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
     );
   }, [hermes.conversations]);
 
+  const abortActiveStream = useCallback(() => {
+    if (stateRef.current.isTyping) {
+      hermes.client.cancel().catch(() => {});
+      setIsTyping(false);
+    }
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+    streamingMessageIdRef.current = null;
+    reasoningMessageIdRef.current = null;
+    clearBuffer();
+  }, [hermes.client, clearBuffer]);
+
   const handleLoadConversation = useCallback(
     (id: string) => {
+      abortActiveStream();
       const conv = hermes.conversations.loadConversation(id);
       if (conv) {
         setMessages(conv.messages || []);
@@ -901,7 +931,7 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         setIsConversationListOpen(false);
       }
     },
-    [hermes.conversations, hermes.chat],
+    [hermes.conversations, hermes.chat, abortActiveStream],
   );
 
   const handleDeleteConversation = useCallback(
@@ -911,6 +941,9 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
       // one (ConversationManager already nulls currentConversation then).
       const wasCurrent =
         hermes.conversations.getCurrentConversation()?.id === id;
+      if (wasCurrent) {
+        abortActiveStream();
+      }
       hermes.conversations.deleteConversation(id);
       loadConversationList();
       if (wasCurrent) {
@@ -919,7 +952,7 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         hermes.conversations.createConversation();
       }
     },
-    [hermes.conversations, loadConversationList],
+    [hermes.conversations, loadConversationList, abortActiveStream],
   );
 
   const performSearch = useCallback(
@@ -969,13 +1002,14 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
   );
 
   const newChat = useCallback(() => {
+    abortActiveStream();
     setMessages([]);
     setContextItems([]);
     setError(null);
     setAllowedTools(null);
     hermes.chat.clearMessages();
     hermes.conversations.createConversation();
-  }, [hermes.chat, hermes.conversations]);
+  }, [hermes.chat, hermes.conversations, abortActiveStream]);
 
   return (
     <div
@@ -1077,9 +1111,17 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
 
       <ContextBar
         items={contextItems}
-        onRemoveItem={(id) =>
-          setContextItems((prev) => prev.filter((c) => c.id !== id))
-        }
+        onRemoveItem={(id) => {
+          setContextItems((prev) => {
+            const removed = prev.find((c) => c.id === id);
+            if (removed?.extracted?.id) {
+              hermes.items.removeAttachedItem(removed.extracted.id as number);
+            } else if (removed?.data?.id) {
+              hermes.items.removeAttachedItem(removed.data.id);
+            }
+            return prev.filter((c) => c.id !== id);
+          });
+        }}
         onClear={clearContext}
       />
 

@@ -310,4 +310,20 @@ describe("ConversationManager", function () {
       throw err;
     }
   });
+
+  it("should reject path traversal in conversation IDs", function () {
+    const fs = new MockFs();
+    installZoteroGlobals(fs);
+    const manager = new ConversationManager(makeAddon(fs));
+
+    expect(manager.isValidId("conv_123_abc")).to.be.true;
+    expect(manager.isValidId("../secret")).to.be.false;
+    expect(manager.isValidId("../../etc/passwd")).to.be.false;
+    expect(manager.isValidId("foo/bar")).to.be.false;
+    expect(manager.isValidId("foo\\bar")).to.be.false;
+
+    // load and delete should gracefully reject path traversal attempts
+    expect(manager.loadConversation("../../etc/passwd")).to.be.null;
+    expect(manager.deleteConversation("../../etc/passwd")).to.be.false;
+  });
 });

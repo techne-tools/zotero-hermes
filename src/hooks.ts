@@ -313,9 +313,13 @@ function unregisterHermesSidebar(win: Window): void {
   }
 }
 
+const windowToolkits = new WeakMap<Window, any>();
+
 async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
-  // Create ztoolkit for every window FIRST
-  addon.data.ztoolkit = createZToolkit();
+  // Create ztoolkit for this window and store in per-window WeakMap
+  const ztoolkit = createZToolkit();
+  windowToolkits.set(win, ztoolkit);
+  addon.data.ztoolkit = ztoolkit;
 
   // Initialize locale for this window
   initLocale();
@@ -324,13 +328,10 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
     `${addon.data.config.addonRef}-mainWindow.ftl`,
   );
 
-  const popupWin = new addon.data.ztoolkit.ProgressWindow(
-    addon.data.config.addonName,
-    {
-      closeOnClick: true,
-      closeTime: -1,
-    },
-  )
+  const popupWin = new ztoolkit.ProgressWindow(addon.data.config.addonName, {
+    closeOnClick: true,
+    closeTime: -1,
+  })
     .createLine({
       text: getString("startup-begin"),
       type: "default",
@@ -361,7 +362,13 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
 
 async function onMainWindowUnload(win: Window): Promise<void> {
   unregisterHermesSidebar(win);
-  addon.data.ztoolkit.unregisterAll();
+  const winToolkit = windowToolkits.get(win);
+  if (winToolkit) {
+    winToolkit.unregisterAll();
+    windowToolkits.delete(win);
+  } else {
+    addon.data.ztoolkit?.unregisterAll();
+  }
   addon.data.dialog?.window?.close();
 }
 

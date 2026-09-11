@@ -2,6 +2,29 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.1] — 2026-09-11
+
+### Security
+- **Sandbox escape mitigations** in markdown parsing and link delegation:
+  - Disarmed dangerous URI schemes (`javascript:`, `file:`, `chrome:`, `data:`) in `MarkdownRenderer`, rendering them as inert text and guarding anchor rendering.
+  - Added support for nested parentheses in markdown link URLs (e.g. Wikipedia disambiguation, JS function calls).
+  - Added explicit `e.preventDefault()` fallback for any unhandled URI schemes in `HermesChatView` to prevent Gecko chrome-level execution.
+- **Workspace sandboxing & database protection**:
+  - Sandboxed Hermes ACP agent session `cwd` and `workdir` to `<profile>/zotero-hermes/workspace/` (isolated from `zotero.sqlite`).
+  - Disabled ACP filesystem client capabilities (`readTextFile: false, writeTextFile: false`).
+- **Path traversal prevention**:
+  - Enforced strict ID regex (`/^[a-zA-Z0-9_-]+$/`) across all `ConversationManager` file access methods (`getConversationFile`, `saveConversation`, `loadConversationFromFile`, `deleteConversation`).
+- **Dialog deadlock fix**:
+  - Added native `cancel` and `close` listeners with settled guard to `ApprovalDialog` so pressing `Escape` resolves cleanly rather than deadlocking the approval queue.
+
+### Fixed
+- **Process spawn mutex**: Added `connectPromise` mutex in `HermesClient` to prevent concurrent calls from spawning multiple `hermes acp` child processes.
+- **Cross-conversation stream bleeding**: Added `abortActiveStream()` and buffer clearing on chat switch, creation, or deletion; dropped reasoning chunks targeted at inactive conversations.
+- **Debounced save race**: Captured target conversation ID in `ChatManager.scheduleSave()` to prevent delayed debounced writes from clobbering switched chats.
+- **Duplicate SSE stop events**: Added `stopEmitted` guard in `HermesApiClient` to prevent spurious duplicate stop notifications from finally blocks.
+- **Context synchronization**: Added `removeAttachedItem()` to `ItemManager` and wired `ContextBar.onRemoveItem` to keep UI context pills and internal item tracking synchronized.
+- **Multi-window teardown**: Replaced global single-toolkit reference with a per-window `WeakMap<Window, any>` in `hooks.ts` to prevent window close from disrupting other open windows.
+
 ## [0.3.0] — 2026-09-10
 
 ### Added

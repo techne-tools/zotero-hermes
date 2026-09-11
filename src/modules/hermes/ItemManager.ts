@@ -112,6 +112,18 @@ export class ItemManager {
     }
   }
 
+  /**
+   * Remove an item from attachedItems by item ID or key.
+   */
+  public removeAttachedItem(idOrKey: number | string): void {
+    this.attachedItems = this.attachedItems.filter((item) => {
+      if (typeof idOrKey === "number") {
+        return item.id !== idOrKey;
+      }
+      return item.key !== idOrKey && String(item.id) !== idOrKey;
+    });
+  }
+
   public clearAttachedItems(): void {
     this.attachedItems = [];
   }

@@ -206,6 +206,14 @@ export class HermesApiClient implements ChatClient {
       const reader = response.body.getReader() as any;
       const decoder = new TextDecoder();
       let buffer = "";
+      let stopEmitted = false;
+
+      const emitStop = () => {
+        if (!stopEmitted) {
+          stopEmitted = true;
+          this.emit({ type: "stop" });
+        }
+      };
 
       try {
         while (true) {
@@ -225,7 +233,7 @@ export class HermesApiClient implements ChatClient {
 
             const data = trimmed.slice(5).trim();
             if (data === "[DONE]") {
-              this.emit({ type: "stop" });
+              emitStop();
               return;
             }
 
@@ -250,7 +258,7 @@ export class HermesApiClient implements ChatClient {
                 this.emit({ type: "reasoning", reasoning: delta.reasoning });
               }
               if (parsed.choices?.[0]?.finish_reason) {
-                this.emit({ type: "stop" });
+                emitStop();
                 return;
               }
               if (parsed.usage) {
@@ -272,7 +280,7 @@ export class HermesApiClient implements ChatClient {
         }
       } finally {
         reader.releaseLock();
-        this.emit({ type: "stop" });
+        emitStop();
       }
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {

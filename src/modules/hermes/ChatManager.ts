@@ -21,6 +21,7 @@ export class ChatManager {
   /**
    * Schedule a debounced save to disk. Only the last call within the
    * debounce window actually writes. Respects the autoSave pref (M4).
+   * Verifies conversation ID matching to prevent cross-conversation overwrite.
    */
   private scheduleSave(): void {
     const autoSave = this.addon.data.hermes?.preferences?.get<boolean>(
@@ -28,12 +29,19 @@ export class ChatManager {
       true,
     );
     if (autoSave === false) return;
+
+    const currentConv =
+      this.addon.data.hermes?.conversations.getCurrentConversation();
+    if (!currentConv) return;
+    const targetConvId = currentConv.id;
+
     if (this.saveTimer) clearTimeout(this.saveTimer);
     this.saveTimer = setTimeout(() => {
       this.saveTimer = null;
       const conv =
         this.addon.data.hermes?.conversations.getCurrentConversation();
-      if (conv) {
+      // Verify active conversation has not switched during the debounce delay
+      if (conv && conv.id === targetConvId) {
         conv.messages = [...this.messages];
         this.addon.data.hermes?.conversations.saveConversation(conv);
       }
@@ -62,6 +70,10 @@ export class ChatManager {
   }
 
   public loadFromConversation(conv: Conversation): void {
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = null;
+    }
     this.messages = conv.messages || [];
   }
 

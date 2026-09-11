@@ -124,18 +124,34 @@ export class ApprovalDialog {
       contentDiv.appendChild(actionsDiv);
       dialogElement.appendChild(contentDiv);
 
-      const cleanup = () => {
-        dialogElement.remove();
+      let settled = false;
+      const finish = (result: boolean) => {
+        if (settled) return;
+        settled = true;
+        try {
+          dialogElement.remove();
+        } catch {
+          // ignore if already removed
+        }
+        resolve(result);
       };
 
       approveBtn.addEventListener("click", () => {
-        cleanup();
-        resolve(true);
+        finish(true);
       });
 
       denyBtn.addEventListener("click", () => {
-        cleanup();
-        resolve(false);
+        finish(false);
+      });
+
+      // Handle Escape key or native dialog dismissal so the promise never hangs
+      dialogElement.addEventListener("cancel", (e) => {
+        e.preventDefault();
+        finish(false);
+      });
+
+      dialogElement.addEventListener("close", () => {
+        finish(false);
       });
 
       dialogElement.showModal();

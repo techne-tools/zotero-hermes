@@ -5,9 +5,11 @@ import type Addon from "../../addon";
  */
 export class TagManager {
   private readonly addon: Addon;
+  private readonly approvalDialog?: any;
 
-  constructor(addon: Addon) {
+  constructor(addon: Addon, approvalDialog?: any) {
     this.addon = addon;
+    this.approvalDialog = approvalDialog;
   }
 
   public async getAllTags(): Promise<Array<{ tag: string; count: number }>> {
@@ -27,19 +29,73 @@ export class TagManager {
   public async addTags(itemID: number, tags: string[]): Promise<void> {
     const item = await Zotero.Items.getAsync(itemID);
     if (!item) return;
+
+    const title = (item as any).getDisplayTitle?.() || `Item ${itemID}`;
+    const displayName = `Add tags to "${title}": ${tags.join(", ")}`;
+    const approvalDialog =
+      this.approvalDialog || (this.addon?.data?.hermes as any)?.approvalDialog;
+    if (approvalDialog) {
+      const changeId = `tag-add-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      const approved = await approvalDialog.addPendingChange({
+        action: "modify",
+        id: changeId,
+        newContent: `Add tags: ${tags.join(", ")}`,
+        path: displayName,
+        status: "pending",
+        timestamp: Date.now(),
+      });
+      if (!approved) {
+        throw new Error("Tag addition cancelled by user.");
+      }
+    }
+
     for (const tag of tags) {
       item.addTag(tag);
     }
     await item.saveTx();
+
+    this.addon.data?.hermes?.auditLog?.record(
+      "file_change",
+      displayName,
+      "success",
+      { action: "modify", itemID, tags },
+    );
   }
 
   public async removeTags(itemID: number, tags: string[]): Promise<void> {
     const item = await Zotero.Items.getAsync(itemID);
     if (!item) return;
+
+    const title = (item as any).getDisplayTitle?.() || `Item ${itemID}`;
+    const displayName = `Remove tags from "${title}": ${tags.join(", ")}`;
+    const approvalDialog =
+      this.approvalDialog || (this.addon?.data?.hermes as any)?.approvalDialog;
+    if (approvalDialog) {
+      const changeId = `tag-rm-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      const approved = await approvalDialog.addPendingChange({
+        action: "modify",
+        id: changeId,
+        newContent: `Remove tags: ${tags.join(", ")}`,
+        path: displayName,
+        status: "pending",
+        timestamp: Date.now(),
+      });
+      if (!approved) {
+        throw new Error("Tag removal cancelled by user.");
+      }
+    }
+
     for (const tag of tags) {
       item.removeTag(tag);
     }
     await item.saveTx();
+
+    this.addon.data?.hermes?.auditLog?.record(
+      "file_change",
+      displayName,
+      "success",
+      { action: "modify", itemID, tags },
+    );
   }
 
   public async suggestTags(

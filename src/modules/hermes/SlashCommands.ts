@@ -351,6 +351,89 @@ const BUILT_IN_COMMANDS: SlashCommand[] = [
     },
     name: "persona",
   },
+  {
+    description:
+      "View or update metadata for attached item. Usage: `/metadata` or `/metadata title=My Title, date=2024`",
+    execute: async (addon, args) => {
+      const attachedItems = addon.data.hermes!.items.getAttachedItems();
+      if (attachedItems.length === 0) {
+        return "No item attached to the conversation. Attach an item first.";
+      }
+      const parentItem = attachedItems[0];
+      const trimmed = args.trim();
+
+      if (!trimmed) {
+        // Display current metadata
+        const lines = [
+          `### Metadata for **${parentItem.title}**`,
+          `- **Item Type**: ${parentItem.itemType}`,
+          `- **Creators**: ${parentItem.creators.join(", ") || "(none)"}`,
+          `- **Date**: ${parentItem.date || "(none)"}`,
+          `- **DOI**: ${parentItem.doi || "(none)"}`,
+          `- **URL**: ${parentItem.url || "(none)"}`,
+          `- **Abstract**: ${parentItem.abstract ? parentItem.abstract.slice(0, 150) + "..." : "(none)"}`,
+          `- **Tags**: ${parentItem.tags.join(", ") || "(none)"}`,
+          "",
+          "*To update metadata, use `/metadata field=value, ...` (e.g. `/metadata title=New Title, date=2024`)*",
+        ];
+        return lines.join("\n");
+      }
+
+      // Parse field=value pairs
+      const updates: Record<string, any> = {};
+      const pairs = trimmed.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+      for (const pair of pairs) {
+        const eqIdx = pair.indexOf("=");
+        const colonIdx = pair.indexOf(":");
+        const sepIdx =
+          eqIdx !== -1 && (colonIdx === -1 || eqIdx < colonIdx)
+            ? eqIdx
+            : colonIdx;
+
+        if (sepIdx !== -1) {
+          const key = pair.slice(0, sepIdx).trim();
+          let val = pair.slice(sepIdx + 1).trim();
+          if (
+            (val.startsWith('"') && val.endsWith('"')) ||
+            (val.startsWith("'") && val.endsWith("'"))
+          ) {
+            val = val.slice(1, -1);
+          }
+          if (
+            key.toLowerCase() === "creators" ||
+            key.toLowerCase() === "authors"
+          ) {
+            updates.creators = val
+              .split(";")
+              .map((c) => c.trim())
+              .filter(Boolean);
+          } else {
+            updates[key] = val;
+          }
+        }
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return "Could not parse any field updates. Usage: `/metadata field=value, ...`";
+      }
+
+      try {
+        const success = await addon.data.hermes!.items.updateItemMetadata(
+          parentItem.id,
+          updates,
+        );
+        if (success) {
+          const fieldNames = Object.keys(updates).join(", ");
+          return `Successfully updated metadata (**${fieldNames}**) for **${parentItem.title}**.`;
+        } else {
+          return "No valid or modifiable fields were provided.";
+        }
+      } catch (err) {
+        return `Failed to update metadata: ${(err as Error).message}`;
+      }
+    },
+    name: "metadata",
+  },
 ];
 
 /**

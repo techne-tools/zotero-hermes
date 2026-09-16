@@ -18,6 +18,7 @@ interface ChatMessageItemProps {
   message: ChatMessage;
   addon: Addon;
   onEditMessage?: (newContent: string) => void;
+  onAbortTerminal?: () => void;
 }
 
 const HELIX_FRAMES = ["⢌⣉⢎⣉", "⣉⡱⣉⡱", "⣉⢎⣉⢎", "⡱⣉⡱⣉"];
@@ -44,6 +45,7 @@ export const ChatMessageItem = memo(function ChatMessageItem({
   message,
   addon,
   onEditMessage,
+  onAbortTerminal,
 }: ChatMessageItemProps) {
   const [isCopied, setIsCopied] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -143,7 +145,11 @@ export const ChatMessageItem = memo(function ChatMessageItem({
   if (message.role === "tool") {
     const isError = message.toolStatus === "error";
     const isRunning = message.isRunning || message.toolStatus === "running";
-    const statusIcon = isError ? <AlertIcon /> : <HelixSpinner isRunning={isRunning} />;
+    const statusIcon = isError ? (
+      <AlertIcon />
+    ) : (
+      <HelixSpinner isRunning={isRunning} />
+    );
     roleLabel = (
       <>
         {statusIcon}Tool: {message.toolName}
@@ -224,7 +230,7 @@ export const ChatMessageItem = memo(function ChatMessageItem({
         {!message.isExited && (
           <button
             onClick={() => {
-              /* TODO: abort terminal */
+              onAbortTerminal?.();
             }}
             className="hermes-abort-btn"
           >

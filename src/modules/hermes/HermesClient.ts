@@ -74,7 +74,11 @@ export class HermesClient implements ChatClient {
    * keeping lifecycle-critical messages always visible.
    */
   private logDebug(message: string, ...args: unknown[]): void {
-    if (this.addon.data.hermes?.preferences?.get("enableDebugMode", false)) {
+    if (this.addon.data?.hermes?.debug) {
+      this.addon.data.hermes.debug.debug(message, ...args);
+    } else if (
+      this.addon.data?.hermes?.preferences?.get("enableDebugMode", false)
+    ) {
       this.addon.log(`[DEBUG] ${message}`, ...args);
     }
   }

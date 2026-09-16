@@ -14,6 +14,7 @@ interface MessageListProps {
   messagesEndRef: React.RefObject<HTMLDivElement>;
   messageRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
   onEditMessage: (idx: number, newText: string) => void;
+  onAbortTerminal?: () => void;
   onDismissError: () => void;
 }
 
@@ -58,6 +59,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   messagesEndRef,
   messageRefs,
   onEditMessage,
+  onAbortTerminal,
   onDismissError,
 }) => {
   return (
@@ -92,6 +94,7 @@ export const MessageList: React.FC<MessageListProps> = ({
             <ChatMessageItem
               message={msg}
               addon={addon}
+              onAbortTerminal={onAbortTerminal}
               onEditMessage={
                 msg.role === "user"
                   ? (newText) => onEditMessage(idx, newText)

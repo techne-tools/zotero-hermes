@@ -31,6 +31,12 @@ export class ApprovalDialog {
     if (!approved) {
       this.pendingChanges.delete(change.id);
     }
+    this.addon.data?.hermes?.auditLog?.record(
+      "permission",
+      change.path,
+      approved ? "success" : "blocked",
+      { action: change.action, id: change.id },
+    );
     return approved;
   }
 

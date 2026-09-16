@@ -20,6 +20,13 @@ declare namespace _ZoteroTypes {
       "enableCitations": boolean;
       "enableAnnotations": boolean;
       "enableTags": boolean;
+      "hasSeenOnboarding": boolean;
+      "enableTypingSound": boolean;
+      "enableHapticFeedback": boolean;
+      "allowTerminal": boolean;
+      "conversationOrganization": string;
+      "chatSaveFolder": string;
+      "currentPersona": string;
     };
   }
 }

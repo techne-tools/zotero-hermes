@@ -1,6 +1,6 @@
 import type Addon from "../../addon";
 
-import { buildPersonaPrompt } from "./systemPrompt";
+import { buildPersonaPrompt, buildItemContext } from "./systemPrompt";
 import type { ChatClient, ChatSessionUpdate, PromptContextItem } from "./types";
 
 /**
@@ -152,6 +152,12 @@ export class HermesApiClient implements ChatClient {
       });
     }
 
+    const zoteroDataDir =
+      (Zotero as any).getZoteroDirectory?.()?.path ||
+      (Zotero as any).DataDirectory?.dir ||
+      "";
+    const zoteroStorageDir = zoteroDataDir ? `${zoteroDataDir}/storage` : "";
+
     // Build user message with context items
     const userContentParts: Record<string, unknown>[] = [];
     for (const item of contextItems) {
@@ -165,7 +171,7 @@ export class HermesApiClient implements ChatClient {
       } else {
         userContentParts.push({
           type: "text",
-          text: `[${item.type}]: ${item.text}`,
+          text: buildItemContext(item, zoteroStorageDir),
         });
       }
     }
@@ -460,5 +466,15 @@ export class HermesApiClient implements ChatClient {
     }
     this.isReconnecting = false;
     this.reconnectAttempts = 0;
+  }
+
+  private logDebug(message: string, ...args: unknown[]): void {
+    if (this.addon.data?.hermes?.debug) {
+      this.addon.data.hermes.debug.debug(message, ...args);
+    } else if (
+      this.addon.data?.hermes?.preferences?.get("enableDebugMode", false)
+    ) {
+      this.addon.log(`[DEBUG] ${message}`, ...args);
+    }
   }
 }

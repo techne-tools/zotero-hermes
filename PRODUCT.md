@@ -45,13 +45,13 @@ grounded in the actual metadata, notes, annotations, and tags.
 | PDF annotations (`/annotations`)        | ✅                               |
 | Citations (`/cite [style]`)             | ✅                               |
 | Tag suggestions (`/tag`)                | ✅                               |
+| Item metadata updates (`/metadata`)     | ✅ (gated via approval dialog)   |
 | Conversation persistence + branching    | ✅                               |
 | Cmd+F message search                    | ✅                               |
 | Token dashboard                         | ✅                               |
 | Persona switcher (`/persona`)           | ✅                               |
-| Export (HTML/JSON/Markdown)             | ✅                               |
 | Terminal output gating                  | ✅ (behind `allowTerminal` pref) |
-| Terminal abort button                   | ⚠️ TODO                          |
+| Terminal abort button                   | ✅                               |
 | Virtualized scrolling                   | ⚠️ Not started                   |
 
 ## Roadmap (validated against user intent)
@@ -59,16 +59,14 @@ grounded in the actual metadata, notes, annotations, and tags.
 The roadmap below is the _user's_ intent, not an agent-generated feature
 wishlist. It is deliberately small and focused on the research workflow.
 
-1. **Stability** — the chat UI was restored from a stub (2026-08-11); the
-   next priority is real-world testing and bug fixes.
-2. **Terminal abort** — complete the TODO on terminal messages.
-3. **Conversation branches as first-class** — parallel branches per
+1. **Stability** — real-world testing and bug fixes.
+2. **Conversation branches as first-class** — parallel branches per
    conversation.
-4. **Virtualized scrolling** — for very large conversations.
+3. **Virtualized scrolling** — for very large conversations.
 
 ## Success Metrics
 
 - The plugin loads without errors in Zotero 9 and 10.
 - A user can attach an item, ask a question, and get a grounded answer.
-- All write operations (notes, annotations, tags) require approval.
+- All write operations (notes, annotations, tags, metadata) require approval and are logged.
 - No user-specific paths or secrets in the codebase.

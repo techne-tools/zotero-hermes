@@ -79,9 +79,10 @@ these docs current at review time.
 
 Zotero plugins run in a **Firefox 115 ESR sandbox** with severe React limitations:
 
-1. **Synthetic events fail** — `onChange`, `onClick`, `onKeyDown` on React elements don't fire
-   - **Pattern**: Use native `addEventListener` via refs for ALL user interaction
-   - **Example**: `textareaRef.current.addEventListener("keydown", handler)` instead of `onKeyDown`
+1. **Synthetic input events fail** — `onChange` and `onKeyDown` on text inputs do not fire reliably
+   - **Pattern**: Use native `addEventListener` via refs for text inputs and window accelerators
+   - **Example**: `textareaRef.current.addEventListener("input", handler)` instead of `onChange`
+   - Standard button `onClick` handlers inside the React tree dispatch normally
 
 2. **State ref pattern** — Native callbacks can't access React state closures
    - **Pattern**: `stateRef` mirrors all React state; native handlers read from `stateRef.current`

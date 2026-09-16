@@ -1,10 +1,10 @@
 # Zotero Hermes Plugin — Full Rework TODO
 
 **Created:** 21 May 2026  
-**Updated:** 5 June 2026  
-**Target Version:** 0.1.0 (Alpha)  
-**Platform:** Zotero 9.0.0+ (current: 10.x, Mozilla 140 ESR)  
-**Status:** ✅ Core Infrastructure Complete — API Mode, Preferences UI, Chat Polish & Sound/Haptic Added
+**Updated:** 16 September 2026  
+**Current Version:** 0.3.1 (Stable)  
+**Platform:** Zotero 7.0–10.x (Mozilla 140 ESR)  
+**Status:** ✅ Core Infrastructure, UI Redesign, Security Hardening & Zotero 10 Compatibility Complete
 
 ---
 
@@ -14,7 +14,7 @@
 
 - [x] Initialize plugin scaffold from zotero-plugin-template
   - Update package.json with Hermes branding
-  - Configure manifest.json for Zotero 9
+  - Configure manifest.json for Zotero 7–10
   - Set up build system with zotero-plugin-scaffold
 - [x] Create core Hermes modules
   - `HermesClient.ts` — ACP protocol client with $PATH discovery
@@ -28,7 +28,7 @@
   - `addon/content/hermes/sidebar.css` — Styling
   - `hermes-mainWindow.ftl` — English localization
 - [x] Integrate with Zotero lifecycle
-  - ItemPaneManager.registerSection for standalone tab
+  - Register Hermes toolbar button and full-height sidebar container in hooks.ts
   - React mount/unmount lifecycle hooks
   - Message send/receive handlers
 
@@ -296,17 +296,13 @@
 
 #### 7. Export Conversations (HTML/JSON/PDF)
 
-- [ ] Add export functionality to Zotero sidebar
-- [ ] Export as HTML (self-contained with escaped output)
-- [ ] Export as JSON (with metadata)
-- [ ] Export as PDF (via browser print)
-- [ ] Support for sharing conversations with collaborators
+- [x] Dropped from spec (conversations persist locally in JSON store within profile directory)
 
 #### 8. Session Tools (Tool Restrictions)
 
-- [ ] Add session tools UI to Zotero sidebar
-- [ ] Allow users to restrict available tools per conversation
-- [ ] Save tool restrictions with conversation
+- [x] Add session tools UI to Zotero sidebar (`SidePanels.tsx`)
+- [x] Allow users to restrict available tools per conversation (Allow All, Block All, per-tool toggles)
+- [x] Save tool restrictions with conversation (`Conversation.allowedTools` persisted to JSON)
 
 ---
 
@@ -320,8 +316,8 @@
 | Token Usage Dashboard               | Low                    | ⭐⭐⭐⭐      | **4**    |
 | Conversation Search (Cmd+F)         | Medium                 | ⭐⭐⭐⭐      | **5**    |
 | Persona Templates                   | Low                    | ⭐⭐⭐⭐      | **6**    |
-| Export Conversations                | Low                    | ⭐⭐⭐        | **7**    |
-| Session Tools (Tool Restrictions)   | Low                    | ⭐⭐⭐        | **8**    |
+| Session Tools (Tool Restrictions)   | Low                    | ⭐⭐⭐        | **7**    |
+| Export Conversations                | Low                    | ⭐⭐⭐        | Dropped  |
 
 ---
 
@@ -388,25 +384,19 @@ All features must follow Zotero Hermes coding conventions.
   - [x] Reset onboarding button
   - File: `addon/content/preferences.xhtml`, `src/modules/preferenceScript.ts`
 
-### ⚪ Future - Conversation Persistence Enhancements
+### ✅ Completed - Conversation Persistence & Notes
 
-- [ ] **Save Conversations to Notes**
-  - [ ] Implement `saveToNote()` with formatting
-  - [ ] Auto-save option with interval
-  - [ ] Manual save button in chat
-  - [ ] Export as HTML/PDF/Markdown
-  - **Estimated:** 2 days
-  - **Dependencies:** ChatManager.ts
-  - **Status:** Not started
+- [x] **Save Conversations to Notes**
+  - [x] Implement `/savechat` command with HTML formatting
+  - [x] Auto-save option with debounce (500ms)
+  - [x] Per-message save note button (📝) in chat
+  - [x] Dropped file export (HTML/PDF/Markdown) from spec
 
-- [ ] **Load Previous Conversations**
-  - [ ] Conversation history sidebar
-  - [ ] Search/filter conversations
-  - [ ] Resume previous chats
-  - [ ] Delete/archive conversations
-  - **Estimated:** 3 days
-  - **Dependencies:** Save conversations
-  - **Status:** Not started
+- [x] **Load Previous Conversations**
+  - [x] Conversation history sidebar in `SidePanels.tsx`
+  - [x] Search/filter messages in conversations (Cmd+F)
+  - [x] Resume previous chats
+  - [x] Delete conversations
 
 ---
 
@@ -432,16 +422,19 @@ All features must follow Zotero Hermes coding conventions.
   - **Dependencies:** None
   - **Status:** Not started
 
-### ⚪ Future - Testing
+### ✅ Completed - Testing
 
-- [ ] **Unit Tests**
-  - [ ] HermesClient tests (mock ACP protocol)
-  - [ ] ChatManager tests
-  - [ ] NoteManager tests
-  - [ ] ItemManager tests
-  - **Estimated:** 3 days
-  - **Dependencies:** Core modules complete
-  - **Status:** Not started
+- [x] **Unit Tests** (10 test suites in `test/`)
+  - [x] `hermesClient.test.ts` — NDJSON parsing & message correlation
+  - [x] `chatManager.test.ts` — message state & debounced save
+  - [x] `noteManager.test.ts` — note operations
+  - [x] `itemManager.test.ts` — item metadata extraction & attachments
+  - [x] `conversationManager.test.ts` — JSON persistence & path traversal validation
+  - [x] `markdownRenderer.test.ts` — sandbox parsing, table rendering & URI disarming
+  - [x] `slashCommands.test.ts` — command registry & parsing
+  - [x] `tagManager.test.ts` — tag scoring & suggestions
+  - [x] `stripAnsi.test.ts` — terminal ANSI code stripping
+  - [x] `systemPrompt.test.ts` — persona prompts & context formatting
 
 - [ ] **Integration Tests**
   - [ ] End-to-end chat flow tests
@@ -564,36 +557,31 @@ All features must follow Zotero Hermes coding conventions.
 
 ### Sprint Summary
 
-| Sprint   | Dates        | Focus                  | Completion |
-| -------- | ------------ | ---------------------- | ---------- |
-| Sprint 0 | May 19       | Project Setup          | 100% ✅    |
-| Sprint 1 | May 19-25    | Core Infrastructure    | 20% 🟡     |
-| Sprint 2 | May 26-Jun 1 | Zotero Integration     | 0% ⚪      |
-| Sprint 3 | Jun 2-8      | Advanced Features      | 0% ⚪      |
-| Sprint 4 | Jun 9-15     | Preferences & Settings | 0% ⚪      |
-| Sprint 5 | Jun 16-29    | Polish & Testing       | 0% ⚪      |
-| Sprint 6 | Jun 30-Jul 6 | Release Prep           | 0% ⚪      |
-
-### Metrics
-
-- **Total Tasks:** 47
-- **Completed:** 4 (8.5%)
-- **In Progress:** 0 (0%)
-- **Not Started:** 43 (91.5%)
-- **Blocked:** 0 (0%)
+| Sprint   | Dates        | Focus                          | Completion |
+| -------- | ------------ | ------------------------------ | ---------- |
+| Sprint 0 | May 19       | Project Setup                  | 100% ✅    |
+| Sprint 1 | May 19-25    | Core Infrastructure            | 100% ✅    |
+| Sprint 2 | May 26-Jun 1 | Zotero Integration             | 100% ✅    |
+| Sprint 3 | Jun 2-8      | Advanced Features              | 100% ✅    |
+| Sprint 4 | Jun 9-15     | Preferences & Settings         | 100% ✅    |
+| Sprint 5 | Jun 16-29    | Polish & Testing               | 100% ✅    |
+| Sprint 6 | Jul - Sep    | Zotero 10, Redesign, Hardening | 100% ✅    |
 
 ### Key Decisions Log
 
-- **19 May 2026** - Chose XUL/XHTML over pure React for sidebar (Zotero compatibility)
+- **19 May 2026** - Chose XUL/XHTML container + React 18 for chat sidebar (Zotero compatibility)
 - **19 May 2026** - Selected ACP protocol for local communication (matches Obsidian Hermes)
 - **19 May 2026** - Implemented approval system for all note modifications (security first)
+- **5 June 2026** - Removed external MCP server dependency in favor of direct item context passing
+- **10 September 2026** - Upgraded for Zotero 10 / Firefox 140 ESR compatibility and OpenDesign Reading Room redesign
+- **11 September 2026** - Sandboxed workspace directory (`<profile>/zotero-hermes/workspace/`) and hardened URI schemes
+- **16 September 2026** - Resolved spec conflicts 2–6: TagManager approval gate, Remote API metadata parity (`buildItemContext`), runtime mode hot-swapping (`switchConnectionMode`), full AuditLog and DebugLogger integration across write operations, and implemented library metadata inspection/updates (`ItemManager.updateItemMetadata`, `/metadata` slash command).
 
-### Known Issues
+### Current Known Constraints & Backlog
 
-1. ACP protocol implementation pending - placeholder responses currently used
-2. Item context attachment not yet implemented
-3. No preferences panel - settings hardcoded for now
-4. PDF annotation support planned for Phase 3
+1. Zotero SQLite database is locked while Zotero is running — the agent cannot read it directly via fs tools; context items are the library access point.
+2. Conversation export dropped from spec; conversations remain stored in profile JSON files.
+3. Virtualized scrolling for very large conversations remains on backlog.
 
 ---
 

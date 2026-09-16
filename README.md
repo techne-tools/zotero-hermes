@@ -1,7 +1,7 @@
 # Hermes Agent for Zotero
 
 [![zotero target version](https://img.shields.io/badge/Zotero-7.0+-green?style=flat-square&logo=zotero&logoColor=CC2936)](https://www.zotero.org)
-[![Version](https://img.shields.io/badge/version-0.1.0-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-0.3.1-blue?style=flat-square)](./package.json)
 
 A Zotero plugin that integrates the [Hermes Agent](https://github.com/nousresearch/hermes) directly into your research workflow. Chat with an AI assistant that has full context of your Zotero library — no copy-pasting, no context switching.
 
@@ -20,7 +20,6 @@ A Zotero plugin that integrates the [Hermes Agent](https://github.com/nousresear
 - **Keyboard Search (Cmd+F)** — Intercepts `Cmd+F` / `Ctrl+F` to toggle and focus the chat messages search panel, supporting navigation and match counters
 - **Token Dashboard** — Displays real-time input and output token counts for the last turn at the bottom of the chat view
 - **Persona Switcher** — Switch system prompt orientations (Research Assistant, Citation Expert, Literature Analyst) dynamically using the `/persona [name]` command
-- **Export Formats** — Export conversation history directly to HTML, JSON, or Markdown from a header dropdown menu
 - **Streaming Responses** — Real-time message streaming with typing indicator
 - **Reasoning Display** — Collapsible reasoning/thought process bubbles
 - **Tool Call Visualization** — Expandable tool call panels with status indicators
@@ -196,7 +195,6 @@ Open **Zotero → Edit → Settings → Hermes Agent** to configure:
 - **Conversation Branching** — Edit previous user messages via pencil button to spawn edited dialog paths.
 - **Cmd+F Search Shortcut** — Window keydown interceptor opens and focuses message search panel.
 - **Token Dashboard** — Displays real-time API turn tokens dynamically.
-- **Export Options Dropdown** — Exposes HTML, JSON, and Markdown export actions directly from the chat header.
 - **Persona Switcher** — Added `/persona` command to switch between system prompts (Research Assistant, Citation Expert, Literature Analyst).
 
 ## Recent Changes (5 June 2026)

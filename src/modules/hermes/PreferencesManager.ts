@@ -69,4 +69,27 @@ export class PreferencesManager {
   public setConnectionMode(mode: string): void {
     this.set("connectionMode", mode);
   }
+
+  public async switchConnectionMode(mode: string): Promise<void> {
+    this.setConnectionMode(mode);
+    const hermes = this.addon.data?.hermes;
+    if (!hermes) return;
+
+    try {
+      hermes.client?.disconnect();
+    } catch (err) {
+      this.addon.log(
+        `Error disconnecting old client on mode switch: ${(err as Error).message}`,
+      );
+    }
+
+    if (mode === "api") {
+      const { HermesApiClient } = await import("./HermesApiClient");
+      hermes.client = new HermesApiClient(this.addon);
+    } else {
+      const { HermesClient } = await import("./HermesClient");
+      hermes.client = new HermesClient(this.addon);
+    }
+    this.addon.log(`Switched Hermes connection mode to ${mode}`);
+  }
 }

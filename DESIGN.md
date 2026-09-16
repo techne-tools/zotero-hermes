@@ -34,10 +34,10 @@ with zero context-switching?
 
 ```
 HermesChatView (state + orchestration)
-├── ChatHeader        — toolbar: search, conversations, attach, new, settings, export
-├── SidePanels        — export dropdown, conversation list, search bar, session settings, onboarding
+├── ChatHeader        — toolbar: search, conversations, attach, new, settings
+├── SidePanels        — conversation list, search bar, session settings, onboarding
 ├── MessageList       — message list + typing indicator + error bar
-│   └── ChatMessageItem — per-message: copy, save-note, edit, collapsible reasoning/tool
+│   └── ChatMessageItem — per-message: copy, save-note, edit, collapsible reasoning/tool, terminal abort
 ├── ContextBar        — attached item chips
 ├── InputArea         — textarea + send/stop button + slash dropdown
 └── TokenDashboard    — usage footer
@@ -60,8 +60,9 @@ HermesChatView (state + orchestration)
 - **Subprocess** — the `hermes` binary is spawned directly with an argument
   array (no shell), so a configured path with metacharacters cannot inject
   commands.
-- **Approval** — all Zotero writes (notes, annotations, tags) require user
-  approval via `ApprovalDialog`, serialised through a queue.
+- **Approval & Audit** — all Zotero writes (notes, annotations, tags,
+  metadata) require user approval via `ApprovalDialog`, serialised through a
+  queue, and record persistent entries in `AuditLog`.
 - **Terminal gating** — `terminal_output` updates are blocked unless the
   `allowTerminal` preference is enabled.
 - **Secrets** — the API key lives in Zotero prefs and is never logged.
@@ -78,10 +79,8 @@ HermesChatView (state + orchestration)
 
 ## Open Questions
 
-1. **Terminal abort** — the "Abort" button on terminal messages is a TODO.
-   Should it send a `session/cancel` or a dedicated abort method?
-2. **Conversation branching** — editing a user message truncates history and
+1. **Conversation branching** — editing a user message truncates history and
    re-sends. Should branches be first-class (multiple parallel branches per
    conversation)?
-3. **Virtualized scrolling** — needed for very large conversations. Priority
+2. **Virtualized scrolling** — needed for very large conversations. Priority
    is low until real-world usage demands it.

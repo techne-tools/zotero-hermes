@@ -141,4 +141,140 @@ export class ItemManager {
       return c.name || "";
     });
   }
+
+  /**
+   * Update metadata fields on a Zotero library item.
+   * Gated through ApprovalDialog for user confirmation and recorded in AuditLog.
+   */
+  public async updateItemMetadata(
+    itemID: number,
+    updates: Record<string, any>,
+  ): Promise<boolean> {
+    const item = await Zotero.Items.getAsync(itemID);
+    if (!item) {
+      throw new Error(`Item with ID ${itemID} not found.`);
+    }
+
+    const PROTECTED_FIELDS = new Set([
+      "id",
+      "key",
+      "libraryID",
+      "version",
+      "itemTypeID",
+      "itemType",
+      "dateAdded",
+      "dateModified",
+      "deleted",
+    ]);
+
+    const FIELD_ALIASES: Record<string, string> = {
+      abstract: "abstractNote",
+      doi: "DOI",
+      publication: "publicationTitle",
+      journal: "publicationTitle",
+      isbn: "ISBN",
+      issn: "ISSN",
+    };
+
+    const cleanUpdates: Record<string, any> = {};
+    for (const [key, val] of Object.entries(updates)) {
+      const field = FIELD_ALIASES[key.toLowerCase()] || key;
+      if (!PROTECTED_FIELDS.has(field) && !PROTECTED_FIELDS.has(key)) {
+        cleanUpdates[field] = val;
+      }
+    }
+
+    if (Object.keys(cleanUpdates).length === 0) {
+      return false;
+    }
+
+    // Build diff for approval dialog
+    const diffLines: string[] = [];
+    for (const [field, newVal] of Object.entries(cleanUpdates)) {
+      if (field === "creators") {
+        const oldCreators = this.formatCreators(item).join(", ") || "(none)";
+        const newCreatorsStr = Array.isArray(newVal)
+          ? newVal
+              .map((c) =>
+                typeof c === "string"
+                  ? c
+                  : c.name || `${c.firstName || ""} ${c.lastName || ""}`.trim(),
+              )
+              .join(", ")
+          : String(newVal);
+        diffLines.push(`Creators: "${oldCreators}" -> "${newCreatorsStr}"`);
+      } else {
+        const oldVal = (item.getField(field as any) as string) || "(empty)";
+        diffLines.push(`${field}: "${oldVal}" -> "${newVal}"`);
+      }
+    }
+
+    const displayName = (item as any).getDisplayTitle?.() || `Item ${itemID}`;
+    const approvalDialog = (this.addon.data?.hermes as any)?.approvalDialog;
+    if (approvalDialog) {
+      const changeId = `meta-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      const approved = await approvalDialog.addPendingChange({
+        action: "modify",
+        id: changeId,
+        newContent: diffLines.join("\n"),
+        path: `Metadata for "${displayName}"`,
+        status: "pending",
+        timestamp: Date.now(),
+      });
+      if (!approved) {
+        throw new Error("Metadata update cancelled by user.");
+      }
+    }
+
+    // Apply updates
+    for (const [field, val] of Object.entries(cleanUpdates)) {
+      if (field === "creators") {
+        if (Array.isArray(val)) {
+          const parsedCreators = val.map((c) => {
+            if (typeof c === "object" && c !== null) {
+              return {
+                creatorType: (c as any).creatorType || "author",
+                ...c,
+              };
+            }
+            const str = String(c).trim();
+            const parts = str.split(/\s+/);
+            if (parts.length === 1) {
+              return {
+                lastName: parts[0],
+                firstName: "",
+                creatorType: "author",
+              };
+            }
+            const lastName = parts.pop()!;
+            const firstName = parts.join(" ");
+            return { firstName, lastName, creatorType: "author" };
+          });
+          item.setCreators(parsedCreators);
+        }
+      } else {
+        item.setField(field as any, String(val));
+      }
+    }
+
+    await item.saveTx();
+
+    // Update in-memory attached items if present
+    const existingIndex = this.attachedItems.findIndex((a) => a.id === itemID);
+    if (existingIndex !== -1) {
+      const updated = await this.extractItemData(item);
+      if (updated) {
+        this.attachedItems[existingIndex] = updated;
+      }
+    }
+
+    this.addon.data?.hermes?.auditLog?.record(
+      "file_change",
+      `Update metadata for "${displayName}"`,
+      "success",
+      { itemID, fields: Object.keys(cleanUpdates) },
+    );
+
+    return true;
+  }
 }

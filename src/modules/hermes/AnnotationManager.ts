@@ -152,6 +152,14 @@ export class AnnotationManager {
     }
 
     await annotation.saveTx();
+
+    (this.addon.data?.hermes as any)?.auditLog?.record(
+      "file_change",
+      displayName,
+      "success",
+      { action: "create", key: annotation.key, parentItemID, page, type },
+    );
+
     return annotation.key;
   }
 }

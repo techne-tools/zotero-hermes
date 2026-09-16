@@ -52,13 +52,17 @@ function bindPrefEvents(): void {
   const doc = addon.data.prefs?.window?.document;
   if (!doc) return;
 
-  // Connection mode dropdown — toggle visible sections
+  // Connection mode dropdown — toggle visible sections and hot-swap active client
   const modeDropdown = doc.querySelector(
     `#zotero-prefpane-${config.addonRef}-connection-mode`,
   );
-  modeDropdown?.addEventListener("command", () => {
+  const onModeChange = async () => {
     updateConnectionModeUI();
-  });
+    const mode = (modeDropdown as any)?.value || "stdio";
+    await addon.data.hermes?.preferences?.switchConnectionMode(mode);
+  };
+  modeDropdown?.addEventListener("command", onModeChange);
+  modeDropdown?.addEventListener("change", onModeChange);
 
   // Test Local Connection button
   const testLocalBtn = doc.getElementById(
@@ -66,16 +70,35 @@ function bindPrefEvents(): void {
   );
   testLocalBtn?.addEventListener("click", async () => {
     try {
+      const pathInput = doc.getElementById(
+        `zotero-prefpane-${config.addonRef}-binary-path`,
+      ) as HTMLInputElement | null;
+      const configuredPath =
+        pathInput?.value ||
+        addon.data.hermes?.preferences?.getHermesPath() ||
+        "";
+
       const hermes = addon.data.hermes;
-      if (!hermes?.client) {
-        (doc.defaultView as any)?.alert(
-          "Hermes client not initialized. Please restart Zotero.",
+      const { isHermesAvailable } = await import("./hermes/HermesBinaryFinder");
+      const available = isHermesAvailable(configuredPath);
+
+      if (!available) {
+        throw new Error(
+          configuredPath
+            ? `Hermes binary not found at "${configuredPath}".`
+            : "Hermes binary not found in system PATH or default locations.",
         );
-        return;
       }
-      await hermes.client.connect();
+
+      // If local client is active, verify connection
+      if (hermes?.client && "setupStdioHandlers" in (hermes.client as any)) {
+        if (!hermes.client.getIsConnected()) {
+          await hermes.client.connect();
+        }
+      }
+
       (doc.defaultView as any)?.alert(
-        "Local connection successful! Hermes is ready.",
+        "Local connection successful! Hermes binary found and ready.",
       );
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
@@ -89,16 +112,50 @@ function bindPrefEvents(): void {
   );
   testRemoteBtn?.addEventListener("click", async () => {
     try {
-      const hermes = addon.data.hermes;
-      if (!hermes?.client) {
+      const urlInput = doc.getElementById(
+        `zotero-prefpane-${config.addonRef}-api-url`,
+      ) as HTMLInputElement | null;
+      const keyInput = doc.getElementById(
+        `zotero-prefpane-${config.addonRef}-api-key`,
+      ) as HTMLInputElement | null;
+
+      const apiUrl = (
+        urlInput?.value ||
+        addon.data.hermes?.preferences?.get("apiUrl", "") ||
+        ""
+      ).replace(/\/$/, "");
+
+      const apiKey =
+        keyInput?.value ||
+        addon.data.hermes?.preferences?.get("apiKey", "") ||
+        "";
+
+      if (!apiUrl) {
         (doc.defaultView as any)?.alert(
-          "Hermes client not initialized. Please restart Zotero.",
+          "Please enter a server address before testing.",
         );
         return;
       }
-      await hermes.client.connect();
+
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (apiKey) {
+        headers["Authorization"] = `Bearer ${apiKey}`;
+      }
+
+      const response = await fetch(`${apiUrl}/health`, {
+        method: "GET",
+        headers,
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => "Unknown error");
+        throw new Error(`Health check failed (${response.status}): ${text}`);
+      }
+
       (doc.defaultView as any)?.alert(
-        "Remote connection successful! Hermes is ready.",
+        "Remote connection successful! Hermes server is online.",
       );
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";

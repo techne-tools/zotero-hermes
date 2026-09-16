@@ -8,9 +8,10 @@ conflict, flag the conflict — do not silently pick a side.
 
 Zotero plugins run in a **Firefox 115 ESR sandbox**:
 
-- **No React synthetic events** — `onChange`, `onClick`, `onKeyDown` on React
-  elements do not fire. Use native `addEventListener` via refs for ALL user
-  interaction.
+- **Synthetic event boundaries** — `onChange` and `onKeyDown` on text inputs do
+  not fire reliably in Mozilla privileged chrome contexts. Use native
+  `addEventListener` via refs for text inputs and keyboard shortcuts (`Cmd+F`).
+  Standard button `onClick` within the React tree is supported.
 - **No `dangerouslySetInnerHTML`** — crashes the sandbox with security
   errors. Use `MarkdownRenderer.tsx` (pure React element creation).
 - **No `DOMParser`** — also crashes. Manual string parsing only.

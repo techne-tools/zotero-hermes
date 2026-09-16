@@ -106,6 +106,14 @@ export class NoteManager {
 
     note.setNote(noteContent);
     await note.saveTx();
+
+    this.addon.data?.hermes?.auditLog?.record(
+      "file_change",
+      displayName,
+      "success",
+      { action: isNew ? "create" : "modify", noteID: note.id, parentItemID },
+    );
+
     return note.id;
   }
 

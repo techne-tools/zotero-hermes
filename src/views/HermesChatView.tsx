@@ -211,11 +211,11 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
   }, [messages, isTyping]);
 
   // Keep ChatManager in sync with the view state so slash commands
-  // (/export, /savechat) and the persistence layer see the current
+  // (/savechat) and the persistence layer see the current
   // conversation. setMessages schedules a debounced save (500ms), which
   // is exactly the intended write path during streaming (min1: the
-  // old code never pushed view messages into ChatManager, so /export
-  // and /savechat exported an empty conversation).
+  // old code never pushed view messages into ChatManager, so /savechat
+  // saved an empty conversation).
   useEffect(() => {
     hermes.chat.setMessages(messages);
   }, [messages, hermes.chat]);
@@ -344,6 +344,18 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
     },
     [performSend, addon],
   );
+
+  const handleAbortTerminal = useCallback(() => {
+    addon.log("[ChatView] Abort requested on terminal execution");
+    void hermes.client.cancel();
+    setIsTyping(false);
+    streamingMessageIdRef.current = null;
+    reasoningMessageIdRef.current = null;
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+  }, [hermes.client, addon]);
 
   const sendMessage = useCallback(async () => {
     const st = stateRef.current;
@@ -1106,6 +1118,7 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         messagesEndRef={messagesEndRef}
         messageRefs={messageRefs}
         onEditMessage={resendFromIndex}
+        onAbortTerminal={handleAbortTerminal}
         onDismissError={() => setError(null)}
       />
 

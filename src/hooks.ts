@@ -72,7 +72,7 @@ async function onStartup() {
     const items = new ItemManager(addon);
     const citations = new CitationManager(addon);
     const annotations = new AnnotationManager(addon);
-    const tags = new TagManager(addon);
+    const tags = new TagManager(addon, approvalDialog);
     const conversations = new ConversationManager(addon);
 
     addon.data.hermes = {

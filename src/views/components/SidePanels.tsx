@@ -98,7 +98,10 @@ export const SidePanels: React.FC<SidePanelsProps> = ({
                   <button
                     onClick={() => onDeleteConversation(conv.id)}
                     className="hermes-small-btn"
-                    style={{ color: "var(--hermes-danger, #b3261e)", padding: "0 4px" }}
+                    style={{
+                      color: "var(--hermes-danger, #b3261e)",
+                      padding: "0 4px",
+                    }}
                     title="Delete"
                     aria-label="Delete conversation"
                   >
@@ -232,10 +235,7 @@ export const SidePanels: React.FC<SidePanelsProps> = ({
                 agent can use
               </li>
             </ul>
-            <p>
-              Your conversations are saved locally and can be searched or
-              exported.
-            </p>
+            <p>Your conversations are saved locally and can be searched.</p>
           </div>
           <div className="hermes-onboarding-security">
             <span

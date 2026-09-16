@@ -5,7 +5,7 @@ structured today. When it disagrees with DESIGN.md, flag the conflict.
 
 ## Runtime Environment
 
-- **Host:** Zotero 7–9 (Firefox 115 ESR sandbox)
+- **Host:** Zotero 7–10 (Mozilla 140 ESR / Firefox ESR sandbox)
 - **Language:** TypeScript (strict), bundled by esbuild via
   zotero-plugin-scaffold
 - **UI:** React 18 (chat), XUL/XHTML (native panels)
@@ -24,12 +24,12 @@ src/
 │   │   ├── HermesApiClient.ts  # REST/SSE client (OpenAI-compatible)
 │   │   ├── ChatManager.ts      # Conversation state (debounced persistence)
 │   │   ├── ConversationManager.ts # JSON file persistence in profile dir
-│   │   ├── ItemManager.ts      # Zotero item metadata extraction
+│   │   ├── ItemManager.ts      # Zotero item metadata extraction & updates (approval-gated)
 │   │   ├── NoteManager.ts      # Note read/write (approval-gated)
 │   │   ├── AnnotationManager.ts # PDF annotation read/write (approval-gated)
 │   │   ├── CitationManager.ts  # CSL citation/bibliography generation
-│   │   ├── TagManager.ts       # Tag operations + suggestions
-│   │   ├── SlashCommands.ts    # Built-in slash command registry
+│   │   ├── TagManager.ts       # Tag operations + suggestions (approval-gated)
+│   │   ├── SlashCommands.ts    # Built-in slash command registry (/metadata, /tag, etc.)
 │   │   ├── ApprovalDialog.ts   # Serialised approval modal
 │   │   ├── PreferencesManager.ts # Pref defaults + access
 │   │   ├── HermesBinaryFinder.ts # Binary discovery across $PATH
@@ -49,7 +49,7 @@ src/
     ├── types.ts                # ChatMessage, ContextItem
     └── components/
         ├── ChatHeader.tsx      # Toolbar
-        ├── SidePanels.tsx      # Export/conversations/search/settings/onboarding
+        ├── SidePanels.tsx      # Conversations/search/settings/onboarding
         ├── MessageList.tsx     # Message list + typing + error
         ├── ChatMessageItem.tsx # Per-message rendering + actions
         ├── ContextBar.tsx      # Attached item chips
@@ -97,11 +97,14 @@ ChatManager.addMessage → scheduleSave (500ms debounce)
 
 ## Key Patterns
 
-### Native event wiring (sandbox constraint)
+### Native event wiring & sandbox event boundaries
 
-React synthetic events (`onChange`, `onClick`, `onKeyDown`) do not fire
-reliably in the Zotero sandbox. All user interaction uses native
-`addEventListener` via refs, reading mutable state from `stateRef.current`.
+In Zotero's Firefox ESR sandbox, React synthetic events on text inputs
+(`onChange`, `onKeyDown`) fail to dispatch reliably due to Mozilla privileged
+chrome event handling. The input area, Enter-to-send, and window-level
+shortcuts (`Cmd+F`) strictly use native `addEventListener` via refs, reading
+mutable state from `stateRef.current`. Standard button click handlers inside
+React subcomponents dispatch normally and use declarative `onClick`.
 
 ### Stream subscription (minimal deps)
 
@@ -127,8 +130,10 @@ one), preventing Promise leaks on concurrent calls.
 - **Subprocess spawn:** `HermesClient` invokes the binary directly with an
   argument array (`command: hermesPath, arguments: ["acp"]`) — no shell, no
   command injection surface. PATH is extended via the environment object.
-- **Approval gate:** `NoteManager.writeNote`, `AnnotationManager.writeAnnotation`
-  route through `ApprovalDialog` before any Zotero write.
+- **Approval gate & Audit logging:** `NoteManager.writeNote`,
+  `AnnotationManager.writeAnnotation`, `TagManager.addTags/removeTags`, and
+  `ItemManager.updateItemMetadata` route through `ApprovalDialog` before any
+  Zotero write, and record persistent entries to `AuditLog`.
 - **Terminal gating:** `terminal_output` updates are dropped unless
   `allowTerminal` is enabled.
 - **Secrets:** API key stored in Zotero prefs, never logged.

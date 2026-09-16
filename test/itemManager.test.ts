@@ -11,23 +11,36 @@ function mockItem(overrides: Record<string, unknown> = {}) {
   const fields = new Map<string, string>(
     Object.entries((overrides.fields as Record<string, string>) || {}),
   );
-  const creators = (overrides.creators as any[]) || [];
+  let creators = (overrides.creators as any[]) || [];
   const tags = (overrides.tags as any[]) || [];
   const bestAttachment = overrides.bestAttachment as
     | { key: string; getFilePath?: () => string }
     | false
     | undefined;
 
+  let saved = false;
+
   return {
     id: (overrides.id as number) ?? 1,
     key: (overrides.key as string) ?? "ABC123",
     itemType: (overrides.itemType as string) ?? "journalArticle",
     getField: (name: string) => fields.get(name) || "",
+    setField: (name: string, val: string) => {
+      fields.set(name, val);
+    },
     getCreators: () => creators,
+    setCreators: (newCreators: any[]) => {
+      creators = newCreators;
+    },
     getTags: () => tags,
     getBestAttachment: bestAttachment
       ? async () => bestAttachment
       : async () => false,
+    getDisplayTitle: () => fields.get("title") || "Untitled",
+    saveTx: async () => {
+      saved = true;
+    },
+    isSaved: () => saved,
   } as unknown as Zotero.Item;
 }
 
@@ -206,5 +219,129 @@ describe("ItemManager.attachSelectedItems", function () {
     stubZoteroPane(null);
     const attached = await manager.attachSelectedItems();
     expect(attached).to.have.length(0);
+  });
+});
+
+describe("ItemManager.updateItemMetadata", function () {
+  after(function () {
+    if ((globalThis as any).__realZotero) {
+      (globalThis as any).Zotero = (globalThis as any).__realZotero;
+      delete (globalThis as any).__realZotero;
+    }
+  });
+
+  function stubGetAsync(itemMap: Map<number, any>) {
+    const realZotero = (globalThis as any).Zotero;
+    if (!(globalThis as any).__realZotero) {
+      (globalThis as any).__realZotero = realZotero;
+    }
+    (globalThis as any).Zotero = {
+      ...realZotero,
+      Items: {
+        ...(realZotero?.Items || {}),
+        getAsync: async (id: number) => itemMap.get(id) || null,
+      },
+    };
+  }
+
+  it("should update scalar fields and map aliases", async function () {
+    const manager = new ItemManager(mockAddon());
+    const item = mockItem({
+      id: 10,
+      fields: {
+        title: "Old Title",
+        abstractNote: "Old Abstract",
+        DOI: "old-doi",
+      },
+    });
+    stubGetAsync(new Map([[10, item]]));
+
+    const result = await manager.updateItemMetadata(10, {
+      title: "New Title",
+      abstract: "New Abstract",
+      doi: "10.1234/new-doi",
+    });
+
+    expect(result).to.be.true;
+    expect(item.getField("title")).to.equal("New Title");
+    expect(item.getField("abstractNote")).to.equal("New Abstract");
+    expect(item.getField("DOI")).to.equal("10.1234/new-doi");
+    expect((item as any).isSaved()).to.be.true;
+  });
+
+  it("should parse and set creators from string array", async function () {
+    const manager = new ItemManager(mockAddon());
+    const item = mockItem({
+      id: 11,
+      fields: { title: "Paper" },
+      creators: [{ firstName: "Old", lastName: "Author" }],
+    });
+    stubGetAsync(new Map([[11, item]]));
+
+    const result = await manager.updateItemMetadata(11, {
+      creators: ["Alice Walker", "SingleNameAuthor"],
+    });
+
+    expect(result).to.be.true;
+    const creators = item.getCreators();
+    expect(creators).to.have.length(2);
+    expect(creators[0]).to.deep.equal({
+      firstName: "Alice",
+      lastName: "Walker",
+      creatorType: "author",
+    });
+    expect(creators[1]).to.deep.equal({
+      firstName: "",
+      lastName: "SingleNameAuthor",
+      creatorType: "author",
+    });
+  });
+
+  it("should ignore protected system fields and return false if no valid updates", async function () {
+    const manager = new ItemManager(mockAddon());
+    const item = mockItem({
+      id: 12,
+      key: "KEY123",
+      fields: { title: "Untouched" },
+    });
+    stubGetAsync(new Map([[12, item]]));
+
+    const result = await manager.updateItemMetadata(12, {
+      id: 999,
+      key: "NEWKEY",
+      itemType: "book",
+    });
+
+    expect(result).to.be.false;
+    expect(item.id).to.equal(12);
+    expect(item.key).to.equal("KEY123");
+    expect((item as any).isSaved()).to.be.false;
+  });
+
+  it("should gate with ApprovalDialog when present and reject if denied", async function () {
+    let dialogCalled = false;
+    const mockApproval = {
+      addPendingChange: async () => {
+        dialogCalled = true;
+        return false; // Denied by user
+      },
+    };
+    const addon = mockAddon();
+    (addon as any).data = { hermes: { approvalDialog: mockApproval } };
+    const manager = new ItemManager(addon);
+    const item = mockItem({ id: 13, fields: { title: "Before" } });
+    stubGetAsync(new Map([[13, item]]));
+
+    let threw = false;
+    try {
+      await manager.updateItemMetadata(13, { title: "After" });
+    } catch {
+      threw = true;
+    }
+
+    expect(dialogCalled).to.be.true;
+    expect(threw).to.be.true;
+    expect(item.getField("title")).to.equal("Before");
+    expect((item as any).isSaved()).to.be.false;
   });
 });

@@ -133,8 +133,8 @@ addon ID:
 3. Write a new entry mirroring the known-good structure: `id`, `path`,
    `rootURI` (`jar:file://` with `%40` for `@`, `%20` for spaces, slashes
    preserved), `targetApplications` (zotero@zotero.org, min/max), `active:
-   true`, `userDisabled: false`, `installTelemetryInfo: {source:
-   "app-profile", method: "sideload"}`.
+true`, `userDisabled: false`, `installTelemetryInfo: {source:
+"app-profile", method: "sideload"}`.
 4. Restart Zotero and verify the plugin bootstrapped — its prefs
    (`extensions.zotero.<ref>.*`) only appear if startup code ran.
 

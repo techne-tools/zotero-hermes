@@ -24,6 +24,7 @@ export class PreferencesManager {
     "extensions.zotero.hermes.conversationOrganization": "flat",
     "extensions.zotero.hermes.chatSaveFolder": "hermes",
     "extensions.zotero.hermes.currentPersona": "default",
+    "extensions.zotero.hermes.obsidianVaultPath": "",
   };
 
   constructor(addon: any) {
@@ -33,8 +34,8 @@ export class PreferencesManager {
 
   private initializeDefaults(): void {
     for (const [key, value] of Object.entries(this.defaults)) {
-      if (Zotero.Prefs.get(key) === undefined) {
-        Zotero.Prefs.set(key, value);
+      if (Zotero.Prefs.get(key, true) === undefined) {
+        Zotero.Prefs.set(key, value, true);
       }
     }
   }
@@ -43,7 +44,7 @@ export class PreferencesManager {
     const fullKey = key.startsWith("extensions.zotero.hermes.")
       ? key
       : `extensions.zotero.hermes.${key}`;
-    const value = Zotero.Prefs.get(fullKey);
+    const value = Zotero.Prefs.get(fullKey, true);
     return value !== undefined ? (value as T) : (defaultValue as T);
   }
 
@@ -51,7 +52,7 @@ export class PreferencesManager {
     const fullKey = key.startsWith("extensions.zotero.hermes.")
       ? key
       : `extensions.zotero.hermes.${key}`;
-    Zotero.Prefs.set(fullKey, value);
+    Zotero.Prefs.set(fullKey, value, true);
   }
 
   public getHermesPath(): string {

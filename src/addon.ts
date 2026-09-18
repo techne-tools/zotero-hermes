@@ -25,6 +25,7 @@ class Addon {
       approvalDialog: import("./modules/hermes/ApprovalDialog").ApprovalDialog;
       debug: import("./utils/DebugLogger").DebugLogger;
       auditLog: import("./utils/AuditLog").AuditLog;
+      exports: import("./modules/hermes/ExportManager").ExportManager;
     };
     locale?: {
       current: any;

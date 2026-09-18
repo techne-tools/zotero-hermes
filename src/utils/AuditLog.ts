@@ -35,7 +35,8 @@ export class AuditLog {
 
   private get logFilePath(): string {
     try {
-      const profileDir = Zotero.getProfileDirectory?.();
+      const profileDir =
+        (Zotero as any).Profile?.dir || Zotero.getProfileDirectory?.();
       if (!profileDir) return "";
       const dir = profileDir.clone() as nsIFile;
       dir.append("zotero-hermes");

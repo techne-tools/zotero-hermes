@@ -19,6 +19,7 @@ interface ChatMessageItemProps {
   addon: Addon;
   onEditMessage?: (newContent: string) => void;
   onAbortTerminal?: () => void;
+  onSwitchBranch?: (messageId: string, branchIndex: number) => void;
 }
 
 const HELIX_FRAMES = ["⢌⣉⢎⣉", "⣉⡱⣉⡱", "⣉⢎⣉⢎", "⡱⣉⡱⣉"];
@@ -46,6 +47,7 @@ export const ChatMessageItem = memo(function ChatMessageItem({
   addon,
   onEditMessage,
   onAbortTerminal,
+  onSwitchBranch,
 }: ChatMessageItemProps) {
   const [isCopied, setIsCopied] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -323,6 +325,65 @@ export const ChatMessageItem = memo(function ChatMessageItem({
       <div className="hermes-message-header">
         <span className="hermes-message-role">{roleLabel}</span>
         <span className="hermes-message-meta">
+          {isUser &&
+            message.branchHistory &&
+            message.branchHistory.length > 1 && (
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "2px",
+                  fontSize: "0.8em",
+                  opacity: 0.8,
+                  marginRight: "4px",
+                }}
+              >
+                <button
+                  onClick={() =>
+                    onSwitchBranch?.(message.id, (message.branchIndex ?? 0) - 1)
+                  }
+                  disabled={(message.branchIndex ?? 0) <= 0}
+                  className="hermes-message-action-btn"
+                  title="Previous branch"
+                  style={{
+                    cursor:
+                      (message.branchIndex ?? 0) <= 0 ? "default" : "pointer",
+                    opacity: (message.branchIndex ?? 0) <= 0 ? 0.4 : 1,
+                  }}
+                >
+                  ◀
+                </button>
+                <span>
+                  {(message.branchIndex ?? 0) + 1}/
+                  {message.branchHistory.length}
+                </span>
+                <button
+                  onClick={() =>
+                    onSwitchBranch?.(message.id, (message.branchIndex ?? 0) + 1)
+                  }
+                  disabled={
+                    (message.branchIndex ?? 0) >=
+                    message.branchHistory.length - 1
+                  }
+                  className="hermes-message-action-btn"
+                  title="Next branch"
+                  style={{
+                    cursor:
+                      (message.branchIndex ?? 0) >=
+                      message.branchHistory.length - 1
+                        ? "default"
+                        : "pointer",
+                    opacity:
+                      (message.branchIndex ?? 0) >=
+                      message.branchHistory.length - 1
+                        ? 0.4
+                        : 1,
+                  }}
+                >
+                  ▶
+                </button>
+              </span>
+            )}
           {isUser && onEditMessage && (
             <button
               onClick={() => setIsEditing(true)}

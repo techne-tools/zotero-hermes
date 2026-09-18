@@ -1,7 +1,7 @@
 {
   "name": "zotero-hermes",
   "type": "module",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Hermes AI Agent integration for Zotero — Chat with your research library",
   "config": {
     "addonName": "Hermes Agent for Zotero",
@@ -24,6 +24,7 @@
     "start": "zotero-plugin serve",
     "serve": "zotero-plugin serve",
     "build": "zotero-plugin build && tsc --noEmit",
+    "lint": "npm run lint:check",
     "lint:check": "prettier --check . && eslint .",
     "lint:fix": "prettier --write . && eslint . --fix",
     "release": "zotero-plugin release",

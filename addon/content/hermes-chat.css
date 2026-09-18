@@ -4,19 +4,79 @@
    on the container by HermesChatView's theme injection. Static tokens
    (type families, scale, radius, motion, terminal colours) live here. */
 
-@font-face { font-family: "Source Serif 4"; src: url("chrome://hermes/content/fonts/source-serif-4-400.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
-@font-face { font-family: "Source Serif 4"; src: url("chrome://hermes/content/fonts/source-serif-4-400i.woff2") format("woff2"); font-weight: 400; font-style: italic; font-display: swap; }
-@font-face { font-family: "Source Serif 4"; src: url("chrome://hermes/content/fonts/source-serif-4-600.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
-@font-face { font-family: "Source Sans 3"; src: url("chrome://hermes/content/fonts/source-sans-3-400.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
-@font-face { font-family: "Source Sans 3"; src: url("chrome://hermes/content/fonts/source-sans-3-500.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: swap; }
-@font-face { font-family: "Source Sans 3"; src: url("chrome://hermes/content/fonts/source-sans-3-600.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
-@font-face { font-family: "Source Code Pro"; src: url("chrome://hermes/content/fonts/source-code-pro-400.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
-@font-face { font-family: "Source Code Pro"; src: url("chrome://hermes/content/fonts/source-code-pro-500.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face {
+  font-family: "Source Serif 4";
+  src: url("chrome://hermes/content/fonts/source-serif-4-400.woff2")
+    format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Source Serif 4";
+  src: url("chrome://hermes/content/fonts/source-serif-4-400i.woff2")
+    format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Source Serif 4";
+  src: url("chrome://hermes/content/fonts/source-serif-4-600.woff2")
+    format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Source Sans 3";
+  src: url("chrome://hermes/content/fonts/source-sans-3-400.woff2")
+    format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Source Sans 3";
+  src: url("chrome://hermes/content/fonts/source-sans-3-500.woff2")
+    format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Source Sans 3";
+  src: url("chrome://hermes/content/fonts/source-sans-3-600.woff2")
+    format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Source Code Pro";
+  src: url("chrome://hermes/content/fonts/source-code-pro-400.woff2")
+    format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Source Code Pro";
+  src: url("chrome://hermes/content/fonts/source-code-pro-500.woff2")
+    format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
 
 .hermes-chat-view {
-  --hermes-serif: "Source Serif 4", "Source Serif Pro", "Charter", Georgia, serif;
-  --hermes-sans: "Source Sans 3", "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  --hermes-mono: "Source Code Pro", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --hermes-serif:
+    "Source Serif 4", "Source Serif Pro", "Charter", Georgia, serif;
+  --hermes-sans:
+    "Source Sans 3", "Source Sans Pro", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", system-ui, sans-serif;
+  --hermes-mono:
+    "Source Code Pro", ui-monospace, "SFMono-Regular", Menlo, monospace;
   --hermes-terminal-bg: #0f1512;
   --hermes-terminal-ink: #d6e6dc;
   --hermes-r-ctl: 6px;
@@ -86,7 +146,9 @@
   justify-content: center;
   border-radius: var(--hermes-r-ctl);
   color: var(--hermes-text-muted, #5e655e);
-  transition: background var(--hermes-dur-fast) var(--hermes-ease-out), color var(--hermes-dur-fast) var(--hermes-ease-out);
+  transition:
+    background var(--hermes-dur-fast) var(--hermes-ease-out),
+    color var(--hermes-dur-fast) var(--hermes-ease-out);
 }
 
 .hermes-icon-btn:hover {
@@ -103,7 +165,9 @@
   align-items: center;
   color: var(--hermes-text-muted, #5e655e);
   border-radius: var(--hermes-r-ctl);
-  transition: background var(--hermes-dur-fast) var(--hermes-ease-out), color var(--hermes-dur-fast) var(--hermes-ease-out);
+  transition:
+    background var(--hermes-dur-fast) var(--hermes-ease-out),
+    color var(--hermes-dur-fast) var(--hermes-ease-out);
 }
 
 .hermes-small-btn:hover {
@@ -192,7 +256,8 @@
 .hermes-search-input:focus {
   outline: none;
   border-color: var(--hermes-accent, #0b6b54);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--hermes-accent, #0b6b54) 18%, transparent);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--hermes-accent, #0b6b54) 18%, transparent);
 }
 
 .hermes-search-count {
@@ -272,11 +337,19 @@
 }
 
 .hermes-message-tool-running {
-  border-color: color-mix(in srgb, var(--hermes-accent, #0b6b54) 45%, var(--hermes-border, #dee1db));
+  border-color: color-mix(
+    in srgb,
+    var(--hermes-accent, #0b6b54) 45%,
+    var(--hermes-border, #dee1db)
+  );
 }
 
 .hermes-message-tool-error {
-  border-color: color-mix(in srgb, var(--hermes-danger, #b3261e) 45%, var(--hermes-border, #dee1db));
+  border-color: color-mix(
+    in srgb,
+    var(--hermes-danger, #b3261e) 45%,
+    var(--hermes-border, #dee1db)
+  );
 }
 
 .hermes-message-terminal {
@@ -320,7 +393,10 @@
   opacity: 0.5;
   color: var(--hermes-text-muted, #5e655e);
   border-radius: 4px;
-  transition: background var(--hermes-dur-fast) var(--hermes-ease-out), color var(--hermes-dur-fast) var(--hermes-ease-out), opacity var(--hermes-dur-fast) var(--hermes-ease-out);
+  transition:
+    background var(--hermes-dur-fast) var(--hermes-ease-out),
+    color var(--hermes-dur-fast) var(--hermes-ease-out),
+    opacity var(--hermes-dur-fast) var(--hermes-ease-out);
 }
 
 .hermes-message-action-btn:hover {
@@ -380,9 +456,15 @@
 }
 
 /* Markdown output inside assistant answers */
-.hermes-message-markdown p { margin: 0 0 0.7em; }
-.hermes-message-markdown p:last-child { margin-bottom: 0; }
-.hermes-message-markdown > :first-child { margin-top: 0; }
+.hermes-message-markdown p {
+  margin: 0 0 0.7em;
+}
+.hermes-message-markdown p:last-child {
+  margin-bottom: 0;
+}
+.hermes-message-markdown > :first-child {
+  margin-top: 0;
+}
 .hermes-message-markdown h1,
 .hermes-message-markdown h2,
 .hermes-message-markdown h3 {
@@ -392,13 +474,27 @@
   line-height: 1.25;
   margin: 0.9em 0 0.4em;
 }
-.hermes-message-markdown h3 { font-size: 16px; }
-.hermes-message-markdown h2 { font-size: 18px; }
-.hermes-message-markdown h1 { font-size: 20px; }
+.hermes-message-markdown h3 {
+  font-size: 16px;
+}
+.hermes-message-markdown h2 {
+  font-size: 18px;
+}
+.hermes-message-markdown h1 {
+  font-size: 20px;
+}
 .hermes-message-markdown ul,
-.hermes-message-markdown ol { margin: 0.4em 0 0.7em; padding-left: 1.2em; }
-.hermes-message-markdown li { margin: 2px 0; }
-.hermes-message-markdown a { color: var(--hermes-accent, #0b6b54); text-underline-offset: 2px; }
+.hermes-message-markdown ol {
+  margin: 0.4em 0 0.7em;
+  padding-left: 1.2em;
+}
+.hermes-message-markdown li {
+  margin: 2px 0;
+}
+.hermes-message-markdown a {
+  color: var(--hermes-accent, #0b6b54);
+  text-underline-offset: 2px;
+}
 .hermes-message-markdown code {
   font-family: var(--hermes-mono);
   font-size: 0.86em;
@@ -416,7 +512,10 @@
   overflow-x: auto;
   margin: 0.5em 0;
 }
-.hermes-message-markdown pre code { background: transparent; padding: 0; }
+.hermes-message-markdown pre code {
+  background: transparent;
+  padding: 0;
+}
 .hermes-message-markdown blockquote {
   margin: 0.6em 0;
   padding-left: 14px;
@@ -437,7 +536,10 @@
   border-radius: var(--hermes-r-ctl);
   overflow-x: auto;
 }
-.hermes-message-content pre code { background: transparent; padding: 0; }
+.hermes-message-content pre code {
+  background: transparent;
+  padding: 0;
+}
 .hermes-message-content blockquote {
   margin: 0.6em 0;
   padding-left: 14px;
@@ -476,9 +578,14 @@
   align-items: flex-start;
   gap: 8px;
   padding: 10px 12px;
-  background-color: color-mix(in srgb, var(--hermes-danger, #b3261e) 12%, var(--hermes-bg));
+  background-color: color-mix(
+    in srgb,
+    var(--hermes-danger, #b3261e) 12%,
+    var(--hermes-bg)
+  );
   color: var(--hermes-text, #191c1a);
-  border: 1px solid color-mix(in srgb, var(--hermes-danger, #b3261e) 34%, transparent);
+  border: 1px solid
+    color-mix(in srgb, var(--hermes-danger, #b3261e) 34%, transparent);
   border-radius: var(--hermes-r-surf);
   font-size: 13px;
   margin: 4px 0;
@@ -541,7 +648,11 @@
 }
 
 .hermes-context-chip-remove:hover {
-  background-color: color-mix(in srgb, var(--hermes-danger, #b3261e) 14%, transparent);
+  background-color: color-mix(
+    in srgb,
+    var(--hermes-danger, #b3261e) 14%,
+    transparent
+  );
   color: var(--hermes-danger, #b3261e);
 }
 
@@ -579,7 +690,8 @@
 
 .hermes-input-row:focus-within {
   border-color: var(--hermes-accent, #0b6b54);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--hermes-accent, #0b6b54) 18%, transparent);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--hermes-accent, #0b6b54) 18%, transparent);
 }
 
 .hermes-textarea {
@@ -616,7 +728,9 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  transition: background var(--hermes-dur-fast) var(--hermes-ease-out), opacity var(--hermes-dur-fast) var(--hermes-ease-out);
+  transition:
+    background var(--hermes-dur-fast) var(--hermes-ease-out),
+    opacity var(--hermes-dur-fast) var(--hermes-ease-out);
 }
 
 .hermes-send-btn:disabled {
@@ -788,7 +902,11 @@
 .hermes-onboarding-security {
   margin-top: 8px;
   padding: 8px 10px;
-  background-color: color-mix(in srgb, var(--hermes-accent, #0b6b54) 10%, transparent);
+  background-color: color-mix(
+    in srgb,
+    var(--hermes-accent, #0b6b54) 10%,
+    transparent
+  );
   border-radius: var(--hermes-r-ctl);
   font-size: 13px;
   color: var(--hermes-text, #191c1a);
@@ -849,7 +967,11 @@
 
 @keyframes hermes-search-flash {
   0% {
-    background-color: color-mix(in srgb, var(--hermes-highlight, #9a6608) 30%, transparent);
+    background-color: color-mix(
+      in srgb,
+      var(--hermes-highlight, #9a6608) 30%,
+      transparent
+    );
   }
   100% {
     background-color: transparent;

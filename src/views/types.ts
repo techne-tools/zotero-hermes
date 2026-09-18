@@ -12,6 +12,8 @@ export interface ChatMessage {
   toolCallId?: string;
   toolName?: string;
   toolStatus?: "complete" | "error" | "running";
+  branchHistory?: Array<ChatMessage[]>;
+  branchIndex?: number;
 }
 
 export interface ContextItem {

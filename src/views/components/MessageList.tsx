@@ -15,6 +15,7 @@ interface MessageListProps {
   messageRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
   onEditMessage: (idx: number, newText: string) => void;
   onAbortTerminal?: () => void;
+  onSwitchBranch?: (messageId: string, branchIndex: number) => void;
   onDismissError: () => void;
 }
 
@@ -60,8 +61,16 @@ export const MessageList: React.FC<MessageListProps> = ({
   messageRefs,
   onEditMessage,
   onAbortTerminal,
+  onSwitchBranch,
   onDismissError,
 }) => {
+  const WINDOW_SIZE = 40;
+  const [visibleCount, setVisibleCount] = useState(WINDOW_SIZE);
+
+  const hiddenCount = Math.max(0, messages.length - visibleCount);
+  const visibleMessages =
+    hiddenCount > 0 ? messages.slice(hiddenCount) : messages;
+
   return (
     <div
       ref={messagesContainerRef}
@@ -76,7 +85,33 @@ export const MessageList: React.FC<MessageListProps> = ({
         minWidth: 0,
       }}
     >
-      {messages.map((msg, idx) => {
+      {hiddenCount > 0 && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            padding: "4px 0",
+          }}
+        >
+          <button
+            onClick={() => setVisibleCount((prev) => prev + WINDOW_SIZE)}
+            className="hermes-small-btn"
+            style={{
+              padding: "4px 12px",
+              borderRadius: "12px",
+              backgroundColor: "var(--hermes-bg-secondary, #f0f0f0)",
+              border: "1px solid var(--hermes-border, #e0e0e0)",
+              color: "var(--hermes-text, #333)",
+              cursor: "pointer",
+              fontSize: "0.85em",
+            }}
+          >
+            Show earlier messages ({hiddenCount} hidden)
+          </button>
+        </div>
+      )}
+      {visibleMessages.map((msg, visibleIdx) => {
+        const idx = hiddenCount + visibleIdx;
         if (isTyping && msg.role === "assistant" && !msg.content) return null;
         return (
           <div
@@ -95,6 +130,7 @@ export const MessageList: React.FC<MessageListProps> = ({
               message={msg}
               addon={addon}
               onAbortTerminal={onAbortTerminal}
+              onSwitchBranch={onSwitchBranch}
               onEditMessage={
                 msg.role === "user"
                   ? (newText) => onEditMessage(idx, newText)

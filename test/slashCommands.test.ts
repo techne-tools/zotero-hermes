@@ -28,4 +28,20 @@ describe("SlashCommands", function () {
     expect(result?.command.name).to.equal("unknown");
     expect(result?.args).to.equal("arg");
   });
+
+  it("should have export command registered", function () {
+    const commands = getSlashCommands();
+    const exportCmd = commands.find((c) => c.name === "export");
+    expect(exportCmd).to.exist;
+    expect(exportCmd?.description).to.include("Markdown");
+  });
+
+  it("should have collection, compare, gaps, and draft-litreview registered", function () {
+    const commands = getSlashCommands();
+    const names = commands.map((c) => c.name);
+    expect(names).to.include("collection");
+    expect(names).to.include("compare");
+    expect(names).to.include("gaps");
+    expect(names).to.include("draft-litreview");
+  });
 });

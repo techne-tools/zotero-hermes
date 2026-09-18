@@ -6,7 +6,13 @@
   flex-direction: column;
   background-color: var(--hermes-bg, #f1f2ef);
   color: var(--hermes-text, #191c1a);
-  font-family: var(--hermes-sans, "Source Sans 3", -apple-system, system-ui, sans-serif);
+  font-family: var(
+    --hermes-sans,
+    "Source Sans 3",
+    -apple-system,
+    system-ui,
+    sans-serif
+  );
   font-size: 14px;
   line-height: 1.55;
   overflow: hidden;
@@ -25,7 +31,8 @@
   padding: 12px;
   border-radius: var(--hermes-r-surf, 10px);
   max-width: 85%;
-  animation: fadeIn var(--hermes-dur-base, 220ms) var(--hermes-ease-out, ease-out);
+  animation: fadeIn var(--hermes-dur-base, 220ms)
+    var(--hermes-ease-out, ease-out);
 }
 
 @keyframes fadeIn {
@@ -108,7 +115,8 @@
 #hermes-input:focus {
   outline: none;
   border-color: var(--hermes-accent, #0b6b54);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--hermes-accent, #0b6b54) 18%, transparent);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--hermes-accent, #0b6b54) 18%, transparent);
 }
 
 .hermes-btn-primary {
@@ -121,7 +129,8 @@
   font-family: inherit;
   font-weight: 600;
   font-size: 13px;
-  transition: filter var(--hermes-dur-fast, 150ms) var(--hermes-ease-out, ease-out);
+  transition: filter var(--hermes-dur-fast, 150ms)
+    var(--hermes-ease-out, ease-out);
 }
 
 .hermes-btn-primary:hover {
@@ -247,8 +256,13 @@
 /* Error message styling */
 .hermes-message-error {
   color: var(--hermes-danger, #b3261e);
-  background-color: color-mix(in srgb, var(--hermes-danger, #b3261e) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--hermes-danger, #b3261e) 34%, transparent);
+  background-color: color-mix(
+    in srgb,
+    var(--hermes-danger, #b3261e) 12%,
+    transparent
+  );
+  border: 1px solid
+    color-mix(in srgb, var(--hermes-danger, #b3261e) 34%, transparent);
   padding: 8px 12px;
   border-radius: var(--hermes-r-surf, 10px);
   font-size: 13px;
@@ -316,7 +330,8 @@
   cursor: pointer;
   font-family: inherit;
   font-size: 13px;
-  transition: background var(--hermes-dur-fast, 150ms) var(--hermes-ease-out, ease-out);
+  transition: background var(--hermes-dur-fast, 150ms)
+    var(--hermes-ease-out, ease-out);
 }
 
 .hermes-btn-secondary:hover {

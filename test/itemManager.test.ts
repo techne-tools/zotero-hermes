@@ -135,6 +135,45 @@ describe("ItemManager.extractItemData", function () {
     expect(result?.creators).to.deep.equal(["World Health Organization"]);
   });
 
+  it("should extract child notes when available", async function () {
+    const manager = new ItemManager(mockAddon());
+    const item = mockItem({
+      fields: { title: "Note Test Item" },
+    });
+    (item as any).getNotes = () => [101];
+
+    const realZotero = (globalThis as any).Zotero;
+    (globalThis as any).__realZotero = realZotero;
+    (globalThis as any).Zotero = {
+      ...realZotero,
+      Items: {
+        getAsync: async (id: number) => {
+          if (id === 101) {
+            return {
+              isNote: () => true,
+              getNote: () => "<p>Key insight from reading chapter 1.</p>",
+              getNoteTitle: () => "Key insight",
+            };
+          }
+          return null;
+        },
+      },
+    };
+
+    try {
+      const result = await manager.extractItemData(item);
+      expect(result?.notes).to.deep.equal([
+        {
+          title: "Key insight",
+          content: "Key insight from reading chapter 1.",
+        },
+      ]);
+    } finally {
+      (globalThis as any).Zotero = (globalThis as any).__realZotero;
+      delete (globalThis as any).__realZotero;
+    }
+  });
+
   it("should return null when item access throws", async function () {
     const manager = new ItemManager(mockAddon());
     const item = mockItem({});

@@ -91,4 +91,27 @@ export class ChatManager {
       this.addon.data.hermes?.conversations.saveConversation(conv);
     }
   }
+
+  private externalPromptListeners: Array<(prompt: string) => void> = [];
+
+  public onExternalPrompt(callback: (prompt: string) => void): () => void {
+    this.externalPromptListeners.push(callback);
+    return () => {
+      this.externalPromptListeners = this.externalPromptListeners.filter(
+        (cb) => cb !== callback,
+      );
+    };
+  }
+
+  public dispatchExternalPrompt(prompt: string): void {
+    for (const listener of this.externalPromptListeners) {
+      try {
+        listener(prompt);
+      } catch (err) {
+        this.addon.log(
+          `Error in externalPrompt listener: ${(err as Error).message}`,
+        );
+      }
+    }
+  }
 }

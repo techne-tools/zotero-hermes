@@ -249,6 +249,24 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
       };
 
       if (truncateToIndex !== undefined) {
+        const targetMsg = st.messages[truncateToIndex];
+        const previousTail = st.messages.slice(truncateToIndex);
+        const existingHistory = targetMsg?.branchHistory
+          ? [...targetMsg.branchHistory]
+          : [previousTail];
+
+        const targetBranchIndex = targetMsg?.branchIndex ?? 0;
+        if (targetBranchIndex < existingHistory.length) {
+          existingHistory[targetBranchIndex] = previousTail;
+        }
+
+        const newBranchHistory = [
+          ...existingHistory,
+          [userMessage, assistantMessage],
+        ];
+        userMessage.branchHistory = newBranchHistory;
+        userMessage.branchIndex = newBranchHistory.length - 1;
+
         setMessages([
           ...st.messages.slice(0, truncateToIndex),
           userMessage,
@@ -345,6 +363,40 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
     [performSend, addon],
   );
 
+  const handleSwitchBranch = useCallback(
+    (messageId: string, targetBranchIndex: number) => {
+      const st = stateRef.current;
+      const msgIndex = st.messages.findIndex((m) => m.id === messageId);
+      if (msgIndex === -1) return;
+
+      const msg = st.messages[msgIndex];
+      if (!msg.branchHistory || !msg.branchHistory[targetBranchIndex]) return;
+
+      // Save current active tail back into history
+      const currentTail = st.messages.slice(msgIndex);
+      const updatedHistory = [...msg.branchHistory];
+      const currentIndex = msg.branchIndex ?? 0;
+      updatedHistory[currentIndex] = currentTail;
+
+      // Retrieve target branch tail
+      const targetTail = updatedHistory[targetBranchIndex];
+      if (!targetTail || targetTail.length === 0) return;
+
+      const updatedUserMsg: ChatMessage = {
+        ...targetTail[0],
+        branchHistory: updatedHistory,
+        branchIndex: targetBranchIndex,
+      };
+
+      setMessages([
+        ...st.messages.slice(0, msgIndex),
+        updatedUserMsg,
+        ...targetTail.slice(1),
+      ]);
+    },
+    [],
+  );
+
   const handleAbortTerminal = useCallback(() => {
     addon.log("[ChatView] Abort requested on terminal execution");
     void hermes.client.cancel();
@@ -386,7 +438,20 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
 
       try {
         const result = await slashCmd.command.execute(addon, slashCmd.args);
-        if (result) {
+        if (result && typeof result === "object" && "sendPrompt" in result) {
+          if (result.systemMessage) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: generateMessageId(),
+                content: result.systemMessage!,
+                role: "system",
+                timestamp: Date.now(),
+              },
+            ]);
+          }
+          await sendToHermes(result.sendPrompt);
+        } else if (typeof result === "string") {
           setMessages((prev) => [
             ...prev,
             {
@@ -746,7 +811,8 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         !href.startsWith("http://") &&
         !href.startsWith("https://") &&
         !href.startsWith("add-context:") &&
-        !href.startsWith("apply-tag:")
+        !href.startsWith("apply-tag:") &&
+        !href.startsWith("action:")
       ) {
         e.preventDefault();
         return;
@@ -846,12 +912,73 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         } catch (err) {
           setError(`Failed to apply tag: ${(err as Error).message}`);
         }
+      } else if (href && href.startsWith("action:")) {
+        e.preventDefault();
+        const actionPayload = href.substring("action:".length);
+        const attachedItems = hermes.items.getAttachedItems();
+        if (actionPayload === "save-note") {
+          const conv = hermes.conversations.getCurrentConversation();
+          if (conv) {
+            hermes.exports
+              .exportToZoteroNote(conv, hermes.items.getAttachedItems())
+              .then((res) => {
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: generateMessageId(),
+                    content: res.message,
+                    role: "system",
+                    timestamp: Date.now(),
+                  },
+                ]);
+              })
+              .catch((err) => {
+                setError(`Failed to save note: ${(err as Error).message}`);
+              });
+          }
+        } else if (actionPayload.startsWith("metadata?")) {
+          const parentItem = attachedItems[0];
+          if (!parentItem) {
+            setError("No item attached to update metadata for.");
+            return;
+          }
+          const queryString = actionPayload.substring("metadata?".length);
+          const params = new URLSearchParams(queryString);
+          const updates: Record<string, string> = {};
+          params.forEach((val, key) => {
+            updates[key] = val;
+          });
+          try {
+            await hermes.items.updateItemMetadata(parentItem.id, updates);
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: generateMessageId(),
+                content: `Successfully updated metadata for **${parentItem.title}**!`,
+                role: "system",
+                timestamp: Date.now(),
+              },
+            ]);
+          } catch (err) {
+            setError(
+              `Metadata update cancelled or failed: ${(err as Error).message}`,
+            );
+          }
+        }
       }
     };
 
     container.addEventListener("click", handler);
     return () => container.removeEventListener("click", handler);
   }, [hermes.notes, hermes.tags]);
+
+  // Subscribe to external prompts dispatched from Reader / Context Menu
+  useEffect(() => {
+    const unsub = hermes.chat.onExternalPrompt((promptText) => {
+      void sendToHermes(promptText);
+    });
+    return unsub;
+  }, [hermes.chat, sendToHermes]);
 
   useEffect(() => {
     const win = Zotero.getMainWindow();
@@ -869,9 +996,26 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
   }, []);
 
   const attachSelectedItems = useCallback(() => {
+    // Check if there is an active selection in the PDF reader
+    const readerSel = hermes.items.getActiveReaderSelection?.();
+    if (readerSel) {
+      const selId = `sel-${Date.now()}`;
+      const displayText = readerSel.page
+        ? `[Page ${readerSel.page}]: "${readerSel.text}"`
+        : `"${readerSel.text}"`;
+      setContextItems((prev) => [
+        ...prev,
+        {
+          id: selId,
+          type: "selection" as const,
+          text: displayText,
+        },
+      ]);
+    }
+
     const items = hermes.items.getSelectedItems();
-    if (items.length === 0) {
-      setError("No items selected in Zotero library.");
+    if (items.length === 0 && !readerSel) {
+      setError("No items or text selected in Zotero library or reader.");
       return;
     }
     void (async () => {
@@ -967,6 +1111,91 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
     [hermes.conversations, loadConversationList, abortActiveStream],
   );
 
+  const handleExportCurrentChat = useCallback(async () => {
+    const conv = hermes.conversations.getCurrentConversation();
+    if (!conv || !conv.messages || conv.messages.length === 0) {
+      setError("No conversation messages to export.");
+      return;
+    }
+    const attached = hermes.items.getAttachedItems();
+    const vaultPath = settings.get<string>("obsidianVaultPath", "");
+    if (vaultPath && vaultPath.trim()) {
+      const res = await hermes.exports.exportToObsidianVault(conv, attached);
+      if (res.success) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: generateMessageId(),
+            content: `${res.message} (Obsidian Vault)`,
+            role: "system",
+            timestamp: Date.now(),
+          },
+        ]);
+        return;
+      }
+    }
+    const res = await hermes.exports.exportWithFilePicker(conv, attached);
+    if (res.success) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: generateMessageId(),
+          content: `${res.message}`,
+          role: "system",
+          timestamp: Date.now(),
+        },
+      ]);
+    } else if (res.message && res.message !== "Export cancelled by user.") {
+      setError(res.message);
+    }
+  }, [hermes.conversations, hermes.items, hermes.exports, settings]);
+
+  const handleExportConversation = useCallback(
+    async (id: string) => {
+      const allConvs = hermes.conversations.loadAllConversations();
+      const targetConv = allConvs.find((c) => c.id === id);
+      if (
+        !targetConv ||
+        !targetConv.messages ||
+        targetConv.messages.length === 0
+      ) {
+        setError("Conversation has no messages to export.");
+        return;
+      }
+      const vaultPath = settings.get<string>("obsidianVaultPath", "");
+      if (vaultPath && vaultPath.trim()) {
+        const res = await hermes.exports.exportToObsidianVault(targetConv, []);
+        if (res.success) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: generateMessageId(),
+              content: `${res.message} (Obsidian Vault)`,
+              role: "system",
+              timestamp: Date.now(),
+            },
+          ]);
+          return;
+        }
+      }
+      const res = await hermes.exports.exportWithFilePicker(targetConv, []);
+      if (res.success) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: generateMessageId(),
+            content: `${res.message}`,
+            role: "system",
+            timestamp: Date.now(),
+          },
+        ]);
+      } else if (res.message && res.message !== "Export cancelled by user.") {
+        setError(res.message);
+      }
+    },
+    [hermes.conversations, hermes.exports, settings],
+  );
+
   const performSearch = useCallback(
     (query: string): void => {
       if (!query.trim()) {
@@ -1050,6 +1279,7 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         onAttachItems={attachSelectedItems}
         onNewChat={newChat}
         onSettingsToggle={() => setIsSessionSettingsOpen((prev) => !prev)}
+        onExport={handleExportCurrentChat}
       />
 
       <SidePanels
@@ -1065,6 +1295,7 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         searchInputRef={searchInputRef}
         onLoadConversation={handleLoadConversation}
         onDeleteConversation={handleDeleteConversation}
+        onExportConversation={handleExportConversation}
         onCloseConversationList={() => setIsConversationListOpen(false)}
         onSearchChange={(query) => {
           setSearchQuery(query);
@@ -1118,6 +1349,7 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         messagesEndRef={messagesEndRef}
         messageRefs={messageRefs}
         onEditMessage={resendFromIndex}
+        onSwitchBranch={handleSwitchBranch}
         onAbortTerminal={handleAbortTerminal}
         onDismissError={() => setError(null)}
       />

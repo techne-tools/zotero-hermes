@@ -144,4 +144,61 @@ describe("systemPrompt.buildItemContext", function () {
     expect(text).to.not.include("DOI:");
     expect(text).to.not.include("Zotero attachment key:");
   });
+
+  it("should include annotations, user notes, and document excerpt when present", function () {
+    const text = buildItemContext(
+      {
+        type: "item",
+        text: "Deep Learning Review",
+        extracted: {
+          title: "Deep Learning Review",
+          annotations: [
+            {
+              page: 4,
+              type: "highlight",
+              text: "Attention mechanisms are critical",
+              comment: "Important point for section 2",
+            },
+          ],
+          notes: [
+            {
+              title: "Methodology Summary",
+              content:
+                "The authors use an empirical benchmark across 5 datasets.",
+            },
+          ],
+          fulltext:
+            "Introduction: Recent advances in artificial intelligence...",
+        },
+      },
+      storageDir,
+    );
+    expect(text).to.include("Annotations (user highlights & notes):");
+    expect(text).to.include(
+      '(Page 4) "Attention mechanisms are critical" [Comment: "Important point for section 2"]',
+    );
+    expect(text).to.include("User Notes:");
+    expect(text).to.include(
+      "**Methodology Summary**: The authors use an empirical benchmark across 5 datasets.",
+    );
+    expect(text).to.include("Document Excerpt:");
+    expect(text).to.include(
+      "Introduction: Recent advances in artificial intelligence...",
+    );
+  });
+
+  it("should format citation key in item context", function () {
+    const text = buildItemContext(
+      {
+        type: "item",
+        text: "Paper with Citekey",
+        extracted: {
+          title: "Paper with Citekey",
+          citekey: "Vaswani2017",
+        },
+      },
+      storageDir,
+    );
+    expect(text).to.include("Citation Key: @Vaswani2017");
+  });
 });

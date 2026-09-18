@@ -6,6 +6,7 @@ import {
   AttachIcon,
   PlusIcon,
   SettingsIcon,
+  ExportIcon,
 } from "./Icons";
 
 interface ChatHeaderProps {
@@ -15,6 +16,7 @@ interface ChatHeaderProps {
   onAttachItems: () => void;
   onNewChat: () => void;
   onSettingsToggle: () => void;
+  onExport?: () => void;
 }
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
@@ -24,6 +26,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onAttachItems,
   onNewChat,
   onSettingsToggle,
+  onExport,
 }) => {
   const settings = addon.data.hermes?.preferences;
 
@@ -88,6 +91,15 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         >
           <PlusIcon />
         </button>
+        {onExport && (
+          <button
+            onClick={onExport}
+            className="hermes-icon-btn"
+            title="Export to Markdown / Obsidian (/export)"
+          >
+            <ExportIcon />
+          </button>
+        )}
         <button
           onClick={onSettingsToggle}
           className="hermes-icon-btn"

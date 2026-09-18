@@ -36,23 +36,25 @@ grounded in the actual metadata, notes, annotations, and tags.
 
 ## Feature Inventory (current)
 
-| Feature                                 | Status                           |
-| --------------------------------------- | -------------------------------- |
-| AI chat sidebar (React)                 | ✅ Working (restored 2026-08-11) |
-| Attach selected items as context        | ✅                               |
-| Dual connection (ACP stdio / API SSE)   | ✅                               |
-| Note save (`/savechat`, per-message 📝) | ✅                               |
-| PDF annotations (`/annotations`)        | ✅                               |
-| Citations (`/cite [style]`)             | ✅                               |
-| Tag suggestions (`/tag`)                | ✅                               |
-| Item metadata updates (`/metadata`)     | ✅ (gated via approval dialog)   |
-| Conversation persistence + branching    | ✅                               |
-| Cmd+F message search                    | ✅                               |
-| Token dashboard                         | ✅                               |
-| Persona switcher (`/persona`)           | ✅                               |
-| Terminal output gating                  | ✅ (behind `allowTerminal` pref) |
-| Terminal abort button                   | ✅                               |
-| Virtualized scrolling                   | ⚠️ Not started                   |
+| Feature                                 | Status                                 |
+| --------------------------------------- | -------------------------------------- |
+| AI chat sidebar (React)                 | ✅ Working (restored 2026-08-11)       |
+| Attach selected items as context        | ✅ (Includes annotations, notes, text) |
+| Dual connection (ACP stdio / API SSE)   | ✅                                     |
+| Note save (`/savechat`, per-message 📝) | ✅                                     |
+| PDF annotations (`/annotations`)        | ✅                                     |
+| Citations (`/cite [style]`)             | ✅                                     |
+| Tag suggestions (`/tag`)                | ✅                                     |
+| Item metadata updates (`/metadata`)     | ✅ (gated via approval dialog)         |
+| Conversation branching (first-class)    | ✅ (`< 1 / 2 >` branch switcher)       |
+| Interactive action pills                | ✅ (`action:`, `apply-tag:`, etc.)     |
+| Cmd+F message search                    | ✅                                     |
+| Token dashboard                         | ✅                                     |
+| Persona switcher (`/persona`)           | ✅                                     |
+| Terminal output gating                  | ✅ (behind `allowTerminal` pref)       |
+| Terminal abort button                   | ✅                                     |
+| Windowed message list rendering         | ✅ (progressive windowing)             |
+| Reader tab & selection awareness        | ✅                                     |
 
 ## Roadmap (validated against user intent)
 
@@ -60,9 +62,8 @@ The roadmap below is the _user's_ intent, not an agent-generated feature
 wishlist. It is deliberately small and focused on the research workflow.
 
 1. **Stability** — real-world testing and bug fixes.
-2. **Conversation branches as first-class** — parallel branches per
-   conversation.
-3. **Virtualized scrolling** — for very large conversations.
+2. **Collection-level synthesis** — batch reasoning across entire collections.
+3. **Dedicated Reader tab sidebar panel** — embedded viewport alongside PDF.
 
 ## Success Metrics
 

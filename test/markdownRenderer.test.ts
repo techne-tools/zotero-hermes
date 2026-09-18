@@ -124,14 +124,15 @@ describe("MarkdownRenderer (parseInline)", function () {
       .true;
   });
 
-  it("should allow safe link schemes (https, http, add-context, apply-tag)", function () {
+  it("should allow safe link schemes (https, http, add-context, apply-tag, action)", function () {
     const safe =
-      "[web](https://example.com) [ctx](add-context:123) [tag](apply-tag:test)";
+      "[web](https://example.com) [ctx](add-context:123) [tag](apply-tag:test) [act](action:save-note)";
     const result = parseInline(safe);
     const links = result.filter((s) => s.type === "link");
-    expect(links).to.have.lengthOf(3);
+    expect(links).to.have.lengthOf(4);
     expect(links[0].url).to.equal("https://example.com");
     expect(links[1].url).to.equal("add-context:123");
     expect(links[2].url).to.equal("apply-tag:test");
+    expect(links[3].url).to.equal("action:save-note");
   });
 });

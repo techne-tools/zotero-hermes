@@ -50,7 +50,13 @@ OBSIDIAN AWARENESS (secondary):
 - Only search Obsidian as a FALLBACK when the Zotero library does not contain the requested information.
 - Do not assume Obsidian content is more relevant than Zotero for research queries.
 
-Always cite Zotero items by title and author when providing answers.`;
+RESEARCH SYNTHESIS & DRAFTING:
+- When multiple items are attached, synthesize their findings, methodologies, and theoretical frameworks collectively.
+- When generating comparisons or handling /compare, build structured markdown matrix tables.
+- When analyzing literature gaps or handling /gaps, identify unaddressed questions and suggest concrete empirical designs.
+- When drafting manuscript prose or handling /draft-litreview, integrate academic citations seamlessly using @citekey syntax (e.g. "@Smith2023" or "[@Doe2022]").
+
+Always cite Zotero items by title, author, and citation key (@citekey) when providing answers.`;
 }
 
 /**
@@ -102,12 +108,50 @@ export function buildItemContext(
     if (extracted.doi) contextText += `\nDOI: ${extracted.doi}`;
     if (extracted.url) contextText += `\nURL: ${extracted.url}`;
     if (extracted.itemType) contextText += `\nItem type: ${extracted.itemType}`;
+    if (extracted.citekey)
+      contextText += `\nCitation Key: @${extracted.citekey}`;
     if (extracted.attachmentKey) {
       contextText += `\nZotero attachment key: ${extracted.attachmentKey}`;
       contextText += `\nZotero storage path: ${zoteroStorageDir}/${extracted.attachmentKey}/`;
     }
     if (extracted.storagePath)
       contextText += `\nZotero file path: ${extracted.storagePath}`;
+
+    if (
+      extracted.annotations &&
+      Array.isArray(extracted.annotations) &&
+      extracted.annotations.length > 0
+    ) {
+      contextText += "\nAnnotations (user highlights & notes):";
+      for (const ann of extracted.annotations as Array<{
+        page: number;
+        type: string;
+        text: string;
+        comment?: string;
+      }>) {
+        const commentPart = ann.comment ? ` [Comment: "${ann.comment}"]` : "";
+        contextText += `\n- (Page ${ann.page}) "${ann.text}"${commentPart}`;
+      }
+    }
+
+    if (
+      extracted.notes &&
+      Array.isArray(extracted.notes) &&
+      extracted.notes.length > 0
+    ) {
+      contextText += "\nUser Notes:";
+      for (const n of extracted.notes as Array<{
+        title?: string;
+        content: string;
+      }>) {
+        const titlePart = n.title ? `**${n.title}**: ` : "";
+        contextText += `\n- ${titlePart}${n.content}`;
+      }
+    }
+
+    if (extracted.fulltext && typeof extracted.fulltext === "string") {
+      contextText += `\nDocument Excerpt:\n${extracted.fulltext}`;
+    }
   }
   return contextText;
 }

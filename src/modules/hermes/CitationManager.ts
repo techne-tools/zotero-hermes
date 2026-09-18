@@ -135,4 +135,57 @@ export class CitationManager {
       return null;
     }
   }
+
+  public getCitekey(item: Zotero.Item): string {
+    let citekey = "";
+    try {
+      if (typeof (item as any).getField === "function") {
+        const raw = item.getField("citationKey" as any);
+        if (raw && typeof raw === "string") citekey = raw;
+      }
+    } catch {
+      // ignore
+    }
+    if (!citekey) {
+      try {
+        const bbt = (Zotero as any).BetterBibTeX?.KeyManager?.get?.(item.id);
+        if (bbt?.citationKey) citekey = bbt.citationKey;
+      } catch {
+        // ignore
+      }
+    }
+    if (!citekey) {
+      try {
+        const extra = (item.getField("extra") as string) || "";
+        const m = extra.match(/(?:citation key|bibtex):\s*([^\s\n\r]+)/i);
+        if (m && m[1]) citekey = m[1];
+      } catch {
+        // ignore
+      }
+    }
+    if (!citekey) {
+      const creator = item.getCreators?.()?.[0];
+      const lastName =
+        (creator as any)?.lastName || (creator as any)?.firstName || "Item";
+      const rawDate = (item.getField("date") as string) || "";
+      const year = rawDate.match(/\d{4}/)?.[0] || "";
+      citekey = `${lastName.replace(/\W/g, "")}${year || "nd"}`;
+    }
+    return citekey;
+  }
+
+  public getCitationSnippets(item: Zotero.Item): {
+    citekey: string;
+    pandoc: string;
+    latex: string;
+    typst: string;
+  } {
+    const key = this.getCitekey(item);
+    return {
+      citekey: key,
+      pandoc: `[@${key}]`,
+      latex: `\\cite{${key}}`,
+      typst: `@${key}`,
+    };
+  }
 }

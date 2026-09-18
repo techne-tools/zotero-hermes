@@ -232,7 +232,10 @@ export class HermesClient implements ChatClient {
       (Zotero as any).getZoteroDirectory?.()?.path ||
       (Zotero as any).DataDirectory?.dir ||
       "";
-    const zoteroProfileDir = Zotero.getProfileDirectory?.()?.path || "";
+    const zoteroProfileDir =
+      (Zotero as any).Profile?.dir?.path ||
+      Zotero.getProfileDirectory?.()?.path ||
+      "";
     const zoteroStorageDir = zoteroDataDir ? `${zoteroDataDir}/storage` : "";
     const zoteroDbPath = zoteroDataDir ? `${zoteroDataDir}/zotero.sqlite` : "";
 
@@ -770,7 +773,8 @@ export class HermesClient implements ChatClient {
     // profile or data directory where zotero.sqlite and sensitive credentials reside.
     let path = "";
     try {
-      const profileDir = Zotero.getProfileDirectory?.();
+      const profileDir =
+        (Zotero as any).Profile?.dir || Zotero.getProfileDirectory?.();
       if (profileDir) {
         const wsDir = profileDir.clone() as nsIFile;
         wsDir.append("zotero-hermes");
@@ -788,7 +792,9 @@ export class HermesClient implements ChatClient {
     }
 
     if (!path) {
-      const profileDir = Zotero.getProfileDirectory?.()?.path;
+      const profileDir =
+        (Zotero as any).Profile?.dir?.path ||
+        Zotero.getProfileDirectory?.()?.path;
       const dataDir = (Zotero as any).getZoteroDirectory?.()?.path || "";
       path = profileDir || dataDir || "";
     }

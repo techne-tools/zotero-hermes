@@ -5,6 +5,7 @@ import {
   ChevronUpIcon,
   ChevronDownIcon,
   LockIcon,
+  ExportIcon,
 } from "./Icons";
 
 export interface ConversationSummary {
@@ -26,6 +27,7 @@ interface SidePanelsProps {
   searchInputRef: React.RefObject<HTMLInputElement>;
   onLoadConversation: (id: string) => void;
   onDeleteConversation: (id: string) => void;
+  onExportConversation?: (id: string) => void;
   onCloseConversationList: () => void;
   onSearchChange: (query: string) => void;
   onSearchKeyDown: (e: React.KeyboardEvent) => void;
@@ -52,6 +54,7 @@ export const SidePanels: React.FC<SidePanelsProps> = ({
   searchInputRef,
   onLoadConversation,
   onDeleteConversation,
+  onExportConversation,
   onCloseConversationList,
   onSearchChange,
   onSearchKeyDown,
@@ -95,6 +98,20 @@ export const SidePanels: React.FC<SidePanelsProps> = ({
                   >
                     {conv.title}
                   </button>
+                  {onExportConversation && (
+                    <button
+                      onClick={() => onExportConversation(conv.id)}
+                      className="hermes-small-btn"
+                      style={{
+                        padding: "0 4px",
+                        marginRight: "4px",
+                      }}
+                      title="Export to Markdown / Obsidian"
+                      aria-label="Export conversation"
+                    >
+                      <ExportIcon />
+                    </button>
+                  )}
                   <button
                     onClick={() => onDeleteConversation(conv.id)}
                     className="hermes-small-btn"

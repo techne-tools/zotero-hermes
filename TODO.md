@@ -402,25 +402,19 @@ All features must follow Zotero Hermes coding conventions.
 
 ## Phase 5: Polish & Testing (Week 5-6: Jun 16-29)
 
-### ⚪ Future - Performance Optimization
+### ✅ Completed - Performance Optimization
 
-- [ ] **UI Performance**
-  - [ ] Virtualize message list for large conversations
-  - [ ] Debounce input handlers
-  - [ ] Optimize re-renders
+- [x] **UI Performance**
+  - [x] Windowed message list for large conversations (progressive 40-message window)
+  - [x] Debounce input handlers
+  - [x] Optimize re-renders
   - [ ] Lazy load heavy components
-  - **Estimated:** 2 days
-  - **Dependencies:** Basic chat flow
-  - **Status:** Not started
 
 - [ ] **Memory Management**
   - [ ] Limit conversation history in memory
-  - [ ] Cleanup unused event listeners
-  - [ ] Handle large note content efficiently
+  - [x] Cleanup unused event listeners
+  - [x] Handle large note content efficiently
   - [ ] Profile and fix memory leaks
-  - **Estimated:** 2 days
-  - **Dependencies:** None
-  - **Status:** Not started
 
 ### ✅ Completed - Testing
 
@@ -576,12 +570,16 @@ All features must follow Zotero Hermes coding conventions.
 - **10 September 2026** - Upgraded for Zotero 10 / Firefox 140 ESR compatibility and OpenDesign Reading Room redesign
 - **11 September 2026** - Sandboxed workspace directory (`<profile>/zotero-hermes/workspace/`) and hardened URI schemes
 - **16 September 2026** - Resolved spec conflicts 2–6: TagManager approval gate, Remote API metadata parity (`buildItemContext`), runtime mode hot-swapping (`switchConnectionMode`), full AuditLog and DebugLogger integration across write operations, and implemented library metadata inspection/updates (`ItemManager.updateItemMetadata`, `/metadata` slash command).
+- **18 September 2026** - Implemented Priority Pillars (4, 1, 3, 2):
+  - **Feature 4 (Obsidian / Markdown Note Export Bridge)**: `ExportManager.ts`, `/export` slash command with YAML frontmatter, wikilinks, `zotero://` links, configured Obsidian vault path export, and one-click export buttons in ChatHeader and SidePanels.
+  - **Feature 1 (Cross-Paper Synthesis & Collection Analysis)**: `ItemManager.attachCollection()`, `/collection`, `/compare` matrix table generation, and `/gaps` literature gap analysis.
+  - **Feature 3 (Manuscript Drafting & Better BibTeX Integration)**: Automatic Better BibTeX citekey extraction with fallback, `@citekey` context injection, `/draft-litreview` command, and Pandoc/LaTeX/Typst citation snippets in `CitationManager.ts` & `/cite`.
+  - **Feature 2 (Active Reader Deep Workflows)**: Floating selection toolbar popup in PDF Reader tab, "Explain Selection" and "Critique Argument" context menu actions, and decoupled prompt dispatching via `ChatManager.onExternalPrompt()`.
 
 ### Current Known Constraints & Backlog
 
 1. Zotero SQLite database is locked while Zotero is running — the agent cannot read it directly via fs tools; context items are the library access point.
-2. Conversation export dropped from spec; conversations remain stored in profile JSON files.
-3. Virtualized scrolling for very large conversations remains on backlog.
+2. Direct cloud syncing for multi-vault topologies remains a future consideration.
 
 ---
 

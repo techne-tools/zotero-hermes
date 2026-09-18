@@ -30,6 +30,7 @@ import { ApprovalDialog } from "./modules/hermes/ApprovalDialog";
 import { TagManager } from "./modules/hermes/TagManager";
 import { ConversationManager } from "./modules/hermes/ConversationManager";
 import { PreferencesManager } from "./modules/hermes/PreferencesManager";
+import { ExportManager } from "./modules/hermes/ExportManager";
 import { DebugLogger } from "./utils/DebugLogger";
 import { AuditLog } from "./utils/AuditLog";
 import { getString, initLocale } from "./utils/locale";
@@ -74,6 +75,7 @@ async function onStartup() {
     const annotations = new AnnotationManager(addon);
     const tags = new TagManager(addon, approvalDialog);
     const conversations = new ConversationManager(addon);
+    const exports = new ExportManager(addon);
 
     addon.data.hermes = {
       client,
@@ -88,6 +90,7 @@ async function onStartup() {
       approvalDialog,
       debug,
       auditLog,
+      exports,
     };
     addon.log("Hermes modules initialized (mode: " + connectionMode + ")");
     // Load FTL/Stylesheets for all existing windows
@@ -169,6 +172,134 @@ function registerHermesSidebar(win: _ZoteroTypes.MainWindow): void {
       if (btn.getAttribute("aria-pressed") === "true") {
         btn.setAttribute("aria-pressed", "false");
         toggleHermesSidebar(win);
+      }
+
+      // Register item context menu entry
+      const itemMenu = doc.getElementById("zotero-itemmenu");
+      if (itemMenu && !doc.getElementById("hermes-itemmenu-ask")) {
+        const menuItem = doc.createXULElement("menuitem") as any;
+        menuItem.setAttribute("id", "hermes-itemmenu-ask");
+        menuItem.setAttribute("label", "Ask Hermes About Item");
+        menuItem.setAttribute("class", "menuitem-iconic");
+        menuItem.style.listStyleImage =
+          "url('chrome://hermes/content/icons/hermes-sidenav.svg')";
+        menuItem.addEventListener("command", async () => {
+          const selectedItems =
+            addon.data.hermes?.items.getSelectedItems() || [];
+          if (selectedItems.length > 0 && addon.data.hermes) {
+            for (const it of selectedItems) {
+              await addon.data.hermes.items.attachItem(it);
+            }
+            const toggleBtn = doc.getElementById(
+              "zotero-hermes-tb-chat-toggle",
+            );
+            if (
+              toggleBtn &&
+              toggleBtn.getAttribute("aria-pressed") !== "true"
+            ) {
+              toggleHermesSidebar(win);
+            }
+          }
+        });
+        itemMenu.appendChild(menuItem);
+      }
+
+      // Handler for active reader actions (explain, critique)
+      const handleReaderAction = async (actionType: "explain" | "critique") => {
+        const selection = addon.data.hermes?.items.getActiveReaderSelection();
+        if (!selection || !selection.text) {
+          addon.log("No text selected in active reader");
+          return;
+        }
+        let itemTitle = "the current document";
+        if (selection.item) {
+          await addon.data.hermes?.items.attachItem(selection.item);
+          itemTitle = `"${selection.item.getDisplayTitle()}"`;
+        }
+        const pageStr = selection.page ? ` (page ${selection.page})` : "";
+        let prompt = "";
+        if (actionType === "explain") {
+          prompt = `Please explain the following passage from ${itemTitle}${pageStr}:\n\n> "${selection.text}"\n\nProvide a clear conceptual explanation, define key terminology, and explain why this matters in the context of the work.`;
+        } else {
+          prompt = `Please critically examine and critique the following argument from ${itemTitle}${pageStr}:\n\n> "${selection.text}"\n\nEvaluate its assumptions, logical rigor, evidence strength, and identify potential counter-arguments or edge cases.`;
+        }
+
+        const toggleBtn = doc.getElementById("zotero-hermes-tb-chat-toggle");
+        if (toggleBtn && toggleBtn.getAttribute("aria-pressed") !== "true") {
+          toggleHermesSidebar(win);
+        }
+        win.setTimeout(() => {
+          addon.data.hermes?.chat.dispatchExternalPrompt(prompt);
+        }, 150);
+      };
+
+      // Register reader context menu entries
+      const readerMenu =
+        doc.getElementById("zotero-reader-context") ||
+        doc.getElementById("reader-context-menu");
+      if (readerMenu && !doc.getElementById("hermes-reader-explain")) {
+        const explainItem = doc.createXULElement("menuitem") as any;
+        explainItem.setAttribute("id", "hermes-reader-explain");
+        explainItem.setAttribute("label", "Explain Selection with Hermes");
+        explainItem.setAttribute("class", "menuitem-iconic");
+        explainItem.style.listStyleImage =
+          "url('chrome://hermes/content/icons/hermes-sidenav.svg')";
+        explainItem.addEventListener("command", () => {
+          void handleReaderAction("explain");
+        });
+        readerMenu.appendChild(explainItem);
+
+        const critiqueItem = doc.createXULElement("menuitem") as any;
+        critiqueItem.setAttribute("id", "hermes-reader-critique");
+        critiqueItem.setAttribute("label", "Critique Argument with Hermes");
+        critiqueItem.setAttribute("class", "menuitem-iconic");
+        critiqueItem.style.listStyleImage =
+          "url('chrome://hermes/content/icons/hermes-sidenav.svg')";
+        critiqueItem.addEventListener("command", () => {
+          void handleReaderAction("critique");
+        });
+        readerMenu.appendChild(critiqueItem);
+      }
+
+      // Floating selection popup in PDF Reader
+      try {
+        if (
+          typeof (Zotero as any).Reader?.registerEventListener === "function" &&
+          !(addon as any)._readerEventRegistered
+        ) {
+          (addon as any)._readerEventRegistered = true;
+          (Zotero as any).Reader.registerEventListener(
+            "renderTextSelectionPopup",
+            ({ reader, doc: readerDoc, popup }: any) => {
+              if (
+                !popup ||
+                readerDoc.getElementById("hermes-reader-float-btn")
+              ) {
+                return;
+              }
+              const btn = readerDoc.createElement("button");
+              btn.id = "hermes-reader-float-btn";
+              btn.className = "hermes-reader-popup-btn";
+              btn.textContent = "⚡ Hermes";
+              btn.style.cssText =
+                "font-size: 11px; padding: 2px 6px; margin-left: 4px; border-radius: 4px; background: var(--hermes-accent, #0b6b54); color: white; border: none; cursor: pointer; font-weight: 500;";
+              btn.title = "Explain selection with Hermes";
+              btn.addEventListener("click", () => {
+                const text =
+                  reader._internalReader?._primaryView?._selectedText ||
+                  reader.getSelectedText?.() ||
+                  "";
+                if (!text) return;
+                void handleReaderAction("explain");
+              });
+              popup.appendChild(btn);
+            },
+          );
+        }
+      } catch (err) {
+        addon.log(
+          `Failed to register reader selection popup listener: ${(err as Error).message}`,
+        );
       }
 
       addon.log("Hermes sidebar toggle button registered successfully");
@@ -282,6 +413,18 @@ function unregisterHermesSidebar(win: Window): void {
     const separator = doc.getElementById("hermes-tb-separator");
     if (separator) {
       separator.parentNode?.removeChild(separator);
+    }
+    const menuItem = doc.getElementById("hermes-itemmenu-ask");
+    if (menuItem) {
+      menuItem.parentNode?.removeChild(menuItem);
+    }
+    const explainItem = doc.getElementById("hermes-reader-explain");
+    if (explainItem) {
+      explainItem.parentNode?.removeChild(explainItem);
+    }
+    const critiqueItem = doc.getElementById("hermes-reader-critique");
+    if (critiqueItem) {
+      critiqueItem.parentNode?.removeChild(critiqueItem);
     }
 
     // 2. Clean up Hermes sidebar panel

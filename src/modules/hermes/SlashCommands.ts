@@ -1,8 +1,13 @@
 import type Addon from "../../addon";
 
+export type SlashCommandResult =
+  | null
+  | string
+  | { sendPrompt: string; systemMessage?: string };
+
 export interface SlashCommand {
   description: string;
-  execute: (addon: Addon, args: string) => Promise<null | string>;
+  execute: (addon: Addon, args: string) => Promise<SlashCommandResult>;
   name: string;
 }
 
@@ -36,6 +41,32 @@ const BUILT_IN_COMMANDS: SlashCommand[] = [
       return `Added **${attached.length} item(s)** to context: ${titles}`;
     },
     name: "context",
+  },
+  {
+    description:
+      "Attach all top-level items from the selected Zotero collection into context",
+    execute: async (addon, args) => {
+      const col = addon.data.hermes?.items.getSelectedCollection();
+      if (!col) {
+        return "No collection currently selected in the Zotero collections tree. Please click a collection in the left sidebar and run `/collection` again.";
+      }
+      const limit = parseInt(args.trim(), 10) || 25;
+      const attached = await addon.data.hermes!.items.attachCollection(
+        col,
+        limit,
+      );
+      if (attached.length === 0) {
+        return `No research items found in collection **"${col.name}"**.`;
+      }
+      const titles = attached
+        .slice(0, 5)
+        .map((i) => `"${i.title}"`)
+        .join(", ");
+      const extra =
+        attached.length > 5 ? ` and ${attached.length - 5} more...` : "";
+      return `Attached **${attached.length} items** from collection **"${col.name}"** to context: ${titles}${extra}`;
+    },
+    name: "collection",
   },
   {
     description: "Show available slash commands",
@@ -102,6 +133,139 @@ const BUILT_IN_COMMANDS: SlashCommand[] = [
       }
     },
     name: "savechat",
+  },
+  {
+    description:
+      "Export conversation as Markdown (Obsidian-ready with YAML frontmatter, wikilinks, and zotero:// links)",
+    execute: async (addon, args) => {
+      const conv = addon.data.hermes?.conversations.getCurrentConversation();
+      if (!conv || !conv.messages || conv.messages.length === 0) {
+        return "No conversation to export.";
+      }
+      const attached = addon.data.hermes?.items.getAttachedItems() || [];
+      const trimmedArgs = args.trim();
+
+      if (trimmedArgs.toLowerCase() === "note") {
+        const res = await addon.data.hermes!.exports.exportToZoteroNote(
+          conv,
+          attached,
+        );
+        return res.message;
+      }
+
+      // Check if Obsidian vault is configured
+      const vaultPath =
+        addon.data.hermes?.preferences?.get<string>("obsidianVaultPath", "") ||
+        "";
+      if (vaultPath && vaultPath.trim()) {
+        const customName =
+          trimmedArgs && !trimmedArgs.toLowerCase().startsWith("obsidian")
+            ? trimmedArgs
+            : undefined;
+        const res = await addon.data.hermes!.exports.exportToObsidianVault(
+          conv,
+          attached,
+          customName,
+        );
+        if (res.success) {
+          return `${res.message}\n\n*Saved to Obsidian vault with YAML frontmatter and Zotero deep links.*`;
+        }
+      }
+
+      // If no Obsidian path configured or explicit fallback, use file picker
+      const res = await addon.data.hermes!.exports.exportWithFilePicker(
+        conv,
+        attached,
+      );
+      if (res.success) {
+        return `${res.message}\n\n*Tip: Set your Obsidian Vault path in Settings → Hermes to export directly with a single command!*`;
+      }
+      return res.message;
+    },
+    name: "export",
+  },
+  {
+    description:
+      "Perform a structured comparative synthesis across all attached research items (matrix table, consensus, divergences)",
+    execute: async (addon, args) => {
+      const attached = addon.data.hermes?.items.getAttachedItems() || [];
+      if (attached.length < 2) {
+        return `Comparison requires at least 2 items in context (currently ${attached.length} attached). Select multiple items and run \`/context\` or \`/collection\` first.`;
+      }
+      const focus = args.trim();
+      const focusPrompt = focus
+        ? `Focus specifically on: "${focus}".`
+        : "Provide a comprehensive cross-paper analysis.";
+
+      const prompt = `Please provide a rigorous comparative synthesis and analysis across the ${attached.length} attached research papers. ${focusPrompt}
+
+Structure your response with:
+1. **Comparative Matrix Table**: Include columns for Paper (Title & @Citekey), Research Question / Core Aim, Methodology / Dataset, Key Empirical Findings, and Limitations.
+2. **Consensus & Theoretical Convergence**: Where do these authors agree or reinforce each other's claims?
+3. **Divergences & Debates**: What are the key points of disagreement, conflicting evidence, or competing theoretical frameworks?
+4. **Methodological Trade-offs**: Compare their empirical strategies (e.g. experimental vs observational, sample sizes, validity).
+
+Cite each paper using its citation key (\`@citekey\`) or author-year throughout.`;
+
+      return {
+        sendPrompt: prompt,
+        systemMessage: `Starting comparative synthesis across **${attached.length} attached papers**...`,
+      };
+    },
+    name: "compare",
+  },
+  {
+    description:
+      "Analyze the attached literature to identify unaddressed research questions, methodological limitations, and future directions",
+    execute: async (addon, args) => {
+      const attached = addon.data.hermes?.items.getAttachedItems() || [];
+      if (attached.length === 0) {
+        return "No items attached to context. Attach items with `/context` or `/collection` first.";
+      }
+      const focus = args.trim();
+      const focusPrompt = focus ? `with special focus on: "${focus}"` : "";
+
+      const prompt = `Based strictly on the attached research literature (${attached.length} items) ${focusPrompt}, conduct a critical literature gap analysis:
+
+1. **Unaddressed Research Questions**: What important questions, mechanisms, or hypotheses are left unanswered or unexplored across these papers?
+2. **Methodological & Data Gaps**: What common weaknesses, boundary conditions, sampling limitations, or missing perspectives exist in the existing studies?
+3. **Emerging Contradictions**: What unresolved tensions or inconsistent findings between the works warrant further investigation?
+4. **Concrete Future Research Agenda**: Propose 3-5 specific, testable research projects or empirical designs that would bridge these identified gaps.
+
+Cite the relevant papers using (\`@citekey\`) to substantiate each identified gap.`;
+
+      return {
+        sendPrompt: prompt,
+        systemMessage: `Analyzing literature gaps across **${attached.length} attached papers**...`,
+      };
+    },
+    name: "gaps",
+  },
+  {
+    description:
+      "Draft a publication-ready literature review section integrating attached items with @citekey citations",
+    execute: async (addon, args) => {
+      const attached = addon.data.hermes?.items.getAttachedItems() || [];
+      if (attached.length === 0) {
+        return "No items attached to context. Attach items with `/context` or `/collection` first.";
+      }
+      const topic =
+        args.trim() || "the thematic consensus of the attached literature";
+
+      const prompt = `Draft a publication-ready academic Literature Review section on the topic: "${topic}".
+
+Requirements:
+1. Synthesize the ${attached.length} attached research papers into coherent thematic paragraphs (not just a paper-by-paper summary).
+2. Integrate in-text academic citations using \`@citekey\` syntax (e.g. "As argued by @Smith2023..." or "...in recent empirical evaluations [@Doe2022; @Lee2024]").
+3. Maintain scholarly tone, clear conceptual transitions, and active synthesis.
+4. Conclude with a brief synthesis paragraph linking the surveyed body of work to unresolved questions.`;
+
+      return {
+        sendPrompt: prompt,
+        systemMessage: `Drafting literature review on **"${topic}"** using ${attached.length} attached sources...`,
+      };
+    },
+    name: "draft-litreview",
   },
   {
     description:
@@ -256,7 +420,23 @@ const BUILT_IN_COMMANDS: SlashCommand[] = [
           ? bibliography.replace(/<[^>]*>/g, "").trim()
           : "None";
 
-        return `### Citation (${styleTitle})\n\n**In-text Citation:**\n${citation || "None"}\n\n**Bibliography:**\n${cleanBib}`;
+        const snippets = addon.data.hermes!.citations.getCitationSnippets(item);
+
+        return `### Citation (${styleTitle}) for **${parentItem.title}**
+
+**CSL In-text Citation:**
+${citation || "None"}
+
+**CSL Bibliography:**
+${cleanBib}
+
+---
+
+### Drafting Keys & Snippets
+- **Citation Key**: \`@${snippets.citekey}\`
+- **Markdown / Pandoc / Quarto**: \`${snippets.pandoc}\`
+- **LaTeX / BibTeX**: \`${snippets.latex}\`
+- **Typst**: \`${snippets.typst}\``;
       } catch (err) {
         return `Failed to generate citation: ${(err as Error).message}`;
       }

@@ -44,7 +44,8 @@ export function isSafeUrl(url?: string): boolean {
     trimmed.startsWith("https://") ||
     trimmed.startsWith("http://") ||
     trimmed.startsWith("add-context:") ||
-    trimmed.startsWith("apply-tag:")
+    trimmed.startsWith("apply-tag:") ||
+    trimmed.startsWith("action:")
   );
 }
 
@@ -173,24 +174,49 @@ function renderInline(segments: InlineSegment[]): ReactNode[] {
         );
       case "link":
       case "doi":
-      case "url":
+      case "url": {
         if (!seg.url || !isSafeUrl(seg.url)) {
           return <span key={i}>{seg.content}</span>;
         }
+        const isAction =
+          seg.url.startsWith("apply-tag:") ||
+          seg.url.startsWith("add-context:") ||
+          seg.url.startsWith("action:");
         return (
           <a
             key={i}
             href={seg.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              color: "var(--hermes-accent, #4a90d9)",
-              textDecoration: "underline",
-            }}
+            className={isAction ? "hermes-action-pill" : undefined}
+            target={isAction ? undefined : "_blank"}
+            rel={isAction ? undefined : "noopener noreferrer"}
+            style={
+              isAction
+                ? {
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    padding: "1px 8px",
+                    margin: "0 2px",
+                    borderRadius: "10px",
+                    fontSize: "0.85em",
+                    fontWeight: 500,
+                    textDecoration: "none",
+                    backgroundColor: "rgba(74, 144, 217, 0.12)",
+                    color: "var(--hermes-accent, #4a90d9)",
+                    border: "1px solid var(--hermes-accent, #4a90d9)",
+                    cursor: "pointer",
+                  }
+                : {
+                    color: "var(--hermes-accent, #4a90d9)",
+                    textDecoration: "underline",
+                  }
+            }
           >
+            {isAction ? "⚡ " : ""}
             {seg.content}
           </a>
         );
+      }
       case "strikethrough":
         return <del key={i}>{seg.content}</del>;
       default:

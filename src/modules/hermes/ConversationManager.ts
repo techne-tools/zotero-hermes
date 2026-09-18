@@ -35,7 +35,8 @@ export class ConversationManager {
    * survive restarts.
    */
   private getBaseDir(): string {
-    const profileDir = Zotero.getProfileDirectory?.();
+    const profileDir =
+      (Zotero as any).Profile?.dir || Zotero.getProfileDirectory?.();
     let baseDir: nsIFile | null = null;
     if (profileDir) {
       baseDir = profileDir.clone() as nsIFile;

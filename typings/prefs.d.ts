@@ -27,6 +27,7 @@ declare namespace _ZoteroTypes {
       "conversationOrganization": string;
       "chatSaveFolder": string;
       "currentPersona": string;
+      "obsidianVaultPath": string;
     };
   }
 }

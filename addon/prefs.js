@@ -18,3 +18,4 @@ pref("extensions.zotero.hermes.allowTerminal", false);
 pref("extensions.zotero.hermes.conversationOrganization", "flat");
 pref("extensions.zotero.hermes.chatSaveFolder", "hermes");
 pref("extensions.zotero.hermes.currentPersona", "default");
+pref("extensions.zotero.hermes.obsidianVaultPath", "");

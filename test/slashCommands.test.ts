@@ -44,4 +44,14 @@ describe("SlashCommands", function () {
     expect(names).to.include("gaps");
     expect(names).to.include("draft-litreview");
   });
+
+  it("should have Round 3 commands registered: canvas, organize-tags, timeline, critique, and quiz", function () {
+    const commands = getSlashCommands();
+    const names = commands.map((c) => c.name);
+    expect(names).to.include("canvas");
+    expect(names).to.include("organize-tags");
+    expect(names).to.include("timeline");
+    expect(names).to.include("critique");
+    expect(names).to.include("quiz");
+  });
 });

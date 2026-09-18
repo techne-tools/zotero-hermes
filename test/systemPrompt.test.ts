@@ -46,6 +46,15 @@ describe("systemPrompt.buildSystemPrompt", function () {
     const prompt = buildSystemPrompt(baseOpts);
     expect(prompt).to.include("ANSWER DIRECTLY using the provided metadata");
   });
+
+  it("should include research synthesis, timeline, critique, and seminar instructions", function () {
+    const prompt = buildSystemPrompt(baseOpts);
+    expect(prompt).to.include("RESEARCH SYNTHESIS, CRITIQUE & DRAFTING:");
+    expect(prompt).to.include("/timeline");
+    expect(prompt).to.include("/critique");
+    expect(prompt).to.include("/quiz");
+    expect(prompt).to.include("/organize-tags");
+  });
 });
 
 describe("systemPrompt.buildItemContext", function () {

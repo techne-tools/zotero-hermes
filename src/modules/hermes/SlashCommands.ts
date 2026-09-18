@@ -614,6 +614,192 @@ ${cleanBib}
     },
     name: "metadata",
   },
+  {
+    description:
+      "Export conversation and attached papers to an Obsidian Canvas (.canvas) graph. Usage: `/canvas [filename]`",
+    execute: async (addon, args) => {
+      const currentConv =
+        addon.data.hermes?.conversations.getCurrentConversation();
+      if (!currentConv) {
+        return "No active conversation to export as Canvas.";
+      }
+      const attachedItems = addon.data.hermes?.items.getAttachedItems() || [];
+      const customFilename = args.trim() || undefined;
+
+      const result = await addon.data.hermes!.exports.exportCanvasToObsidian(
+        currentConv,
+        attachedItems,
+        customFilename,
+      );
+
+      if (result.success) {
+        return {
+          sendPrompt:
+            attachedItems.length > 0
+              ? `I have exported our literature knowledge graph to Obsidian Canvas (${result.path || "configured destination"}). Please provide a high-level topological analysis of this network: Identify central theoretical hubs, methodological bridges, and conceptual gaps between these papers.`
+              : "",
+          systemMessage: `Obsidian Canvas Export: ${result.message}`,
+        };
+      } else {
+        return result.message;
+      }
+    },
+    name: "canvas",
+  },
+  {
+    description:
+      "Analyze library/item tags, detect duplicates/variants, and propose a clean taxonomy. Usage: `/organize-tags` or `/organize-tags merge OldTag -> NewTag`",
+    execute: async (addon, args) => {
+      if (!addon.data.hermes!.preferences.get("enableTags", true)) {
+        return "Tag management is disabled. Enable it in Zotero → Settings → Hermes → Automatic Context.";
+      }
+
+      const trimmedArgs = args.trim();
+
+      // Check if user wants to execute a merge: /organize-tags merge OldTag -> NewTag
+      if (trimmedArgs.toLowerCase().startsWith("merge ")) {
+        const mergeSpec = trimmedArgs.slice(6).trim();
+        const arrowMatch = mergeSpec.match(/^(.+?)\s*(?:->|=>|to)\s*(.+)$/i);
+        if (!arrowMatch) {
+          return "Invalid merge syntax. Usage: `/organize-tags merge OldTag -> NewTag`";
+        }
+        const oldTag = arrowMatch[1].trim();
+        const newTag = arrowMatch[2].trim();
+
+        const attachedItems = addon.data.hermes!.items.getAttachedItems();
+        const itemIDs =
+          attachedItems.length > 0 ? attachedItems.map((i) => i.id) : undefined;
+
+        try {
+          const count = await addon.data.hermes!.tags.renameTag(
+            oldTag,
+            newTag,
+            itemIDs,
+          );
+          return `Successfully merged tag **"${oldTag}"** → **"${newTag}"** across ${count} item(s).`;
+        } catch (err) {
+          return `Failed to merge tags: ${(err as Error).message}`;
+        }
+      }
+
+      // Otherwise, scan tags from attached items or all library tags
+      const attachedItems = addon.data.hermes!.items.getAttachedItems();
+      let tagList: string[] = [];
+
+      if (attachedItems.length > 0) {
+        for (const item of attachedItems) {
+          tagList.push(...addon.data.hermes!.tags.getItemTags(item.id));
+        }
+      } else {
+        const allTags = await addon.data.hermes!.tags.getAllTags();
+        tagList = allTags.map((t) => t.tag);
+      }
+
+      const uniqueTags = Array.from(new Set(tagList));
+      if (uniqueTags.length === 0) {
+        return "No tags found to organize. Attach items or add tags to your library first.";
+      }
+
+      const clusters =
+        addon.data.hermes!.tags.detectTaxonomyClusters(uniqueTags);
+      let duplicateSummary = "";
+      if (clusters.duplicates.length > 0) {
+        duplicateSummary = `\n**Detected Duplicates & Variants:**\n${clusters.duplicates
+          .map(
+            (d) =>
+              `- Canonical \`${d.canonical}\`: variants [${d.variants.map((v) => `"${v}"`).join(", ")}]`,
+          )
+          .join("\n")}`;
+      }
+
+      const prompt = `I am reviewing the tag taxonomy for my research library (${uniqueTags.length} unique tags analyzed: ${uniqueTags.slice(0, 50).join(", ")}).${duplicateSummary}\n\nPlease recommend a clean, standardized hierarchical ontology (e.g. \`domain/...\`, \`method/...\`, \`dataset/...\`, \`status/...\`). Highlight redundant tags, propose specific merge operations (using \`/organize-tags merge OldTag -> NewTag\`), and explain how this will improve discoverability.`;
+
+      return {
+        sendPrompt: prompt,
+        systemMessage: `Tag Taxonomy Analysis: ${uniqueTags.length} tags scanned.${clusters.duplicates.length > 0 ? ` Found ${clusters.duplicates.length} duplicate cluster(s).` : ""}`,
+      };
+    },
+    name: "organize-tags",
+  },
+  {
+    description:
+      "Generate a chronological literature evolution map and paradigm shift timeline across attached papers",
+    execute: async (addon) => {
+      const attachedItems = addon.data.hermes!.items.getAttachedItems();
+      if (attachedItems.length === 0) {
+        return "No items attached to conversation. Attach a collection or multiple papers first (use `/collection` or select items and use `/context`).";
+      }
+
+      const sorted = [...attachedItems].sort((a, b) => {
+        const yearA = parseInt(a.date || "0", 10) || 0;
+        const yearB = parseInt(b.date || "0", 10) || 0;
+        return yearA - yearB;
+      });
+
+      const itemsSummary = sorted
+        .map((i) => {
+          const cite = i.citekey ? `@${i.citekey}` : i.title;
+          const year = i.date || "Unknown date";
+          return `- **${cite}** (${year}): "${i.title}"`;
+        })
+        .join("\n");
+
+      const prompt = `Synthesize a chronological literature evolution timeline across the attached ${sorted.length} paper(s):\n\n${itemsSummary}\n\nPlease analyze:\n1. **Chronological Arc & Milestones**: Trace the historical trajectory from earliest to latest. For each paper (citing @citekey), identify the breakthrough, theoretical pivot, or new capability introduced.\n2. **Methodological Transitions**: How did methodologies, benchmarks, and architectures evolve across this timeline? What earlier assumptions were overturned?\n3. **Paradigm Shifts & Disagreements**: Where did divergent schools of thought emerge?\n4. **Current Frontier**: Where does this timeline terminate today, and what are the immediate forward trajectories?`;
+
+      return {
+        sendPrompt: prompt,
+        systemMessage: `Chronological Timeline Analysis: Synthesizing ${sorted.length} papers across time.`,
+      };
+    },
+    name: "timeline",
+  },
+  {
+    description:
+      "Conduct a rigorous peer-review methodological critique and stress-test of attached paper(s)",
+    execute: async (addon, args) => {
+      const attachedItems = addon.data.hermes!.items.getAttachedItems();
+      if (attachedItems.length === 0) {
+        return "No items attached to conversation. Attach a paper first (use `/context`).";
+      }
+
+      const focusAspect = args.trim()
+        ? ` Focus specifically on: "${args.trim()}".`
+        : "";
+      const itemsList = attachedItems
+        .map((i) => `${i.citekey ? `@${i.citekey}` : `"${i.title}"`}`)
+        .join(", ");
+
+      const prompt = `Conduct an exhaustive academic peer-review critique of the attached paper(s) (${itemsList}).${focusAspect}\n\nExamine:\n1. **Core Thesis & Hidden Assumptions**: What unproven or delicate premises must hold for the primary claims to stand?\n2. **Methodological Rigor & Internal Validity**: Are controls, sample sizes, baselines, and ablation studies adequate? Are there confounding variables or subtle data leaks?\n3. **Threats to External Validity**: Under what real-world conditions or dataset distributions will the proposed method or findings fail?\n4. **Adversarial Counter-arguments**: What is the most devastating criticism a skeptical reviewer could raise?\n5. **Constructive Rebuttal**: What specific follow-up experiment or proof would resolve these concerns?`;
+
+      return {
+        sendPrompt: prompt,
+        systemMessage: `Peer-Review Critique: Stress-testing methodology and assumptions for ${itemsList}.`,
+      };
+    },
+    name: "critique",
+  },
+  {
+    description:
+      "Generate hard seminar discussion questions, exam traps, and defense preparation for attached papers",
+    execute: async (addon) => {
+      const attachedItems = addon.data.hermes!.items.getAttachedItems();
+      if (attachedItems.length === 0) {
+        return "No items attached to conversation. Attach a paper first (use `/context`).";
+      }
+
+      const itemsList = attachedItems
+        .map((i) => `${i.citekey ? `@${i.citekey}` : `"${i.title}"`}`)
+        .join(", ");
+
+      const prompt = `Generate a seminar discussion and defense prep kit for the attached paper(s) (${itemsList}):\n\n1. **3 Provocative Seminar Discussion Questions**: Formulate questions that provoke debate between competing paradigms rather than simple factual recitation.\n2. **2 Methodological "Trap" Questions**: Hard technical questions probing subtle implementation choices or dataset compromises.\n3. **Conceptual Stress Test Scenario**: A hypothetical edge-case scenario where the paper's framework is applied to a challenging problem.\n4. **Executive Q&A Defense Cheat Sheet**: 3 concise bullet points to anchor the presenter during a difficult Q&A session.`;
+
+      return {
+        sendPrompt: prompt,
+        systemMessage: `Seminar & Defense Prep Kit: Formulating discussion questions and technical traps for ${itemsList}.`,
+      };
+    },
+    name: "quiz",
+  },
 ];
 
 /**

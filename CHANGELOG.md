@@ -2,6 +2,29 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.3] — 2026-09-18
+
+### Added
+
+- **Global Keyboard Accelerator (Pillar E)**:
+  - Added native `Cmd+Shift+H` (macOS) / `Ctrl+Shift+H` (Windows/Linux) window accelerator to toggle the Hermes sidebar from anywhere in Zotero.
+  - Automatically focuses the chat input upon opening.
+  - Clean event listener registration and teardown on window unload/addon shutdown.
+- **Obsidian Canvas & Knowledge Graph Generator (Pillar C)**:
+  - Added `ExportManager.exportToCanvas()`: Converts conversation and attached papers into a spatial Obsidian Canvas (`.canvas`) JSON graph.
+  - Places paper cards in structured grid layouts with deep `zotero://` links, citekeys, and abstract excerpts, and connects chronological predecessor/successor edges.
+  - Added `/canvas [filename]` slash command and dedicated `CanvasIcon` export button in `ChatHeader`.
+  - Saves directly to `<obsidianVaultPath>/Hermes/Canvas/<filename>.canvas` or prompts via `nsIFilePicker`.
+- **Smart Tag Taxonomy & Ontology Refinement (Pillar D)**:
+  - Added `TagManager.detectTaxonomyClusters()`: Normalizes tags, identifies casing/punctuation duplicates, and extracts hierarchical category trees.
+  - Added `TagManager.renameTag()`: Merges and renames tags across items with user approval gating (`ApprovalDialog`) and `AuditLog` records.
+  - Added `/organize-tags` and `/organize-tags merge OldTag -> NewTag` slash commands.
+- **Chronological Literature Evolution & Timeline Mapping (Pillar A)**:
+  - Added `/timeline` slash command: Analyzes attached items/collections chronologically, tracing breakthroughs, methodological transitions, and current research frontiers.
+- **Peer Review & Seminar Prep Kit (Pillar B)**:
+  - Added `/critique` slash command: Executes rigorous academic peer-review stress-testing on assumptions, confounding variables, and threats to internal/external validity.
+  - Added `/quiz` slash command: Generates provocative seminar discussion questions, technical trap questions, and defense cheat sheets.
+
 ## [0.3.2] — 2026-09-18
 
 ### Added

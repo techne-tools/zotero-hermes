@@ -266,3 +266,21 @@ export const ExportIcon = () => (
     <line x1="12" x2="12" y1="3" y2="15" />
   </svg>
 );
+
+export const CanvasIcon = () => (
+  <svg
+    fill="none"
+    height="16"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="1.8"
+    viewBox="0 0 24 24"
+    width="16"
+  >
+    <rect height="7" rx="1.5" width="7" x="3" y="3" />
+    <rect height="7" rx="1.5" width="7" x="14" y="3" />
+    <rect height="7" rx="1.5" width="7" x="14" y="14" />
+    <rect height="7" rx="1.5" width="7" x="3" y="14" />
+  </svg>
+);

@@ -7,6 +7,7 @@ import {
   PlusIcon,
   SettingsIcon,
   ExportIcon,
+  CanvasIcon,
 } from "./Icons";
 
 interface ChatHeaderProps {
@@ -17,6 +18,7 @@ interface ChatHeaderProps {
   onNewChat: () => void;
   onSettingsToggle: () => void;
   onExport?: () => void;
+  onExportCanvas?: () => void;
 }
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
@@ -27,6 +29,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onNewChat,
   onSettingsToggle,
   onExport,
+  onExportCanvas,
 }) => {
   const settings = addon.data.hermes?.preferences;
 
@@ -98,6 +101,15 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             title="Export to Markdown / Obsidian (/export)"
           >
             <ExportIcon />
+          </button>
+        )}
+        {onExportCanvas && (
+          <button
+            onClick={onExportCanvas}
+            className="hermes-icon-btn"
+            title="Export Obsidian Canvas Graph (/canvas)"
+          >
+            <CanvasIcon />
           </button>
         )}
         <button

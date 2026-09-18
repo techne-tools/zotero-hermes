@@ -151,4 +151,141 @@ export class TagManager {
   private escapeRegExp(str: string): string {
     return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
+
+  /**
+   * Merges or renames a tag across specified items (or library-wide) with approval gating.
+   */
+  public async renameTag(
+    oldTag: string,
+    newTag: string,
+    itemIDs?: number[],
+  ): Promise<number> {
+    if (!oldTag || !newTag || oldTag.trim() === newTag.trim()) return 0;
+
+    const trimmedOld = oldTag.trim();
+    const trimmedNew = newTag.trim();
+
+    let itemsToProcess: Zotero.Item[] = [];
+    if (itemIDs && itemIDs.length > 0) {
+      const items = await Zotero.Items.getAsync(itemIDs);
+      itemsToProcess = items.filter((i) => {
+        if (!i || !i.isRegularItem()) return false;
+        return typeof (i as any).hasTag === "function"
+          ? (i as any).hasTag(trimmedOld)
+          : i.getTags().some((t: any) => t.tag === trimmedOld);
+      }) as Zotero.Item[];
+    } else {
+      const s = new Zotero.Search();
+      s.addCondition("tag", "is", trimmedOld);
+      const foundIDs = await s.search();
+      if (foundIDs && foundIDs.length > 0) {
+        itemsToProcess = (await Zotero.Items.getAsync(
+          foundIDs,
+        )) as Zotero.Item[];
+      }
+    }
+
+    if (itemsToProcess.length === 0) {
+      return 0;
+    }
+
+    const displayName = `Merge/rename tag "${trimmedOld}" → "${trimmedNew}" on ${itemsToProcess.length} item(s)`;
+    const approvalDialog =
+      this.approvalDialog || (this.addon?.data?.hermes as any)?.approvalDialog;
+    if (approvalDialog) {
+      const changeId = `tag-rename-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      const approved = await approvalDialog.addPendingChange({
+        action: "modify",
+        id: changeId,
+        newContent: `Rename tag "${trimmedOld}" to "${trimmedNew}" across ${itemsToProcess.length} item(s)`,
+        path: displayName,
+        status: "pending",
+        timestamp: Date.now(),
+      });
+      if (!approved) {
+        throw new Error("Tag rename cancelled by user.");
+      }
+    }
+
+    let updatedCount = 0;
+    for (const item of itemsToProcess) {
+      try {
+        item.removeTag(trimmedOld);
+        item.addTag(trimmedNew);
+        await item.saveTx();
+        updatedCount++;
+      } catch (e) {
+        this.addon.log(`TagManager: Error updating item ${item.id}:`, e);
+      }
+    }
+
+    this.addon.data?.hermes?.auditLog?.record(
+      "file_change",
+      displayName,
+      "success",
+      {
+        action: "modify",
+        oldTag: trimmedOld,
+        newTag: trimmedNew,
+        updatedCount,
+      },
+    );
+
+    return updatedCount;
+  }
+
+  /**
+   * Detects duplicate casing, formatting variants, and hierarchical structures in tags.
+   */
+  public detectTaxonomyClusters(tags: string[]): {
+    duplicates: Array<{ canonical: string; variants: string[] }>;
+    hierarchical: Array<{ category: string; tags: string[] }>;
+  } {
+    const normMap = new Map<string, string[]>();
+
+    for (const tag of tags) {
+      const key = tag.toLowerCase().replace(/[-_\s]+/g, "");
+      if (!normMap.has(key)) {
+        normMap.set(key, []);
+      }
+      normMap.get(key)!.push(tag);
+    }
+
+    const duplicates: Array<{ canonical: string; variants: string[] }> = [];
+    for (const [, variants] of normMap) {
+      const uniqueVariants = Array.from(new Set(variants));
+      if (uniqueVariants.length > 1) {
+        // Use the shortest or most cleanly formatted variant as canonical
+        const canonical = uniqueVariants.reduce((best, cur) =>
+          cur.length <= best.length ? cur : best,
+        );
+        duplicates.push({
+          canonical,
+          variants: uniqueVariants,
+        });
+      }
+    }
+
+    const hierMap = new Map<string, string[]>();
+    for (const tag of tags) {
+      if (tag.includes("/")) {
+        const parts = tag.split("/");
+        const cat = parts[0].trim();
+        const sub = parts.slice(1).join("/").trim();
+        if (!hierMap.has(cat)) {
+          hierMap.set(cat, []);
+        }
+        if (sub) {
+          hierMap.get(cat)!.push(sub);
+        }
+      }
+    }
+
+    const hierarchical: Array<{ category: string; tags: string[] }> = [];
+    for (const [category, subTags] of hierMap) {
+      hierarchical.push({ category, tags: Array.from(new Set(subTags)) });
+    }
+
+    return { duplicates, hierarchical };
+  }
 }

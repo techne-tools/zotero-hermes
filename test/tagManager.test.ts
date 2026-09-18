@@ -150,12 +150,50 @@ describe("TagManager", function () {
       { count: 2, tag: "neural" },
     ]);
 
-    const manager = new TagManager(mockAddon());
-    const suggestions = await manager.suggestTags(1);
-
     expect(suggestions).to.be.an("array");
     const suggestedNames = suggestions.map((s) => s.tag);
     expect(suggestedNames).to.include("robotics");
     expect(suggestedNames).to.not.include("quantum");
+  });
+
+  it("should detect duplicate variants and hierarchical tags in detectTaxonomyClusters", function () {
+    const manager = new TagManager(mockAddon());
+    const tags = [
+      "machine-learning",
+      "Machine Learning",
+      "machine learning",
+      "deep learning",
+      "method/transformer",
+      "method/lstm",
+      "domain/nlp",
+    ];
+
+    const result = manager.detectTaxonomyClusters(tags);
+
+    expect(result.duplicates).to.have.lengthOf(1);
+    expect(result.duplicates[0].variants).to.include("machine-learning");
+    expect(result.duplicates[0].variants).to.include("Machine Learning");
+
+    expect(result.hierarchical).to.have.lengthOf(2);
+    const methodCat = result.hierarchical.find((h) => h.category === "method");
+    expect(methodCat).to.exist;
+    expect(methodCat?.tags).to.include("transformer");
+    expect(methodCat?.tags).to.include("lstm");
+  });
+
+  it("should rename and merge tags across items with renameTag", async function () {
+    const item = mockTagItem(["ML", "robotics"]);
+    (item as any).isRegularItem = () => true;
+    stubZotero(item);
+
+    const manager = new TagManager(mockAddon());
+    const count = await manager.renameTag("ML", "machine-learning", [1]);
+
+    expect(count).to.equal(1);
+    expect(item.getTags().map((t) => t.tag)).to.deep.equal([
+      "robotics",
+      "machine-learning",
+    ]);
+    expect(item.isSaved()).to.be.true;
   });
 });

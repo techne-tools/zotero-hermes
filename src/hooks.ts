@@ -133,8 +133,11 @@ function registerHermesSidebar(win: _ZoteroTypes.MainWindow): void {
     if (syncBtn && !doc.getElementById("zotero-hermes-tb-chat-toggle")) {
       const btn = doc.createXULElement("toolbarbutton") as any;
       btn.setAttribute("id", "zotero-hermes-tb-chat-toggle");
-      btn.setAttribute("tooltiptext", "Toggle Hermes Chat");
-      btn.setAttribute("aria-label", "Toggle Hermes Chat");
+      const shortcutText = (Zotero as any).isMac
+        ? "Cmd+Shift+H"
+        : "Ctrl+Shift+H";
+      btn.setAttribute("tooltiptext", `Toggle Hermes Chat (${shortcutText})`);
+      btn.setAttribute("aria-label", `Toggle Hermes Chat (${shortcutText})`);
       btn.setAttribute("aria-pressed", "false");
       btn.setAttribute("tabindex", "0");
       btn.style.listStyleImage =
@@ -153,6 +156,18 @@ function registerHermesSidebar(win: _ZoteroTypes.MainWindow): void {
       btn.addEventListener("click", () => {
         toggleHermesSidebar(win);
       });
+
+      // Global keyboard shortcut: Cmd+Shift+H (Mac) / Ctrl+Shift+H (Win/Linux)
+      const keyHandler = (e: KeyboardEvent) => {
+        const isAccel = (Zotero as any).isMac ? e.metaKey : e.ctrlKey;
+        if (isAccel && e.shiftKey && (e.key === "H" || e.key === "h")) {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleHermesSidebar(win);
+        }
+      };
+      win.addEventListener("keydown", keyHandler, true);
+      (win as any)._hermesKeyHandler = keyHandler;
 
       // Deactivate Hermes if Beaver is activated to avoid overlapping panels
       const beaverToggle = doc.getElementById(
@@ -383,6 +398,18 @@ function toggleHermesSidebar(win: _ZoteroTypes.MainWindow): void {
 
       btn.setAttribute("aria-pressed", "true");
       addon.log("Hermes full sidebar view toggled ON");
+
+      // Auto-focus chat input on toggle
+      win.setTimeout(() => {
+        try {
+          const textarea = doc.querySelector(
+            ".hermes-chat-input",
+          ) as HTMLTextAreaElement | null;
+          textarea?.focus();
+        } catch {
+          // ignore
+        }
+      }, 100);
     } else {
       // Hide Hermes panel and restore default Zotero views
       if (hermesPane) {
@@ -405,7 +432,11 @@ function unregisterHermesSidebar(win: Window): void {
   try {
     const doc = win.document;
 
-    // 1. Remove toolbar button and separator
+    // 1. Remove toolbar button, separator, and keyboard listener
+    if ((win as any)._hermesKeyHandler) {
+      win.removeEventListener("keydown", (win as any)._hermesKeyHandler, true);
+      delete (win as any)._hermesKeyHandler;
+    }
     const btn = doc.getElementById("zotero-hermes-tb-chat-toggle");
     if (btn) {
       btn.parentNode?.removeChild(btn);

@@ -84,4 +84,65 @@ describe("ExportManager", function () {
       "### 🤖 Hermes\n\nQuantum entanglement is a phenomenon",
     );
   });
+
+  it("should generate valid Obsidian Canvas (.canvas) JSON graph with nodes and edges", function () {
+    const exporter = new ExportManager(mockAddon);
+    const mockConversation: Conversation = {
+      id: "conv_canvas",
+      title: "Neural Architectures Graph",
+      messages: [],
+      createdAt: 1690000000000,
+      updatedAt: 1690000000000,
+      allowedTools: null,
+    };
+
+    const item1: AttachedItem = {
+      id: 1,
+      key: "KEY1",
+      title: "Attention Is All You Need",
+      itemType: "conferencePaper",
+      creators: ["Vaswani et al."],
+      date: "2017",
+      citekey: "vaswani2017attention",
+      attachmentKey: "PDF1",
+    };
+
+    const item2: AttachedItem = {
+      id: 2,
+      key: "KEY2",
+      title: "BERT: Pre-training of Deep Bidirectional Transformers",
+      itemType: "conferencePaper",
+      creators: ["Devlin et al."],
+      date: "2018",
+      citekey: "devlin2018bert",
+      attachmentKey: "PDF2",
+    };
+
+    const canvasJson = exporter.exportToCanvas(mockConversation, [
+      item1,
+      item2,
+    ]);
+    const parsed = JSON.parse(canvasJson);
+
+    expect(parsed).to.have.property("nodes").that.is.an("array");
+    expect(parsed).to.have.property("edges").that.is.an("array");
+
+    // Header node + 2 paper nodes = 3 nodes
+    expect(parsed.nodes).to.have.lengthOf(3);
+    const headerNode = parsed.nodes.find((n: any) => n.id === "root-header");
+    expect(headerNode).to.exist;
+    expect(headerNode.text).to.include("Neural Architectures Graph");
+
+    const paper1Node = parsed.nodes.find((n: any) => n.id === "paper-KEY1");
+    expect(paper1Node).to.exist;
+    expect(paper1Node.text).to.include("[[Attention Is All You Need]]");
+    expect(paper1Node.text).to.include("@vaswani2017attention");
+
+    // Edges: 2 header edges + 1 chronological edge (2017 -> 2018)
+    expect(parsed.edges).to.have.lengthOf(3);
+    const chronoEdge = parsed.edges.find((e: any) => e.label === "precedes");
+    expect(chronoEdge).to.exist;
+    expect(chronoEdge.fromNode).to.equal("paper-KEY1");
+    expect(chronoEdge.toNode).to.equal("paper-KEY2");
+  });
 });

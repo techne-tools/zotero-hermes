@@ -1,8 +1,8 @@
 # Zotero Hermes Plugin — Full Rework TODO
 
 **Created:** 21 May 2026  
-**Updated:** 16 September 2026  
-**Current Version:** 0.3.1 (Stable)  
+**Updated:** 18 September 2026  
+**Current Version:** 0.3.3 (Stable)  
 **Platform:** Zotero 7.0–10.x (Mozilla 140 ESR)  
 **Status:** ✅ Core Infrastructure, UI Redesign, Security Hardening & Zotero 10 Compatibility Complete
 
@@ -575,6 +575,12 @@ All features must follow Zotero Hermes coding conventions.
   - **Feature 1 (Cross-Paper Synthesis & Collection Analysis)**: `ItemManager.attachCollection()`, `/collection`, `/compare` matrix table generation, and `/gaps` literature gap analysis.
   - **Feature 3 (Manuscript Drafting & Better BibTeX Integration)**: Automatic Better BibTeX citekey extraction with fallback, `@citekey` context injection, `/draft-litreview` command, and Pandoc/LaTeX/Typst citation snippets in `CitationManager.ts` & `/cite`.
   - **Feature 2 (Active Reader Deep Workflows)**: Floating selection toolbar popup in PDF Reader tab, "Explain Selection" and "Critique Argument" context menu actions, and decoupled prompt dispatching via `ChatManager.onExternalPrompt()`.
+- **18 September 2026** - Implemented Round 3 Academic Thinking Tools (E, C, D, A, B):
+  - **Pillar E (Global Keyboard Accelerator)**: Native `Cmd+Shift+H` / `Ctrl+Shift+H` window accelerator to toggle Hermes sidebar from anywhere and auto-focus chat input.
+  - **Pillar C (Obsidian Canvas Knowledge Graph)**: `ExportManager.exportToCanvas()`, `/canvas` slash command, spatial paper cards with `zotero://` deep links, chronological connection edges, and direct saving to `<obsidianVaultPath>/Hermes/Canvas/` or file picker.
+  - **Pillar D (Smart Tag Taxonomy & Ontology Refinement)**: `TagManager.detectTaxonomyClusters()` duplicate/variant detection, `TagManager.renameTag()` with approval gating, `/organize-tags` and `/organize-tags merge OldTag -> NewTag` slash commands.
+  - **Pillar A (Chronological Evolution & Timeline Mapping)**: `/timeline` command generating chronological breakthroughs, methodological transitions, and forward research trajectories.
+  - **Pillar B (Peer Review & Seminar Prep Kit)**: `/critique` (methodological rigor, hidden assumptions, counter-arguments) and `/quiz` (seminar debate questions, technical traps, defense cheat sheets).
 
 ### Current Known Constraints & Backlog
 

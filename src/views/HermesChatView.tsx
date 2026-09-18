@@ -1150,6 +1150,29 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
     }
   }, [hermes.conversations, hermes.items, hermes.exports, settings]);
 
+  const handleExportCanvas = useCallback(async () => {
+    const conv = hermes.conversations.getCurrentConversation();
+    if (!conv) {
+      setError("No active conversation to export as Canvas.");
+      return;
+    }
+    const attached = hermes.items.getAttachedItems();
+    const res = await hermes.exports.exportCanvasToObsidian(conv, attached);
+    if (res.success) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: generateMessageId(),
+          content: `${res.message}`,
+          role: "system",
+          timestamp: Date.now(),
+        },
+      ]);
+    } else if (res.message && res.message !== "Canvas export cancelled.") {
+      setError(res.message);
+    }
+  }, [hermes.conversations, hermes.items, hermes.exports]);
+
   const handleExportConversation = useCallback(
     async (id: string) => {
       const allConvs = hermes.conversations.loadAllConversations();
@@ -1280,6 +1303,7 @@ export function HermesChatViewComponent({ addon }: HermesChatViewProps) {
         onNewChat={newChat}
         onSettingsToggle={() => setIsSessionSettingsOpen((prev) => !prev)}
         onExport={handleExportCurrentChat}
+        onExportCanvas={handleExportCanvas}
       />
 
       <SidePanels
